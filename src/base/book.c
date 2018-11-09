@@ -102,5 +102,20 @@ int ledger_book_set_notes
   } else return 0;
 }
 
+int ledger_book_is_equal
+  (struct ledger_book const* a, struct ledger_book const* b)
+{
+  /* trivial books */
+  if (a == NULL && b == NULL) return 1;
+  else if (a == NULL || b == NULL) return 0;
+  /* compare top-level features */{
+    if (ledger_util_ustrcmp(a->description, b->description) != 0)
+      return 0;
+    if (ledger_util_ustrcmp(a->notes, b->notes) != 0)
+      return 0;
+  }
+  return 1;
+}
+
 
 /* END   implementation */
