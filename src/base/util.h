@@ -36,6 +36,14 @@ unsigned char* ledger_util_ustrdup(unsigned char const* str, int* ok);
  * @return the length of the string
  */
 size_t ledger_util_ustrlen(unsigned char const* str);
+/*
+ * Compare two strings.
+ * - a first string to compare
+ * - b second string to compare
+ * @return zero if equal, negative if `a` is less than `b`,
+ *   positive if `a` is greater than `b`
+ */
+int ledger_util_ustrcmp(unsigned char const* a, unsigned char const* b);
 
 #ifdef __cplusplus
 };

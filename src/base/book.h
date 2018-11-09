@@ -56,7 +56,14 @@ unsigned char const* ledger_book_get_notes
  */
 int ledger_book_set_notes
   (struct ledger_book* book, unsigned char const* notes);
-
+/*
+ * Compare two books for equality.
+ * - a a book
+ * - b another book
+ * @return one if the books are equal, zero otherwise
+ */
+int ledger_book_is_equal
+  (struct ledger_book const* a, struct ledger_book const* b);
 
 #ifdef __cplusplus
 };
