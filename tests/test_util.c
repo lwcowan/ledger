@@ -56,7 +56,7 @@ int string_test(void){
     result = 1;
   } while (0);
   ledger_util_free(new_text);
-  return 1;
+  return result;
 }
 int string_length_test(void){
   unsigned char buffer[] = { 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x00,
