@@ -5,6 +5,8 @@ project(ledger C)
 
 option(LEDGER_BUILD_TESTS "Build tests for the ledger library.")
 
+add_subdirectory(deps)
+
 add_subdirectory(src)
 
 if (LEDGER_BUILD_TESTS)
