@@ -71,7 +71,7 @@ void ledger_io_manifest_set_top_flags(struct ledger_io_manifest* m, int flags){
 }
 
 int ledger_io_manifest_prepare
-  (struct ledger_io_manifest* manifest, struct ledger_book* book)
+  (struct ledger_io_manifest* manifest, struct ledger_book const* book)
 {
   ledger_io_manifest_clear(manifest);
   /* check top-level */{
