@@ -11,6 +11,7 @@ extern "C" {
 #endif /*__cplusplus*/
 
 struct ledger_book;
+struct cJSON;
 
 /*
  * brief: Ancillary information flags
@@ -54,6 +55,21 @@ void ledger_io_manifest_set_top_flags(struct ledger_io_manifest* m, int flags);
  */
 int ledger_io_manifest_prepare
   (struct ledger_io_manifest* manifest, struct ledger_book* book);
+/*
+ * Convert a manifest to a JSON object.
+ * - manifest the manifest to convert
+ * @return the JSON object on success
+ */
+struct cJSON* ledger_io_manifest_print
+  (struct ledger_io_manifest const* manifest);
+/*
+ * Convert a manifest from a JSON object.
+ * - manifest the manifest to update
+ * - json JSON object to update
+ * @return nonzero on success
+ */
+int ledger_io_manifest_parse
+  (struct ledger_io_manifest* manifest, struct cJSON const* json);
 
 #ifdef __cplusplus
 };

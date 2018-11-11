@@ -2,6 +2,8 @@
 #include "manifest.h"
 #include "../base/util.h"
 #include "../base/book.h"
+#include "../../deps/cJSON/cJSON.h"
+#include <string.h>
 
 /*
  * Actualization of the manifest structure
@@ -83,6 +85,67 @@ int ledger_io_manifest_prepare
     ledger_io_manifest_set_top_flags(manifest, flags);
   }
   return 1;
+}
+
+struct cJSON* ledger_io_manifest_print
+  (struct ledger_io_manifest const* manifest)
+{
+  struct cJSON* out = cJSON_CreateObject();
+  if (out != NULL){
+    int result = 0;
+    do {
+      /* create top-level object */{
+        struct cJSON* top_level = cJSON_AddObjectToObject(out,"top");
+        if (top_level == NULL) break;
+        /* add description */if (manifest->flags & LEDGER_IO_MANIFEST_DESC){
+          struct cJSON* item = cJSON_AddBoolToObject(top_level,"desc",
+              (manifest->flags & LEDGER_IO_MANIFEST_DESC)?1:0
+            );
+          if (item == NULL) break;
+        }
+        /* add notes */if (manifest->flags & LEDGER_IO_MANIFEST_NOTES){
+          struct cJSON* item = cJSON_AddBoolToObject(top_level,"notes",
+              (manifest->flags & LEDGER_IO_MANIFEST_NOTES)?1:0
+            );
+          if (item == NULL) break;
+        }
+      }
+      result = 1;
+    } while (0);
+    if (result == 0){
+      cJSON_Delete(out);
+      out = NULL;
+    }
+  }
+  return out;
+}
+
+int ledger_io_manifest_parse
+  (struct ledger_io_manifest* manifest, struct cJSON const* json)
+{
+  int result = 0;
+  ledger_io_manifest_clear(manifest);
+  /* process JSON */if (cJSON_IsObject(json)) do {
+    /* process top-level object */{
+      struct cJSON* top_level = cJSON_GetObjectItemCaseSensitive(json, "top");
+      if (top_level != NULL){
+        struct cJSON* top_item;
+        cJSON_ArrayForEach(top_item, top_level){
+          if (strcmp(top_item->string, "desc") == 0){
+            /* description flag */
+            if (cJSON_IsTrue(top_item))
+              manifest->flags |= LEDGER_IO_MANIFEST_DESC;
+          } else if (strcmp(top_item->string, "notes") == 0){
+            /* notes flag */
+            if (cJSON_IsTrue(top_item))
+              manifest->flags |= LEDGER_IO_MANIFEST_NOTES;
+          }
+        }
+      }
+    }
+    result = 1;
+  } while (0);
+  return result;
 }
 
 /* END   implementation */

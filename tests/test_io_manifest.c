@@ -1,6 +1,7 @@
 
 #include "../src/base/book.h"
 #include "../src/io/manifest.h"
+#include "../deps/cJSON/cJSON.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,6 +10,10 @@ static int io_manifest_test(void );
 static int io_manifest_zero_test(void );
 static int io_manifest_top_flag_test(void);
 static int io_manifest_nonzero_test(void );
+static int io_manifest_parse_test(void);
+static int io_manifest_print_test(void);
+static int io_manifest_parse_zero_test(void);
+static int io_manifest_print_zero_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -18,9 +23,136 @@ struct test_struct test_array[] = {
   { io_manifest_test, "i/o manifest allocate" },
   { io_manifest_top_flag_test, "i/o manifest top flag" },
   { io_manifest_nonzero_test, "i/o manifest nonzero" },
-  { io_manifest_zero_test, "i/o manifest zero" }
+  { io_manifest_zero_test, "i/o manifest zero" },
+  { io_manifest_parse_test, "parse JSON" },
+  { io_manifest_print_test, "print JSON" },
+  { io_manifest_parse_zero_test, "parse JSON for empty manifest" },
+  { io_manifest_print_zero_test, "print JSON for empty manifest" }
 };
 
+
+int io_manifest_print_test(void){
+  int result = 0;
+  struct ledger_io_manifest* manifest;
+  struct cJSON* json = NULL;
+  manifest = ledger_io_manifest_new();
+  if (manifest == NULL){
+    cJSON_Delete(json);
+    return 0;
+  } else do {
+    int ok;
+    /* set the manifest */{
+      ledger_io_manifest_set_top_flags(manifest,3);
+    }
+    json = ledger_io_manifest_print(manifest);
+    if (json == NULL) break;
+    if (!cJSON_IsObject(json)) break;
+    /* check top level */{
+      cJSON* top_json = cJSON_GetObjectItemCaseSensitive(json, "top");
+      if (top_json == NULL) break;
+      if (!cJSON_IsObject(top_json)) break;
+      if (cJSON_GetArraySize(top_json) != 2) break;
+      /* check description */{
+        cJSON* desc_json = cJSON_GetObjectItemCaseSensitive(top_json, "desc");
+        if (desc_json == NULL) break;
+        if (!cJSON_IsTrue(desc_json)) break;
+      }
+      /* check notes */{
+        cJSON* notes_json =
+          cJSON_GetObjectItemCaseSensitive(top_json, "notes");
+        if (notes_json == NULL) break;
+        if (!cJSON_IsTrue(notes_json)) break;
+      }
+    }
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(manifest);
+  if (json != NULL) cJSON_Delete(json);
+  return result;
+}
+int io_manifest_parse_test(void){
+  int result = 0;
+  struct ledger_io_manifest* manifest;
+  struct cJSON* json;
+  char const *json_text =
+    "{"
+      " \"top\":{ \"desc\": true, \"notes\": true }"
+    "}";
+  json = cJSON_Parse(json_text);
+  if (json == NULL){
+    return 0;
+  }
+  manifest = ledger_io_manifest_new();
+  if (manifest == NULL){
+    cJSON_Delete(json);
+    return 0;
+  } else do {
+    int ok;
+    ok = ledger_io_manifest_parse(manifest, json);
+    if (!ok) break;
+    if (ledger_io_manifest_get_top_flags(manifest) != 3) break;
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(manifest);
+  cJSON_Delete(json);
+  return result;
+}
+
+int io_manifest_print_zero_test(void){
+  int result = 0;
+  struct ledger_io_manifest* manifest;
+  struct cJSON* json = NULL;
+  manifest = ledger_io_manifest_new();
+  if (manifest == NULL){
+    cJSON_Delete(json);
+    return 0;
+  } else do {
+    int ok;
+    /* set the manifest */{
+      ;
+    }
+    json = ledger_io_manifest_print(manifest);
+    if (json == NULL) break;
+    if (!cJSON_IsObject(json)) break;
+    /* check top level */{
+      cJSON* top_json = cJSON_GetObjectItemCaseSensitive(json, "top");
+      if (top_json == NULL) break;
+      if (!cJSON_IsObject(top_json)) break;
+      if (cJSON_GetArraySize(top_json) != 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(manifest);
+  if (json != NULL) cJSON_Delete(json);
+  return result;
+}
+int io_manifest_parse_zero_test(void){
+  int result = 0;
+  struct ledger_io_manifest* manifest;
+  struct cJSON* json;
+  char const *json_text =
+    "{"
+      " \"top\":{ }"
+    "}";
+  json = cJSON_Parse(json_text);
+  if (json == NULL){
+    return 0;
+  }
+  manifest = ledger_io_manifest_new();
+  if (manifest == NULL){
+    cJSON_Delete(json);
+    return 0;
+  } else do {
+    int ok;
+    ok = ledger_io_manifest_parse(manifest, json);
+    if (!ok) break;
+    if (ledger_io_manifest_get_top_flags(manifest) != 0) break;
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(manifest);
+  cJSON_Delete(json);
+  return result;
+}
 int io_manifest_test(void){
   int result = 0;
   struct ledger_io_manifest* manifest;

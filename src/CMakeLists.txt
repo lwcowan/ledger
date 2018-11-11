@@ -16,3 +16,4 @@ set(ledger_io_SOURCES
   )
 
 add_library(ledger_io ${ledger_io_SOURCES})
+target_link_libraries(ledger_io  zip cjson)
