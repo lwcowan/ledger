@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 
 static int allocate_test(void);
 static int description_test(void);
@@ -11,6 +12,9 @@ static int notes_test(void);
 static int null_notes_test(void);
 static int equal_test(void);
 static int trivial_equal_test(void);
+static int alloc_id_test(void);
+static int resume_alloc_id_test(void);
+static int alloc_max_id_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -23,7 +27,10 @@ struct test_struct test_array[] = {
   { notes_test, "notes" },
   { null_notes_test, "null_notes" },
   { equal_test, "equal" },
-  { trivial_equal_test, "trivial_equal" }
+  { trivial_equal_test, "trivial_equal" },
+  { alloc_id_test, "alloc_id" },
+  { alloc_max_id_test, "alloc max id" },
+  { resume_alloc_id_test, "resume_alloc_id" }
 };
 
 int allocate_test(void){
@@ -173,6 +180,60 @@ int null_notes_test(void){
       break;
     if (ledger_book_get_description(ptr) != NULL) break;
     if (ledger_book_get_notes(ptr) != NULL) break;
+    result = 1;
+  } while (0);
+  ledger_book_free(ptr);
+  return result;
+}
+int alloc_id_test(void){
+  int result = 0;
+  struct ledger_book* ptr;
+  ptr = ledger_book_new();
+  if (ptr == NULL) return 0;
+  else do {
+    if (ledger_book_get_sequence(ptr) != 0) break;
+    if (ledger_book_alloc_id(ptr) != 0) break;
+    if (ledger_book_alloc_id(ptr) != 1) break;
+    if (ledger_book_get_sequence(ptr) != 2) break;
+    result = 1;
+  } while (0);
+  ledger_book_free(ptr);
+  return result;
+}
+int resume_alloc_id_test(void){
+  int result = 0;
+  struct ledger_book* ptr;
+  ptr = ledger_book_new();
+  if (ptr == NULL) return 0;
+  else do {
+    if (!ledger_book_set_sequence(ptr,57)) break;
+    if (ledger_book_alloc_id(ptr) != 57) break;
+    if (ledger_book_alloc_id(ptr) != 58) break;
+    if (ledger_book_get_sequence(ptr) != 59) break;
+    if (ledger_book_set_sequence(ptr,-45)) break;
+    if (ledger_book_alloc_id(ptr) != 59) break;
+    if (!ledger_book_set_sequence(ptr,0)) break;
+    if (ledger_book_get_sequence(ptr) != 0) break;
+    if (ledger_book_alloc_id(ptr) != 0) break;
+    if (ledger_book_get_sequence(ptr) != 1) break;
+    result = 1;
+  } while (0);
+  ledger_book_free(ptr);
+  return result;
+}
+int alloc_max_id_test(void){
+  int result = 0;
+  struct ledger_book* ptr;
+  ptr = ledger_book_new();
+  if (ptr == NULL) return 0;
+  else do {
+    if (!ledger_book_set_sequence(ptr,INT_MAX-1)) break;
+    if (ledger_book_alloc_id(ptr) != (INT_MAX-1)) break;
+    if (ledger_book_alloc_id(ptr) >= 0) break;
+    if (ledger_book_get_sequence(ptr) != INT_MAX) break;
+    if (!ledger_book_set_sequence(ptr,0)) break;
+    if (ledger_book_alloc_id(ptr) != 0) break;
+    if (ledger_book_get_sequence(ptr) != 1) break;
     result = 1;
   } while (0);
   ledger_book_free(ptr);

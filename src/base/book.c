@@ -1,6 +1,7 @@
 
 #include "book.h"
 #include "util.h"
+#include <limits.h>
 
 /*
  * Actualization of the book structure
@@ -14,6 +15,10 @@ struct ledger_book {
    * brief: notes
    */
   unsigned char *notes;
+  /*
+   * next id to use
+   */
+  int sequence_id;
 };
 
 /*
@@ -34,6 +39,7 @@ static void ledger_book_clear(struct ledger_book* book);
 int ledger_book_init(struct ledger_book* book){
   book->description = NULL;
   book->notes = NULL;
+  book->sequence_id = 0;
   return 1;
 }
 
@@ -115,6 +121,25 @@ int ledger_book_is_equal
       return 0;
   }
   return 1;
+}
+
+int ledger_book_get_sequence(struct ledger_book const* b){
+  return b->sequence_id;
+}
+
+int ledger_book_set_sequence(struct ledger_book* b, int item_id){
+  if (item_id < 0) return 0;
+  b->sequence_id = item_id;
+  return 1;
+}
+
+int ledger_book_alloc_id(struct ledger_book* b){
+  if (b->sequence_id < INT_MAX){
+    int out;
+    out = b->sequence_id;
+    b->sequence_id += 1;
+    return out;
+  } else return -1;
 }
 
 

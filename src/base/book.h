@@ -64,6 +64,25 @@ int ledger_book_set_notes
  */
 int ledger_book_is_equal
   (struct ledger_book const* a, struct ledger_book const* b);
+/*
+ * Query the sequence identifier of a book.
+ * - b book to query
+ * @return the next identifier
+ */
+int ledger_book_get_sequence(struct ledger_book const* b);
+/*
+ * Modify the sequence identifier of a book.
+ * - b book to query
+ * - item_id new identifier (non-negative)
+ */
+int ledger_book_set_sequence(struct ledger_book* b, int item_id);
+/*
+ * Allocate a sequence identifier from a book.
+ * - b book to use
+ * @return a new identifier (non-negative) on success,
+ *   or -1 if out of identifiers
+ */
+int ledger_book_alloc_id(struct ledger_book* b);
 
 #ifdef __cplusplus
 };
