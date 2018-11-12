@@ -21,6 +21,13 @@ enum ledger_io_manifest_flag {
   LEDGER_IO_MANIFEST_NOTES = 2
 };
 /*
+ * brief: Manifest type codes
+ */
+enum ledger_io_manifest_type {
+  LEDGER_IO_MANIFEST_BOOK = 1,
+  LEDGER_IO_MANIFEST_LEDGER = 2
+};
+/*
  * brief: Book manifest
  */
 struct ledger_io_manifest;
@@ -48,6 +55,30 @@ int ledger_io_manifest_get_top_flags(struct ledger_io_manifest const* m);
  */
 void ledger_io_manifest_set_top_flags(struct ledger_io_manifest* m, int flags);
 /*
+ * Get a manifest's type code.
+ * - m manifest to query
+ * @return its type code
+ */
+int ledger_io_manifest_get_type(struct ledger_io_manifest const* m);
+/*
+ * Set the type code for a manifest.
+ * - m manifest to query
+ * - typ a new type code
+ */
+void ledger_io_manifest_set_type(struct ledger_io_manifest* m, int typ);
+/*
+ * Get a manifest's identification number.
+ * - m manifest to query
+ * @return its identification number
+ */
+int ledger_io_manifest_get_id(struct ledger_io_manifest const* m);
+/*
+ * Set the identification number for a manifest.
+ * - m manifest to query
+ * - item_id a new identification number
+ */
+void ledger_io_manifest_set_id(struct ledger_io_manifest* m, int item_id);
+/*
  * Prepare a manifest of a book.
  * - manifest manifest to adjust
  * - book book to read
@@ -70,6 +101,36 @@ struct cJSON* ledger_io_manifest_print
  */
 int ledger_io_manifest_parse
   (struct ledger_io_manifest* manifest, struct cJSON const* json);
+
+/*
+ * Get a sub-manifest count.
+ * - b manifest to query
+ * @return the number of sub-manifests in this manifest
+ */
+int ledger_io_manifest_get_count(struct ledger_io_manifest const* b);
+/*
+ * Set a sub-manifest count.
+ * - b manifest to configure
+ * - n number of sub-manifests
+ * @return one on success, zero otherwise
+ */
+int ledger_io_manifest_set_count(struct ledger_io_manifest* b, int n);
+/*
+ * Get a sub-manifest.
+ * - b manifest to adjust
+ * - i array index
+ * @return the sub-manifest at that array index
+ */
+struct ledger_io_manifest* ledger_io_manifest_get
+  (struct ledger_io_manifest* b, int i);
+/*
+ * Get a sub-manifest.
+ * - b manifest to read
+ * - i array index
+ * @return the sub-manifest at that array index
+ */
+struct ledger_io_manifest const* ledger_io_manifest_get_c
+  (struct ledger_io_manifest const* b, int i);
 
 #ifdef __cplusplus
 };

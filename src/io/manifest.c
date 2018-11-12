@@ -4,6 +4,7 @@
 #include "../base/book.h"
 #include "../../deps/cJSON/cJSON.h"
 #include <string.h>
+#include <limits.h>
 
 /*
  * Actualization of the manifest structure
@@ -11,6 +12,14 @@
 struct ledger_io_manifest {
   /* top-level flags */
   int flags;
+  /* type code */
+  int type_code;
+  /* identification number */
+  int item_id;
+  /* array of arrays */
+  struct ledger_io_manifest** arrays;
+  /* count of arrays */
+  int array_count;
 };
 
 /*
@@ -30,11 +39,20 @@ static void ledger_io_manifest_clear(struct ledger_io_manifest* manifest);
 
 int ledger_io_manifest_init(struct ledger_io_manifest* manifest){
   manifest->flags = 0;
+  manifest->type_code = 0;
+  manifest->arrays = NULL;
+  manifest->array_count = 0;
+  manifest->item_id = -1;
   return 1;
 }
 
 void ledger_io_manifest_clear(struct ledger_io_manifest* manifest){
+  int i;
   manifest->flags = 0;
+  manifest->type_code = 0;
+  manifest->item_id = -1;
+  /* use a simple recursive clearing algorithm */
+  ledger_io_manifest_set_count(manifest,0);
   return;
 }
 
@@ -67,6 +85,24 @@ int ledger_io_manifest_get_top_flags(struct ledger_io_manifest const* m){
 
 void ledger_io_manifest_set_top_flags(struct ledger_io_manifest* m, int flags){
   m->flags = flags;
+  return;
+}
+
+int ledger_io_manifest_get_type(struct ledger_io_manifest const* m){
+  return m->type_code;
+}
+
+void ledger_io_manifest_set_type(struct ledger_io_manifest* m, int typ){
+  m->type_code = typ;
+  return;
+}
+
+int ledger_io_manifest_get_id(struct ledger_io_manifest const* m){
+  return m->item_id;
+}
+
+void ledger_io_manifest_set_id(struct ledger_io_manifest* m, int item_id){
+  m->item_id = item_id;
   return;
 }
 
@@ -146,6 +182,93 @@ int ledger_io_manifest_parse
     result = 1;
   } while (0);
   return result;
+}
+
+int ledger_io_manifest_get_count(struct ledger_io_manifest const* m){
+  return m->array_count;
+}
+
+struct ledger_io_manifest* ledger_io_manifest_get(struct ledger_io_manifest* m, int i){
+  if (i < 0 || i >= m->array_count){
+    return NULL;
+  } else {
+    return m->arrays[i];
+  }
+}
+
+struct ledger_io_manifest const* ledger_io_manifest_get_c
+  (struct ledger_io_manifest const* m, int i)
+{
+  if (i < 0 || i >= m->array_count){
+    return NULL;
+  } else {
+    return m->arrays[i];
+  }
+}
+
+int ledger_io_manifest_set_count(struct ledger_io_manifest* m, int n){
+  if (n >= INT_MAX/sizeof(struct ledger_io_manifest*)){
+    return 0;
+  } else if (n < 0){
+    return 0;
+  } else if (n == 0){
+    int i;
+    for (i = 0; i < m->array_count; ++i){
+      ledger_io_manifest_free(m->arrays[i]);
+    }
+    ledger_util_free(m->arrays);
+    m->arrays = NULL;
+    m->array_count = 0;
+    return 1;
+  } else if (n < m->array_count){
+    int i;
+    /* allocate smaller array */
+    struct ledger_io_manifest** new_array = (struct ledger_io_manifest** )
+      ledger_util_malloc(n*sizeof(struct ledger_io_manifest*));
+    if (new_array == NULL) return 0;
+    /* move old arrays to new array */
+    for (i = 0; i < n; ++i){
+      new_array[i] = m->arrays[i];
+    }
+    /* free rest of the arrays */
+    for (; i < m->array_count; ++i){
+      ledger_io_manifest_free(m->arrays[i]);
+    }
+    ledger_util_free(m->arrays);
+    m->arrays = new_array;
+    m->array_count = n;
+    return 1;
+  } else if (n >= m->array_count){
+    int save_id;
+    int i;
+    /* allocate larger array */
+    struct ledger_io_manifest** new_array = (struct ledger_io_manifest** )
+      ledger_util_malloc(n*sizeof(struct ledger_io_manifest*));
+    if (new_array == NULL) return 0;
+    /* make new arrays */
+    for (i = m->array_count; i < n; ++i){
+      new_array[i] = ledger_io_manifest_new();
+      if (new_array[i] == NULL) break;
+    }
+    /* rollback and quit */if (i < n){
+      int j;
+      /* rollback */
+      for (j = m->array_count; j < i; ++j){
+        ledger_io_manifest_free(new_array[i]);
+      }
+      /* quit */
+      return 0;
+    }
+    /* transfer old arrays */
+    for (i = 0; i < m->array_count; ++i){
+      new_array[i] = m->arrays[i];
+    }
+    /* continue */
+    ledger_util_free(m->arrays);
+    m->arrays = new_array;
+    m->array_count = n;
+    return 1;
+  } else return 1 /*since n == m->array_count */;
 }
 
 /* END   implementation */

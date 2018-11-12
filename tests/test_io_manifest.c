@@ -14,6 +14,7 @@ static int io_manifest_parse_test(void);
 static int io_manifest_print_test(void);
 static int io_manifest_parse_zero_test(void);
 static int io_manifest_print_zero_test(void);
+static int new_resize_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -24,6 +25,7 @@ struct test_struct test_array[] = {
   { io_manifest_top_flag_test, "i/o manifest top flag" },
   { io_manifest_nonzero_test, "i/o manifest nonzero" },
   { io_manifest_zero_test, "i/o manifest zero" },
+  { new_resize_test, "resize" },
   { io_manifest_parse_test, "parse JSON" },
   { io_manifest_print_test, "print JSON" },
   { io_manifest_parse_zero_test, "parse JSON for empty manifest" },
@@ -234,6 +236,60 @@ int io_manifest_nonzero_test(void ){
   ledger_book_free(book);
   return result;
 }
+int new_resize_test(void){
+  int result = 0;
+  struct ledger_io_manifest* ptr;
+  ptr = ledger_io_manifest_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int ok, i;
+    if (ledger_io_manifest_get_count(ptr) != 0) break;
+    ok = ledger_io_manifest_set_count(ptr,5);
+    if (!ok) break;
+    for (i = 0; i < 5; ++i){
+      struct ledger_io_manifest* l = ledger_io_manifest_get(ptr,i);
+      if (l != ledger_io_manifest_get(ptr,i)) break;
+      if (l == NULL) break;
+      if (ledger_io_manifest_get_id(l) != -1) break;
+      if (ledger_io_manifest_get_type(l) != 0) break;
+      ledger_io_manifest_set_id(l, i);
+    }
+    if (i < 5) break;
+    if (ledger_io_manifest_get_c(ptr,5) != NULL) break;
+    ledger_io_manifest_set_type
+        (ledger_io_manifest_get(ptr,1), LEDGER_IO_MANIFEST_BOOK);
+    ledger_io_manifest_set_type
+        (ledger_io_manifest_get(ptr,3), LEDGER_IO_MANIFEST_LEDGER);
+    ok = ledger_io_manifest_set_count(ptr,2);
+    if (!ok) break;
+    ok = ledger_io_manifest_set_count(ptr,4);
+    if (!ok) break;
+    if (ledger_io_manifest_get_count(ptr) != 4) break;
+    for (i = 0; i < 10; ++i){
+      struct ledger_io_manifest const* l = ledger_io_manifest_get_c(ptr,i);
+      if (i < 2){
+        if (l == NULL) break;
+        if (ledger_io_manifest_get_id(l) != i) break;
+      } else if (i < 4){
+        if (l == NULL) break;
+        if (ledger_io_manifest_get_id(l) != -1) break;
+      } else {
+        if (l != NULL) break;
+      }
+    }
+    if (i < 10) break;
+    if (ledger_io_manifest_get_type(ledger_io_manifest_get_c(ptr,1))
+        != LEDGER_IO_MANIFEST_BOOK)
+      break;
+    if (ledger_io_manifest_get_type(ledger_io_manifest_get_c(ptr,3))
+        != 0)
+      break;
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(ptr);
+  return result;
+}
+
 
 int main(int argc, char **argv){
   int pass_count = 0;
