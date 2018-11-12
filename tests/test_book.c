@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include "../src/base/ledger.h"
+#include "../src/base/util.h"
 
 static int allocate_test(void);
 static int description_test(void);
@@ -15,6 +17,7 @@ static int trivial_equal_test(void);
 static int alloc_id_test(void);
 static int resume_alloc_id_test(void);
 static int alloc_max_id_test(void);
+static int new_ledger_resize_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -30,7 +33,8 @@ struct test_struct test_array[] = {
   { trivial_equal_test, "trivial_equal" },
   { alloc_id_test, "alloc_id" },
   { alloc_max_id_test, "alloc max id" },
-  { resume_alloc_id_test, "resume_alloc_id" }
+  { resume_alloc_id_test, "resume_alloc_id" },
+  { new_ledger_resize_test, "ledger resize" }
 };
 
 int allocate_test(void){
@@ -234,6 +238,64 @@ int alloc_max_id_test(void){
     if (!ledger_book_set_sequence(ptr,0)) break;
     if (ledger_book_alloc_id(ptr) != 0) break;
     if (ledger_book_get_sequence(ptr) != 1) break;
+    result = 1;
+  } while (0);
+  ledger_book_free(ptr);
+  return result;
+}
+int new_ledger_resize_test(void){
+  int result = 0;
+  struct ledger_book* ptr;
+  ptr = ledger_book_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int ok, i;
+    if (ledger_book_get_ledger_count(ptr) != 0) break;
+    if (!ledger_book_set_sequence(ptr,50)) break;
+    ok = ledger_book_set_ledger_count(ptr,5);
+    if (!ok) break;
+    for (i = 0; i < 5; ++i){
+      struct ledger_ledger const* l = ledger_book_get_ledger_c(ptr,i);
+      if (l != ledger_book_get_ledger(ptr,i)) break;
+      if (l == NULL) break;
+      if (ledger_ledger_get_id(l) != i+50) break;
+    }
+    if (i < 5) break;
+    if (ledger_book_get_ledger_c(ptr,5) != NULL) break;
+    ok = ledger_ledger_set_name
+        (ledger_book_get_ledger(ptr,1), (unsigned char const*)"one");
+    if (!ok) break;
+    ok = ledger_ledger_set_name
+        (ledger_book_get_ledger(ptr,3), (unsigned char const*)"three");
+    if (!ok) break;
+    ok = ledger_book_set_ledger_count(ptr,2);
+    if (!ok) break;
+    ok = ledger_book_set_ledger_count(ptr,4);
+    if (!ok) break;
+    if (ledger_book_get_ledger_count(ptr) != 4) break;
+    for (i = 0; i < 10; ++i){
+      struct ledger_ledger const* l = ledger_book_get_ledger_c(ptr,i);
+      if (i < 2){
+        if (l == NULL) break;
+        if (ledger_ledger_get_id(l) != i+50) break;
+      } else if (i < 4){
+        if (l == NULL) break;
+        if (ledger_ledger_get_id(l) != 55+i-2) break;
+      } else {
+        if (l != NULL) break;
+      }
+    }
+    if (i < 10) break;
+    if (ledger_util_ustrcmp(
+          ledger_ledger_get_name(ledger_book_get_ledger_c(ptr,1)),
+          (unsigned char const*)"one")
+        != 0)
+      break;
+    if (ledger_util_ustrcmp(
+          ledger_ledger_get_name(ledger_book_get_ledger_c(ptr,3)),
+          (unsigned char const*)"three")
+        == 0)
+      break;
     result = 1;
   } while (0);
   ledger_book_free(ptr);

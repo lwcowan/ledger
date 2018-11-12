@@ -10,6 +10,8 @@
 extern "C" {
 #endif /*__cplusplus*/
 
+struct ledger_ledger;
+
 /*
  * brief: Account and transaction book
  */
@@ -83,6 +85,34 @@ int ledger_book_set_sequence(struct ledger_book* b, int item_id);
  *   or -1 if out of identifiers
  */
 int ledger_book_alloc_id(struct ledger_book* b);
+/*
+ * Get a ledger count.
+ * - b book to query
+ * @return the number of ledgers in this book
+ */
+int ledger_book_get_ledger_count(struct ledger_book const* b);
+/*
+ * Set a ledger count.
+ * - b book to configure
+ * - n number of ledgers
+ * @return one on success, zero otherwise
+ */
+int ledger_book_set_ledger_count(struct ledger_book* b, int n);
+/*
+ * Get a ledger.
+ * - b book to adjust
+ * - i array index
+ * @return the ledger at that array index
+ */
+struct ledger_ledger* ledger_book_get_ledger(struct ledger_book* b, int i);
+/*
+ * Get a ledger.
+ * - b book to read
+ * - i array index
+ * @return the ledger at that array index
+ */
+struct ledger_ledger const* ledger_book_get_ledger_c
+  (struct ledger_book const* b, int i);
 
 #ifdef __cplusplus
 };
