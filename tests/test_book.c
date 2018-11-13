@@ -18,6 +18,7 @@ static int alloc_id_test(void);
 static int resume_alloc_id_test(void);
 static int alloc_max_id_test(void);
 static int new_ledger_resize_test(void);
+static int new_ledger_equal_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -31,6 +32,7 @@ struct test_struct test_array[] = {
   { null_notes_test, "null_notes" },
   { equal_test, "equal" },
   { trivial_equal_test, "trivial_equal" },
+  { new_ledger_equal_test, "ledger_equal" },
   { alloc_id_test, "alloc_id" },
   { alloc_max_id_test, "alloc max id" },
   { resume_alloc_id_test, "resume_alloc_id" },
@@ -106,6 +108,90 @@ int equal_test(void){
     /* same notes */
     ok = ledger_book_set_notes(other_ptr,description2);
     if (!ok) break;
+    if (!ledger_book_is_equal(other_ptr,ptr)) break;
+    if (!ledger_book_is_equal(ptr,other_ptr)) break;
+    result = 1;
+  } while (0);
+  ledger_book_free(ptr);
+  ledger_book_free(other_ptr);
+  return result;
+}
+int new_ledger_equal_test(void){
+  int result = 0;
+  struct ledger_book* ptr, * other_ptr;
+  ptr = ledger_book_new();
+  if (ptr == NULL) return 0;
+  other_ptr = ledger_book_new();
+  if (other_ptr == NULL){
+    ledger_book_free(ptr);
+    return 0;
+  } else do {
+    int ok;
+    unsigned char const* description =
+      (unsigned char const*)"some long string";
+    unsigned char const* name =
+      (unsigned char const*)"short";
+    /* different ledger counts */
+    ok = ledger_book_set_ledger_count(ptr,1);
+    if (!ok) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    /* different ledger counts */
+    ok = ledger_book_set_ledger_count(other_ptr,2);
+    if (!ok) break;
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    /* same ledger count */
+    ok = ledger_book_set_ledger_count(ptr,2);
+    if (!ok) break;
+    if (!ledger_book_is_equal(other_ptr,ptr)) break;
+    if (!ledger_book_is_equal(ptr,other_ptr)) break;
+    /* ledger modification */{
+      struct ledger_ledger* new_ledger = ledger_book_get_ledger(ptr,0);
+      if (new_ledger == NULL) break;
+      if (!ledger_ledger_set_description(new_ledger, description))
+        break;
+      if (!ledger_ledger_set_name(new_ledger, name))
+        break;
+    }
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    /* ledger modification */{
+      struct ledger_ledger* new_ledger = ledger_book_get_ledger(other_ptr,1);
+      if (new_ledger == NULL) break;
+      if (!ledger_ledger_set_description(new_ledger, description))
+        break;
+      if (!ledger_ledger_set_name(new_ledger, name))
+        break;
+    }
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    /* ledger modification */{
+      struct ledger_ledger* new_ledger = ledger_book_get_ledger(other_ptr,1);
+      if (new_ledger == NULL) break;
+      if (!ledger_ledger_set_description(new_ledger, name))
+        break;
+    }
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    /* ledger modification */{
+      struct ledger_ledger* new_ledger = ledger_book_get_ledger(ptr,1);
+      if (new_ledger == NULL) break;
+      if (!ledger_ledger_set_name(new_ledger, name))
+        break;
+      if (!ledger_ledger_set_description(new_ledger, name))
+        break;
+    }
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    /* ledger modification */{
+      struct ledger_ledger* new_ledger = ledger_book_get_ledger(other_ptr,0);
+      if (new_ledger == NULL) break;
+      if (!ledger_ledger_set_description(new_ledger, description))
+        break;
+      if (!ledger_ledger_set_name(new_ledger, name))
+        break;
+    }
     if (!ledger_book_is_equal(other_ptr,ptr)) break;
     if (!ledger_book_is_equal(ptr,other_ptr)) break;
     result = 1;
