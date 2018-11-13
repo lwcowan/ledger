@@ -11,6 +11,7 @@ static int string_length_test(void);
 static int null_string_dup_test(void);
 static int string_cmp_test(void);
 static int trivial_string_cmp_test(void);
+static int zero_check_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -23,7 +24,8 @@ struct test_struct test_array[] = {
   { string_length_test, "string length" },
   { null_string_dup_test, "null string duplicate" },
   { string_cmp_test, "string compare" },
-  { trivial_string_cmp_test, "trivial string compare" }
+  { trivial_string_cmp_test, "trivial string compare" },
+  { zero_check_test, "zero check" }
 };
 
 int allocate_test(void){
@@ -116,6 +118,24 @@ int null_string_dup_test(void){
       ledger_util_ustrdup((unsigned char const*)text,&ok);
     if (!ok) return 0;
     if (new_text != NULL) return 0;
+  }
+  return 1;
+}
+
+int zero_check_test(void){
+  unsigned char buffer[] = { 1, 0, 2, 0, 4 };
+  /* string zero check */{
+    if (ledger_util_uiszero(buffer,sizeof(buffer))) return 0;
+    buffer[0] = 0;
+    if (ledger_util_uiszero(buffer,sizeof(buffer))) return 0;
+    buffer[2] = 0;
+    if (ledger_util_uiszero(buffer,sizeof(buffer))) return 0;
+    buffer[4] = 0;
+    if (!ledger_util_uiszero(buffer,sizeof(buffer))) return 0;
+    buffer[3] = 3;
+    if (ledger_util_uiszero(buffer,sizeof(buffer))) return 0;
+    buffer[1] = 9;
+    if (ledger_util_uiszero(buffer,sizeof(buffer))) return 0;
   }
   return 1;
 }

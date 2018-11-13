@@ -36,6 +36,7 @@ struct ledger_book {
  * @return one on success, zero on failure
  */
 static int ledger_book_init(struct ledger_book* book);
+
 /*
  * Clear out a book.
  * - book book to clear
@@ -132,6 +133,15 @@ int ledger_book_is_equal
       return 0;
     if (ledger_util_ustrcmp(a->notes, b->notes) != 0)
       return 0;
+  }
+  /* compare ledgers */{
+    int i;
+    if (a->ledger_count != b->ledger_count) return 0;
+    else for (i = 0; i < a->ledger_count; ++i){
+      if (!ledger_ledger_is_equal(a->ledgers[i], b->ledgers[i]))
+        break;
+    }
+    if (i < a->ledger_count) return 0;
   }
   return 1;
 }
