@@ -157,31 +157,38 @@ struct cJSON* ledger_io_manifest_print
 }
 
 int ledger_io_manifest_parse
-  (struct ledger_io_manifest* manifest, struct cJSON const* json)
+  (struct ledger_io_manifest* manifest, struct cJSON const* json, int typ)
 {
-  int result = 0;
   ledger_io_manifest_clear(manifest);
-  /* process JSON */if (cJSON_IsObject(json)) do {
-    /* process top-level object */{
-      struct cJSON* top_level = cJSON_GetObjectItemCaseSensitive(json, "top");
-      if (top_level != NULL){
-        struct cJSON* top_item;
-        cJSON_ArrayForEach(top_item, top_level){
-          if (strcmp(top_item->string, "desc") == 0){
-            /* description flag */
-            if (cJSON_IsTrue(top_item))
-              manifest->flags |= LEDGER_IO_MANIFEST_DESC;
-          } else if (strcmp(top_item->string, "notes") == 0){
-            /* notes flag */
-            if (cJSON_IsTrue(top_item))
-              manifest->flags |= LEDGER_IO_MANIFEST_NOTES;
+  ledger_io_manifest_set_type(manifest, typ);
+  /* process JSON */if (cJSON_IsObject(json)){
+    int result = 0;
+    switch (typ){
+    case LEDGER_IO_MANIFEST_BOOK:
+      {
+        /* process top-level object */{
+          struct cJSON* top_level =
+            cJSON_GetObjectItemCaseSensitive(json, "top");
+          if (top_level != NULL){
+            struct cJSON* top_item;
+            cJSON_ArrayForEach(top_item, top_level){
+              if (strcmp(top_item->string, "desc") == 0){
+                /* description flag */
+                if (cJSON_IsTrue(top_item))
+                  manifest->flags |= LEDGER_IO_MANIFEST_DESC;
+              } else if (strcmp(top_item->string, "notes") == 0){
+                /* notes flag */
+                if (cJSON_IsTrue(top_item))
+                  manifest->flags |= LEDGER_IO_MANIFEST_NOTES;
+              }
+            }
           }
         }
-      }
+        result = 1;
+      }break;
     }
-    result = 1;
-  } while (0);
-  return result;
+    return result;
+  } else return 0;
 }
 
 int ledger_io_manifest_get_count(struct ledger_io_manifest const* m){

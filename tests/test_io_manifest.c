@@ -11,10 +11,12 @@ static int io_manifest_zero_test(void );
 static int io_manifest_top_flag_test(void);
 static int io_manifest_nonzero_test(void );
 static int io_manifest_parse_test(void);
+static int io_manifest_parse_book_test(void);
 static int io_manifest_print_test(void);
 static int io_manifest_parse_zero_test(void);
 static int io_manifest_print_zero_test(void);
 static int new_resize_test(void);
+static int type_code_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -25,8 +27,10 @@ struct test_struct test_array[] = {
   { io_manifest_top_flag_test, "i/o manifest top flag" },
   { io_manifest_nonzero_test, "i/o manifest nonzero" },
   { io_manifest_zero_test, "i/o manifest zero" },
+  { type_code_test, "type code" },
   { new_resize_test, "resize" },
   { io_manifest_parse_test, "parse JSON" },
+  { io_manifest_parse_book_test, "parse JSON book" },
   { io_manifest_print_test, "print JSON" },
   { io_manifest_parse_zero_test, "parse JSON for empty manifest" },
   { io_manifest_print_zero_test, "print JSON for empty manifest" }
@@ -90,7 +94,35 @@ int io_manifest_parse_test(void){
     return 0;
   } else do {
     int ok;
-    ok = ledger_io_manifest_parse(manifest, json);
+    ok = ledger_io_manifest_parse(manifest, json, 0);
+    if (ok) break;
+    if (ledger_io_manifest_get_top_flags(manifest) != 0) break;
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(manifest);
+  cJSON_Delete(json);
+  return result;
+}
+
+int io_manifest_parse_book_test(void){
+  int result = 0;
+  struct ledger_io_manifest* manifest;
+  struct cJSON* json;
+  char const *json_text =
+    "{"
+      " \"top\":{ \"desc\": true, \"notes\": true }"
+    "}";
+  json = cJSON_Parse(json_text);
+  if (json == NULL){
+    return 0;
+  }
+  manifest = ledger_io_manifest_new();
+  if (manifest == NULL){
+    cJSON_Delete(json);
+    return 0;
+  } else do {
+    int ok;
+    ok = ledger_io_manifest_parse(manifest, json, LEDGER_IO_MANIFEST_BOOK);
     if (!ok) break;
     if (ledger_io_manifest_get_top_flags(manifest) != 3) break;
     result = 1;
@@ -146,7 +178,7 @@ int io_manifest_parse_zero_test(void){
     return 0;
   } else do {
     int ok;
-    ok = ledger_io_manifest_parse(manifest, json);
+    ok = ledger_io_manifest_parse(manifest, json, LEDGER_IO_MANIFEST_BOOK);
     if (!ok) break;
     if (ledger_io_manifest_get_top_flags(manifest) != 0) break;
     result = 1;
@@ -284,6 +316,24 @@ int new_resize_test(void){
     if (ledger_io_manifest_get_type(ledger_io_manifest_get_c(ptr,3))
         != 0)
       break;
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(ptr);
+  return result;
+}
+int type_code_test(void){
+  int result = 0;
+  struct ledger_io_manifest* ptr;
+  ptr = ledger_io_manifest_new();
+  if (ptr == NULL) return 0;
+  else do {
+    if (ledger_io_manifest_get_id(ptr) != -1) break;
+    if (ledger_io_manifest_get_top_flags(ptr) != 0) break;
+    if (ledger_io_manifest_get_type(ptr) != 0) break;
+    ledger_io_manifest_set_type(ptr, LEDGER_IO_MANIFEST_BOOK);
+    if (ledger_io_manifest_get_id(ptr) != -1) break;
+    if (ledger_io_manifest_get_top_flags(ptr) != 0) break;
+    if (ledger_io_manifest_get_type(ptr) != 1) break;
     result = 1;
   } while (0);
   ledger_io_manifest_free(ptr);

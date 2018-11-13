@@ -97,10 +97,11 @@ struct cJSON* ledger_io_manifest_print
  * Convert a manifest from a JSON object.
  * - manifest the manifest to update
  * - json JSON object to update
+ * - typ type code for new manifest contents
  * @return nonzero on success
  */
 int ledger_io_manifest_parse
-  (struct ledger_io_manifest* manifest, struct cJSON const* json);
+  (struct ledger_io_manifest* manifest, struct cJSON const* json, int typ);
 
 /*
  * Get a sub-manifest count.

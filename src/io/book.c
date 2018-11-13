@@ -166,7 +166,8 @@ int ledger_io_book_read(char const* filename, struct ledger_book* book){
             ledger_io_book_extract_json(active_zip,"manifest.json",&ok);
           /* require the JSON manifest */
           if (manifest_json == NULL) break;
-          ok = ledger_io_manifest_parse(manifest, manifest_json);
+          ok = ledger_io_manifest_parse(manifest, manifest_json,
+              LEDGER_IO_MANIFEST_BOOK);
           cJSON_Delete(manifest_json);
           if (!ok) break;
         }
