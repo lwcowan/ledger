@@ -9,6 +9,7 @@ static int allocate_test(void);
 static int trivial_compare_test(void);
 static int set_long_test(void);
 static int set_limit_long_test(void);
+static int internal_allocate_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -17,6 +18,7 @@ struct test_struct {
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
   { trivial_compare_test, "trivial compare" },
+  { internal_allocate_test, "internal allocate" },
   { set_long_test, "set long" },
   { set_limit_long_test, "set limit long" }
 };
@@ -27,6 +29,31 @@ int allocate_test(void){
   if (ptr == NULL) return 0;
   ledger_bignum_free(ptr);
   return 1;
+}
+
+int internal_allocate_test(void){
+  int result = 0;
+  struct ledger_bignum* ptr;
+  ptr = ledger_bignum_new();
+  if (ptr == NULL) return 0;
+  do {
+    int ok;
+    if (ledger_bignum_count_digits(ptr) != 0) break;
+    if (ledger_bignum_find_point(ptr) != 0) break;
+    /* invalid allocation */
+    ok = ledger_bignum_alloc(ptr,4,5);
+    if (ok) break;
+    if (ledger_bignum_count_digits(ptr) != 0) break;
+    if (ledger_bignum_find_point(ptr) != 0) break;
+    /* valid allocation */
+    ok = ledger_bignum_alloc(ptr,4,2);
+    if (!ok) break;
+    if (ledger_bignum_count_digits(ptr) != 4) break;
+    if (ledger_bignum_find_point(ptr) != 2) break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(ptr);
+  return result;
 }
 
 int trivial_compare_test(void){

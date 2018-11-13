@@ -106,16 +106,8 @@ int ledger_bignum_set_long(struct ledger_bignum* n, long int v){
     }
     /* allocate if needed */{
       if (n->digit_count - n->point_place < digit_count){
-        unsigned char* new_digits = (unsigned char*)ledger_util_malloc
-          (sizeof(unsigned char)*(digit_count));
-        if (new_digits == NULL){
-          return 0;
-        } else {
-          ledger_util_free(n->digits);
-          n->digits = new_digits;
-          n->digit_count = digit_count;
-          n->point_place = 0;
-        }
+        int const ok = ledger_bignum_alloc(n,digit_count,n->point_place);
+        if (!ok) return 0;
       }
     }
     /* set the number value */{
@@ -168,6 +160,47 @@ long int ledger_bignum_get_long(struct ledger_bignum const* n){
     }
   }
   return out;
+}
+
+int ledger_bignum_alloc
+  (struct ledger_bignum* n, int digits, int point_place)
+{
+  /* sanitize the input */{
+    if (digits < 0 || point_place < 0)
+      return 0;
+    else if (point_place > digits)
+      return 0;
+  }
+  if (digits > 0){
+    /* allocate new digit space */
+    unsigned char* new_digits = (unsigned char*)ledger_util_malloc
+      (sizeof(unsigned char)*(digits));
+    if (new_digits == NULL){
+      return 0;
+    } else {
+      ledger_util_free(n->digits);
+      memset(new_digits,0,digits*sizeof(unsigned char));
+      n->digits = new_digits;
+      n->digit_count = digits;
+      n->point_place = point_place;
+      return 1;
+    }
+  } else {
+    /* free up the digits */
+    ledger_util_free(n->digits);
+    n->digits = NULL;
+    n->digit_count = 0;
+    n->point_place = 0;
+    return 1;
+  }
+}
+
+int ledger_bignum_count_digits(struct ledger_bignum const* n){
+  return n->digit_count;
+}
+
+int ledger_bignum_find_point(struct ledger_bignum const* n){
+  return n->point_place;
 }
 
 /* END   implementation */
