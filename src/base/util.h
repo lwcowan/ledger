@@ -44,6 +44,13 @@ size_t ledger_util_ustrlen(unsigned char const* str);
  *   positive if `a` is greater than `b`
  */
 int ledger_util_ustrcmp(unsigned char const* a, unsigned char const* b);
+/*
+ * Compare a string of bytes to zero.
+ * - a string to compare
+ * - siz length of string in bytes
+ * @return one if all zero, zero otherwise
+ */
+int ledger_util_uiszero(unsigned char const* a, size_t siz);
 
 #ifdef __cplusplus
 };

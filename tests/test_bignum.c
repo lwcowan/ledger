@@ -14,6 +14,7 @@ static int internal_allocate_test(void);
 static int get_text_test(void);
 static int set_text_test(void);
 static int number_swap_test(void);
+static int nonzero_compare_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -27,7 +28,8 @@ struct test_struct test_array[] = {
   { set_limit_long_test, "set limit long" },
   { get_text_test, "get text" },
   { set_text_test, "set text" },
-  { number_swap_test, "number swap" }
+  { number_swap_test, "number swap" },
+  { nonzero_compare_test, "nonzero compare" }
 };
 
 int allocate_test(void){
@@ -218,6 +220,40 @@ int number_swap_test(void){
   return result;
 }
 
+int nonzero_compare_test(void){
+  int result = 0;
+  struct ledger_bignum* ptr, * other_ptr;
+  ptr = ledger_bignum_new();
+  if (ptr == NULL) return 0;
+  other_ptr = ledger_bignum_new();
+  if (other_ptr == NULL){
+    ledger_bignum_free(ptr);
+    return 0;
+  }
+  do {
+    if (!ledger_bignum_alloc(ptr,4,2)) break;
+    if (!ledger_bignum_alloc(other_ptr,5,1)) break;
+    if (ledger_bignum_compare(ptr,other_ptr) != 0) break;
+    if (ledger_bignum_compare(other_ptr, ptr) != 0) break;
+    if (!ledger_bignum_set_text(
+      ptr,(unsigned char const*)"48.01",NULL)) break;
+    if (!ledger_bignum_set_long(other_ptr,48)) break;
+    if (ledger_bignum_compare(other_ptr, ptr) >= 0) break;
+    if (ledger_bignum_compare(ptr, other_ptr) <= 0) break;
+    if (!ledger_bignum_set_text(
+      ptr,(unsigned char const*)"46",NULL)) break;
+    if (ledger_bignum_compare(ptr, other_ptr) >= 0) break;
+    if (ledger_bignum_compare(other_ptr, ptr) <= 0) break;
+    if (!ledger_bignum_set_text(
+      ptr,(unsigned char const*)"48",NULL)) break;
+    if (ledger_bignum_compare(ptr, other_ptr) != 0) break;
+    if (ledger_bignum_compare(other_ptr, ptr) != 0) break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(other_ptr);
+  ledger_bignum_free(ptr);
+  return result;
+}
 
 int main(int argc, char **argv){
   int pass_count = 0;

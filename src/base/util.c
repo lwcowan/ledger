@@ -66,5 +66,13 @@ int ledger_util_ustrcmp(unsigned char const* a, unsigned char const* b){
   else return +1;
 }
 
+int ledger_util_uiszero(unsigned char const* a, size_t siz){
+  size_t i;
+  for (i = 0; i < siz; ++i){
+    if (a[i] != 0) return 0;
+  }
+  return 1;
+}
+
 /* END   implementation */
 

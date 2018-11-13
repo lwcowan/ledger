@@ -71,6 +71,14 @@ static int ledger_bignum_extend
  */
 static int ledger_bignum_alloc_unchecked
   (struct ledger_bignum* n, int digits, int point_place);
+/*
+ * Fetch a centesimal digit from a big number.
+ * - n number to read
+ * - i digit place
+ * @return the digit, or zero if `i` is out of range
+ */
+static int ledger_bignum_fetch_zero
+  (struct ledger_bignum const* n, int i);
 
 
 /* BEGIN static implementation */
@@ -151,6 +159,11 @@ int ledger_bignum_alloc_unchecked
   }
 }
 
+int ledger_bignum_fetch_zero(struct ledger_bignum const* n, int i){
+  if (i < 0 || i >= n->digit_count) return 0;
+  else return n->digits[i];
+}
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -177,6 +190,59 @@ void ledger_bignum_free(struct ledger_bignum* n){
 int ledger_bignum_compare
   (struct ledger_bignum const* a, struct ledger_bignum const* b)
 {
+  int a_start, a_end;
+  int b_start, b_end;
+  int sign;
+  /* ensure that signed zeroes compare equal */{
+    if (ledger_util_uiszero(a->digits,a->digit_count)
+    &&  ledger_util_uiszero(b->digits,b->digit_count))
+      return 0;
+  }
+  /* optimize for sign differences */
+  if (a->negative && (!b->negative)){
+    return -1;
+  } else if (a->negative && (!b->negative)){
+    return +1;
+  } else {
+    /* same sign */
+    sign = a->negative?-1:+1;
+  }
+
+  /* align starts */{
+    if (a->point_place < b->point_place){
+      /* `a` has less digits */
+      a_start = (a->point_place - b->point_place);
+      b_start = 0;
+    } else {
+      /* `b` has less digits */
+      a_start = 0;
+      b_start = (b->point_place - a->point_place);
+    }
+  }
+  /* align ends */{
+    int const a_integral = a->digit_count - a->point_place;
+    int const b_integral = b->digit_count - b->point_place;
+    if (a_integral < b_integral){
+      /* `a` has less integer digits */
+      a_end = a->digit_count + (b_integral - a_integral);
+      b_end = b->digit_count;
+    } else {
+      /* `b` has less integer digits */
+      a_end = a->digit_count;
+      b_end = b->digit_count + (a_integral - b_integral);
+    }
+  }
+  /* compare from end */{
+    int a_i, b_i;
+    for (a_i = a_end-1, b_i = b_end-1; a_i >= a_start && b_i >= b_start;
+          --a_i, --b_i)
+    {
+      int const a_char = ledger_bignum_fetch_zero(a,a_i);
+      int const b_char = ledger_bignum_fetch_zero(b,b_i);
+      if (a_char < b_char) return -1*sign;
+      else if (a_char > b_char) return +1*sign;
+    }
+  }
   return 0;
 }
 
