@@ -3,9 +3,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 
 static int allocate_test(void);
 static int trivial_compare_test(void);
+static int set_long_test(void);
+static int set_limit_long_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -13,7 +16,9 @@ struct test_struct {
 };
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
-  { trivial_compare_test, "trivial compare" }
+  { trivial_compare_test, "trivial compare" },
+  { set_long_test, "set long" },
+  { set_limit_long_test, "set limit long" }
 };
 
 int allocate_test(void){
@@ -40,6 +45,44 @@ int trivial_compare_test(void){
     result = 1;
   } while (0);
   ledger_bignum_free(other_ptr);
+  ledger_bignum_free(ptr);
+  return result;
+}
+int set_long_test(void){
+  int result = 0;
+  struct ledger_bignum* ptr;
+  ptr = ledger_bignum_new();
+  if (ptr == NULL) return 0;
+  do {
+    if (!ledger_bignum_set_long(ptr,378)) break;
+    if (ledger_bignum_get_long(ptr) != 378) break;
+    if (!ledger_bignum_set_long(ptr,-96058l)) break;
+    if (ledger_bignum_get_long(ptr) != -96058l) break;
+    if (!ledger_bignum_set_long(ptr,392050493l)) break;
+    if (ledger_bignum_get_long(ptr) != 392050493l) break;
+    if (!ledger_bignum_set_long(ptr,-2092050493l)) break;
+    if (ledger_bignum_get_long(ptr) != -2092050493l) break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(ptr);
+  return result;
+}
+int set_limit_long_test(void){
+  int result = 0;
+  struct ledger_bignum* ptr;
+  ptr = ledger_bignum_new();
+  if (ptr == NULL) return 0;
+  do {
+    if (!ledger_bignum_set_long(ptr,LONG_MIN)) break;
+    if (ledger_bignum_get_long(ptr) != LONG_MIN) break;
+    if (!ledger_bignum_set_long(ptr,LONG_MIN+1)) break;
+    if (ledger_bignum_get_long(ptr) != LONG_MIN+1) break;
+    if (!ledger_bignum_set_long(ptr,LONG_MAX)) break;
+    if (ledger_bignum_get_long(ptr) != LONG_MAX) break;
+    if (!ledger_bignum_set_long(ptr,LONG_MAX-1)) break;
+    if (ledger_bignum_get_long(ptr) != LONG_MAX-1) break;
+    result = 1;
+  } while (0);
   ledger_bignum_free(ptr);
   return result;
 }
