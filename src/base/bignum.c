@@ -34,21 +34,25 @@ struct ledger_bignum {
  * @return one on success, zero on failure
  */
 static int ledger_bignum_init(struct ledger_bignum* n);
+
 /*
  * Clear out a number.
  * - n number to clear
  */
 static void ledger_bignum_clear(struct ledger_bignum* n);
+
 /*
  * Zero out a number.
  * - n number to zero
  */
 static void ledger_bignum_zero_all(struct ledger_bignum* n);
+
 /*
  * Zero out the fractional part of a number.
  * - n number to zero
  */
 static void ledger_bignum_zero_cents(struct ledger_bignum* n);
+
 /*
  * Allocate and partition only more space for a big number.
  * This function resets the number to zero.
@@ -60,6 +64,7 @@ static void ledger_bignum_zero_cents(struct ledger_bignum* n);
  */
 static int ledger_bignum_extend
   (struct ledger_bignum* n, int digits, int point_place);
+
 /*
  * Allocate and partition space for a big number without
  * checking arguments. This function resets the number to zero.
@@ -71,14 +76,14 @@ static int ledger_bignum_extend
  */
 static int ledger_bignum_alloc_unchecked
   (struct ledger_bignum* n, int digits, int point_place);
+
 /*
  * Fetch a centesimal digit from a big number.
  * - n number to read
  * - i digit place
  * @return the digit, or zero if `i` is out of range
  */
-static int ledger_bignum_fetch_zero
-  (struct ledger_bignum const* n, int i);
+static int ledger_bignum_fetch_zero(struct ledger_bignum const* n, int i);
 
 
 /* BEGIN static implementation */

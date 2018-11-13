@@ -18,11 +18,13 @@ extern "C" {
  * @return the heap-allocated block, otherwise NULL
  */
 void* ledger_util_malloc(size_t siz);
+
 /*
  * Free a block of memory.
  * - ptr pointer to block of memory to free
  */
 void ledger_util_free(void* ptr);
+
 /*
  * Duplicate a UTF-8 string.
  * - str string to duplicate
@@ -30,12 +32,14 @@ void ledger_util_free(void* ptr);
  * @return the cloned string on success, otherwise NULL
  */
 unsigned char* ledger_util_ustrdup(unsigned char const* str, int* ok);
+
 /*
  * Compute the length of a UTF-8 string.
  * - str string to test
  * @return the length of the string
  */
 size_t ledger_util_ustrlen(unsigned char const* str);
+
 /*
  * Compare two strings.
  * - a first string to compare
@@ -44,6 +48,7 @@ size_t ledger_util_ustrlen(unsigned char const* str);
  *   positive if `a` is greater than `b`
  */
 int ledger_util_ustrcmp(unsigned char const* a, unsigned char const* b);
+
 /*
  * Compare a string of bytes to zero.
  * - a string to compare

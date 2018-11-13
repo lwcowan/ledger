@@ -36,6 +36,7 @@ struct ledger_book {
  * @return one on success, zero on failure
  */
 static int ledger_book_init(struct ledger_book* book);
+
 /*
  * Clear out a book.
  * - book book to clear

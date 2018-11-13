@@ -17,6 +17,7 @@ struct ledger_ledger {
  * @return one on success, zero on failure
  */
 static int ledger_ledger_init(struct ledger_ledger* l);
+
 /*
  * Clear out a ledger.
  * - l ledger to clear

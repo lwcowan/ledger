@@ -7,7 +7,7 @@
 #define __Ledger_base_bigNum_H__
 
 /*
- * Big number, with movable decimal point
+ * Big number, with movable centesimal point
  */
 struct ledger_bignum;
 
@@ -17,11 +17,13 @@ struct ledger_bignum;
  * @return the number on success, otherwise NULL
  */
 struct ledger_bignum* ledger_bignum_new(void);
+
 /*
  * Destroy a big number.
  * - n the number to destroy
  */
 void ledger_bignum_free(struct ledger_bignum* n);
+
 /*
  * Compare two big numbers.
  * - a one big number
@@ -31,6 +33,7 @@ void ledger_bignum_free(struct ledger_bignum* n);
  */
 int ledger_bignum_compare
   (struct ledger_bignum const* a, struct ledger_bignum const* b);
+
 /*
  * Assign a long integer value to a big number.
  * - n the number to modify
@@ -38,12 +41,14 @@ int ledger_bignum_compare
  * @return one on success, zero otherwise
  */
 int ledger_bignum_set_long(struct ledger_bignum* n, long int v);
+
 /*
  * Retrieve a long integer from a big number.
  * - n the number to read
  * @return a long integer value, or LONG_MAX or LONG_MIN on overflow
  */
 long int ledger_bignum_get_long(struct ledger_bignum const* n);
+
 /*
  * Allocate and partition space for a big number.
  * This function resets the number to zero.
@@ -55,18 +60,21 @@ long int ledger_bignum_get_long(struct ledger_bignum const* n);
  */
 int ledger_bignum_alloc
   (struct ledger_bignum* n, int digits, int point_place);
+
 /*
  * Query the total number of base-100 digits used by this number.
  * - n the number to query
  * @return a count of integer and fractional digits
  */
 int ledger_bignum_count_digits(struct ledger_bignum const* n);
+
 /*
  * Query the position of the centesimal point.
  * - n the number to query
  * @return the base-100 position of the centesimal point
  */
 int ledger_bignum_find_point(struct ledger_bignum const* n);
+
 /*
  * Assign a long integer value to a big number.
  * - n the number to modify
@@ -77,6 +85,7 @@ int ledger_bignum_find_point(struct ledger_bignum const* n);
 int ledger_bignum_set_text
   ( struct ledger_bignum* n, unsigned char const* text,
     unsigned char** endptr);
+
 /*
  * Retrieve a long integer from a big number.
  * - n the number to read
@@ -87,6 +96,7 @@ int ledger_bignum_set_text
  */
 int ledger_bignum_get_text
   (struct ledger_bignum const* n, unsigned char* buf, int len, int want_plus);
+
 /*
  * Swap two big numbers.
  * - n a number

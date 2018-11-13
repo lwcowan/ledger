@@ -23,11 +23,13 @@ struct ledger_book;
  * @return the book on success, otherwise NULL
  */
 struct ledger_book* ledger_book_new(void);
+
 /*
  * Destroy a book.
  * - book the book to destroy
  */
 void ledger_book_free(struct ledger_book* book);
+
 /*
  * Query the description of a book.
  * - book book to query
@@ -35,6 +37,7 @@ void ledger_book_free(struct ledger_book* book);
  */
 unsigned char const* ledger_book_get_description
   (struct ledger_book const* book);
+
 /*
  * Modify the description of a book.
  * - book book to query
@@ -43,6 +46,7 @@ unsigned char const* ledger_book_get_description
  */
 int ledger_book_set_description
   (struct ledger_book* book, unsigned char const* desc);
+
 /*
  * Query the notes in a book.
  * - book book to query
@@ -50,6 +54,7 @@ int ledger_book_set_description
  */
 unsigned char const* ledger_book_get_notes
   (struct ledger_book const* book);
+
 /*
  * Modify the notes of a book.
  * - book book to query
@@ -58,6 +63,7 @@ unsigned char const* ledger_book_get_notes
  */
 int ledger_book_set_notes
   (struct ledger_book* book, unsigned char const* notes);
+
 /*
  * Compare two books for equality.
  * - a a book
@@ -66,18 +72,21 @@ int ledger_book_set_notes
  */
 int ledger_book_is_equal
   (struct ledger_book const* a, struct ledger_book const* b);
+
 /*
  * Query the sequence identifier of a book.
  * - b book to query
  * @return the next identifier
  */
 int ledger_book_get_sequence(struct ledger_book const* b);
+
 /*
  * Modify the sequence identifier of a book.
  * - b book to query
  * - item_id new identifier (non-negative)
  */
 int ledger_book_set_sequence(struct ledger_book* b, int item_id);
+
 /*
  * Allocate a sequence identifier from a book.
  * - b book to use
@@ -85,12 +94,14 @@ int ledger_book_set_sequence(struct ledger_book* b, int item_id);
  *   or -1 if out of identifiers
  */
 int ledger_book_alloc_id(struct ledger_book* b);
+
 /*
  * Get a ledger count.
  * - b book to query
  * @return the number of ledgers in this book
  */
 int ledger_book_get_ledger_count(struct ledger_book const* b);
+
 /*
  * Set a ledger count.
  * - b book to configure
@@ -98,6 +109,7 @@ int ledger_book_get_ledger_count(struct ledger_book const* b);
  * @return one on success, zero otherwise
  */
 int ledger_book_set_ledger_count(struct ledger_book* b, int n);
+
 /*
  * Get a ledger.
  * - b book to adjust
@@ -105,6 +117,7 @@ int ledger_book_set_ledger_count(struct ledger_book* b, int n);
  * @return the ledger at that array index
  */
 struct ledger_ledger* ledger_book_get_ledger(struct ledger_book* b, int i);
+
 /*
  * Get a ledger.
  * - b book to read
