@@ -5,6 +5,16 @@
 #include <string.h>
 
 /*
+ * sanity check on digit count
+ */
+#ifndef LEDGER_BIGNUM_DIGIT_MAX
+#  define LEDGER_BIGNUM_DIGIT_MAX 100
+#endif /*LEDGER_BIGNUM_DIGIT_MAX*/
+#if LEDGER_BIGNUM_DIGIT_MAX > (INT_MAX/2-4)
+#  error "LEDGER_BIGNUM_DIGIT_MAX too large"
+#endif /*LEDGER_BIGNUM_DIGIT_MAX*/
+
+/*
  * Actualization of the big number structure
  */
 struct ledger_bignum {
@@ -166,6 +176,8 @@ int ledger_bignum_alloc
   (struct ledger_bignum* n, int digits, int point_place)
 {
   /* sanitize the input */{
+    if (digits > LEDGER_BIGNUM_DIGIT_MAX)
+      return 0;
     if (digits < 0 || point_place < 0)
       return 0;
     else if (point_place > digits)
