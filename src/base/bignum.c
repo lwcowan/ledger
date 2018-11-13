@@ -6,12 +6,14 @@
  * Actualization of the big number structure
  */
 struct ledger_bignum {
-  /* base-10 digits, stored in little-endian order */
+  /* base-100 digits, stored in little-endian order */
   unsigned char *digits;
-  /* number of digits, equal to twice the number of bytes */
+  /* number of digits, equal to the number of bytes */
   int digit_count;
-  /* position of the decimal point, in digits */
+  /* position of the centesimal point, in digits */
   int point_place;
+  /* one if the number is negative, zero otherwise */
+  char negative;
 };
 
 /*
@@ -27,13 +29,13 @@ static int ledger_bignum_init(struct ledger_bignum* n);
 static void ledger_bignum_clear(struct ledger_bignum* n);
 
 
-
 /* BEGIN static implementation */
 
 int ledger_bignum_init(struct ledger_bignum* n){
   n->digits = NULL;
   n->digit_count = 0;
   n->point_place = 0;
+  n->negative = 0;
   return 1;
 }
 
@@ -42,6 +44,7 @@ void ledger_bignum_clear(struct ledger_bignum* n){
   n->digits = NULL;
   n->digit_count = 0;
   n->point_place = 0;
+  n->negative = 0;
   return;
 }
 
