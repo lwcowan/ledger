@@ -120,6 +120,7 @@ int ledger_io_manifest_prepare
     }
     ledger_io_manifest_set_top_flags(manifest, flags);
   }
+  ledger_io_manifest_set_type(manifest, LEDGER_IO_MANIFEST_BOOK);
   return 1;
 }
 
@@ -129,25 +130,28 @@ struct cJSON* ledger_io_manifest_print
   struct cJSON* out = cJSON_CreateObject();
   if (out != NULL){
     int result = 0;
-    do {
-      /* create top-level object */{
-        struct cJSON* top_level = cJSON_AddObjectToObject(out,"top");
-        if (top_level == NULL) break;
-        /* add description */if (manifest->flags & LEDGER_IO_MANIFEST_DESC){
-          struct cJSON* item = cJSON_AddBoolToObject(top_level,"desc",
-              (manifest->flags & LEDGER_IO_MANIFEST_DESC)?1:0
-            );
-          if (item == NULL) break;
+    switch (manifest->type_code){
+    case LEDGER_IO_MANIFEST_BOOK:
+      {
+        /* create top-level object */{
+          struct cJSON* top_level = cJSON_AddObjectToObject(out,"top");
+          if (top_level == NULL) break;
+          /* add description */if (manifest->flags & LEDGER_IO_MANIFEST_DESC){
+            struct cJSON* item = cJSON_AddBoolToObject(top_level,"desc",
+                (manifest->flags & LEDGER_IO_MANIFEST_DESC)?1:0
+              );
+            if (item == NULL) break;
+          }
+          /* add notes */if (manifest->flags & LEDGER_IO_MANIFEST_NOTES){
+            struct cJSON* item = cJSON_AddBoolToObject(top_level,"notes",
+                (manifest->flags & LEDGER_IO_MANIFEST_NOTES)?1:0
+              );
+            if (item == NULL) break;
+          }
         }
-        /* add notes */if (manifest->flags & LEDGER_IO_MANIFEST_NOTES){
-          struct cJSON* item = cJSON_AddBoolToObject(top_level,"notes",
-              (manifest->flags & LEDGER_IO_MANIFEST_NOTES)?1:0
-            );
-          if (item == NULL) break;
-        }
-      }
-      result = 1;
-    } while (0);
+        result = 1;
+      }break;
+    }
     if (result == 0){
       cJSON_Delete(out);
       out = NULL;
