@@ -67,6 +67,15 @@ int ledger_bignum_count_digits(struct ledger_bignum const* n);
  * @return the base-100 position of the centesimal point
  */
 int ledger_bignum_find_point(struct ledger_bignum const* n);
-
+/*
+ * Retrieve a long integer from a big number.
+ * - n the number to read
+ * - buf buffer to receive the NUL-terminated string
+ * - len length of buffer in bytes
+ * - want_plus whether to force a plus sign to output
+ * @return the buffer size needed to hold the number
+ */
+int ledger_bignum_get_text
+  (struct ledger_bignum const* n, unsigned char* buf, int len, int want_plus);
 
 #endif /*__Ledger_base_bigNum_H__*/

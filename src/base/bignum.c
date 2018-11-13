@@ -215,4 +215,94 @@ int ledger_bignum_find_point(struct ledger_bignum const* n){
   return n->point_place;
 }
 
+int ledger_bignum_get_text
+  (struct ledger_bignum const* n, unsigned char* buf, int len, int want_plus)
+{
+  int byte_count;
+  int real_execution_start;
+  /* compute number of bytes needed to represent the number */{
+    if (n->digit_count > 0){
+      int i;
+      byte_count = n->digit_count*2;
+      for (i = n->digit_count; i > n->point_place; --i){
+        if (n->digits[i-1] > 0)
+          break;
+        else byte_count -= 2;
+      }
+      if (i > n->point_place){
+        if (n->digits[i-1] < 10){
+          /* drop front zero */
+          byte_count -= 1;
+        }
+      } else {
+        /* add front zero */
+        byte_count += 1;
+      }
+      real_execution_start = i;
+    } else {
+      byte_count = 0;
+    }
+    if (n->negative || want_plus){
+      /* add minus sign */
+      byte_count += 1;
+    }
+    if (n->point_place > 0){
+      /* add decimal point */
+      byte_count += 1;
+    }
+  }
+  /* construct the string */if (buf != NULL && len > 0){
+    int i, write_point = 0;
+    if (n->negative){
+      if (write_point < len) buf[write_point++] = '-';
+    } else if (want_plus){
+      if (write_point < len) buf[write_point++] = '+';
+    }
+    /* put the integral portion */{
+      if (real_execution_start == n->point_place){
+        /* plop a zero down */
+        if (write_point < len) buf[write_point++] = '0';
+        i = real_execution_start;
+      } else {
+        /* first digit */
+        if (n->digits[real_execution_start-1] >= 10){
+          /* put two digits */
+          if (write_point < len)
+            buf[write_point++] = '0'+(n->digits[real_execution_start-1]/10);
+          if (write_point < len)
+            buf[write_point++] = '0'+(n->digits[real_execution_start-1]%10);
+        } else {
+          /* put one digit */
+          if (write_point < len)
+            buf[write_point++] = '0'+(n->digits[real_execution_start-1]);
+        }
+        i = real_execution_start-1;
+        for (; i > n->point_place; --i){
+          /* put two digits */
+          if (write_point < len)
+            buf[write_point++] = '0'+(n->digits[i-1]/10);
+          if (write_point < len)
+            buf[write_point++] = '0'+(n->digits[i-1]%10);
+        }
+      }
+    }
+    /* put the fractional portion */if (n->point_place > 0){
+      if (write_point < len) buf[write_point++] = '.';
+      i -= 1;
+      for (; i >= 0; --i){
+        /* put two digits */
+        if (write_point < len)
+          buf[write_point++] = '0'+(n->digits[i]/10);
+        if (write_point < len)
+          buf[write_point++] = '0'+(n->digits[i]%10);
+      }
+    }
+    /* NUL-terminate the string */{
+      if (write_point < len) buf[write_point] = 0;
+      else buf[len-1] = 0;
+    }
+  }
+  return byte_count;
+}
+
 /* END   implementation */
