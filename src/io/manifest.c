@@ -2,6 +2,7 @@
 #include "manifest.h"
 #include "../base/util.h"
 #include "../base/book.h"
+#include "../base/ledger.h"
 #include "../../deps/cJSON/cJSON.h"
 #include <string.h>
 #include <limits.h>
@@ -124,6 +125,26 @@ int ledger_io_manifest_prepare
   return 1;
 }
 
+int ledger_io_manifest_prepare_ledger
+  (struct ledger_io_manifest* manifest, struct ledger_ledger const* ledger)
+{
+  ledger_io_manifest_clear(manifest);
+  /* check ledger marks */{
+    int flags = 0;
+    if (ledger_ledger_get_description(ledger) != NULL){
+      flags |= LEDGER_IO_MANIFEST_DESC;
+    }
+    if (ledger_ledger_get_name(ledger) != NULL){
+      flags |= LEDGER_IO_MANIFEST_NAME;
+    }
+    ledger_io_manifest_set_top_flags(manifest, flags);
+    ledger_io_manifest_set_id(manifest,
+            ledger_ledger_get_id(ledger) );
+  }
+  ledger_io_manifest_set_type(manifest, LEDGER_IO_MANIFEST_LEDGER);
+  return 1;
+}
+
 struct cJSON* ledger_io_manifest_print
   (struct ledger_io_manifest const* manifest)
 {
@@ -145,6 +166,26 @@ struct cJSON* ledger_io_manifest_print
           /* add notes */if (manifest->flags & LEDGER_IO_MANIFEST_NOTES){
             struct cJSON* item = cJSON_AddBoolToObject(top_level,"notes",
                 (manifest->flags & LEDGER_IO_MANIFEST_NOTES)?1:0
+              );
+            if (item == NULL) break;
+          }
+        }
+        result = 1;
+      }break;
+    case LEDGER_IO_MANIFEST_LEDGER:
+      {
+        /* create ledger object */{
+          struct cJSON* ledger_level = cJSON_AddObjectToObject(out,"ledger");
+          if (ledger_level == NULL) break;
+          /* add description */if (manifest->flags & LEDGER_IO_MANIFEST_DESC){
+            struct cJSON* item = cJSON_AddBoolToObject(ledger_level,"desc",
+                (manifest->flags & LEDGER_IO_MANIFEST_DESC)?1:0
+              );
+            if (item == NULL) break;
+          }
+          /* add notes */if (manifest->flags & LEDGER_IO_MANIFEST_NAME){
+            struct cJSON* item = cJSON_AddBoolToObject(ledger_level,"name",
+                (manifest->flags & LEDGER_IO_MANIFEST_NAME)?1:0
               );
             if (item == NULL) break;
           }
@@ -184,6 +225,28 @@ int ledger_io_manifest_parse
                 /* notes flag */
                 if (cJSON_IsTrue(top_item))
                   manifest->flags |= LEDGER_IO_MANIFEST_NOTES;
+              }
+            }
+          }
+        }
+        result = 1;
+      }break;
+    case LEDGER_IO_MANIFEST_LEDGER:
+      {
+        /* process ledger-level object */{
+          struct cJSON* ledger_level =
+            cJSON_GetObjectItemCaseSensitive(json, "ledger");
+          if (ledger_level != NULL){
+            struct cJSON* ledger_item;
+            cJSON_ArrayForEach(ledger_item, ledger_level){
+              if (strcmp(ledger_item->string, "desc") == 0){
+                /* description flag */
+                if (cJSON_IsTrue(ledger_item))
+                  manifest->flags |= LEDGER_IO_MANIFEST_DESC;
+              } else if (strcmp(ledger_item->string, "name") == 0){
+                /* notes flag */
+                if (cJSON_IsTrue(ledger_item))
+                  manifest->flags |= LEDGER_IO_MANIFEST_NAME;
               }
             }
           }

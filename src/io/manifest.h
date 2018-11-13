@@ -12,13 +12,15 @@ extern "C" {
 
 struct ledger_book;
 struct cJSON;
+struct ledger_ledger;
 
 /*
  * brief: Ancillary information flags
  */
 enum ledger_io_manifest_flag {
   LEDGER_IO_MANIFEST_DESC = 1,
-  LEDGER_IO_MANIFEST_NOTES = 2
+  LEDGER_IO_MANIFEST_NOTES = 2,
+  LEDGER_IO_MANIFEST_NAME = 4
 };
 /*
  * brief: Manifest type codes
@@ -86,6 +88,14 @@ void ledger_io_manifest_set_id(struct ledger_io_manifest* m, int item_id);
  */
 int ledger_io_manifest_prepare
   (struct ledger_io_manifest* manifest, struct ledger_book const* book);
+/*
+ * Prepare a manifest of a ledger.
+ * - manifest manifest to adjust
+ * - ledger ledger to read
+ * @return one on success, zero otherwise
+ */
+int ledger_io_manifest_prepare_ledger
+  (struct ledger_io_manifest* manifest, struct ledger_ledger const* ledger);
 /*
  * Convert a manifest to a JSON object.
  * - manifest the manifest to convert
