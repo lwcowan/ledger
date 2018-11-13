@@ -34,6 +34,15 @@ static int ledger_io_manifest_init(struct ledger_io_manifest* manifest);
  * - manifest manifest to clear
  */
 static void ledger_io_manifest_clear(struct ledger_io_manifest* manifest);
+/*
+ * Check parent-child manifest relationships.
+ * - parent parent manifest
+ * - child child manifest
+ * @return one if the relationship provided is valid, zero otherwise
+ */
+static int ledger_io_manifest_check_edge
+  ( struct ledger_io_manifest const* parent,
+    struct ledger_io_manifest const* child);
 
 
 /* BEGIN static implementation */
@@ -55,6 +64,17 @@ void ledger_io_manifest_clear(struct ledger_io_manifest* manifest){
   /* use a simple recursive clearing algorithm */
   ledger_io_manifest_set_count(manifest,0);
   return;
+}
+
+int ledger_io_manifest_check_edge
+  ( struct ledger_io_manifest const* parent,
+    struct ledger_io_manifest const* child)
+{
+  if (parent == NULL || child == NULL) return 0;
+  else if (parent->type_code == LEDGER_IO_MANIFEST_BOOK
+  &&  child->type_code == LEDGER_IO_MANIFEST_LEDGER)
+    return 1;
+  else return 0;
 }
 
 /* END   static implementation */
@@ -121,6 +141,25 @@ int ledger_io_manifest_prepare
     }
     ledger_io_manifest_set_top_flags(manifest, flags);
   }
+  /* check book internals */{
+    int ok;
+    int i;
+    int const ledger_count = ledger_book_get_ledger_count(book);
+    if (ledger_count > INT_MAX){
+      return 0;
+    }
+    ok = ledger_io_manifest_set_count(manifest, ledger_count);
+    if (!ok) return 0;
+    for (i = 0; i < ledger_count; ++i){
+      struct ledger_io_manifest* sub_fest =
+        ledger_io_manifest_get(manifest, i);
+      struct ledger_ledger const* ledger =
+        ledger_book_get_ledger_c(book, i);
+      ok = ledger_io_manifest_prepare_ledger(sub_fest, ledger);
+      if (!ok) break;
+    }
+    if (i < ledger_count) return 0;
+  }
   ledger_io_manifest_set_type(manifest, LEDGER_IO_MANIFEST_BOOK);
   return 1;
 }
@@ -168,6 +207,26 @@ struct cJSON* ledger_io_manifest_print
                 (manifest->flags & LEDGER_IO_MANIFEST_NOTES)?1:0
               );
             if (item == NULL) break;
+          }
+        }
+        /* create subsidiary objects */{
+          int const count = ledger_io_manifest_get_count(manifest);
+          if (count > 0){
+            int i;
+            struct cJSON* chapter_array =
+              cJSON_AddArrayToObject(out,"chapters");
+            if (chapter_array == NULL) break;
+            for (i = 0; i < count; ++i){
+              struct ledger_io_manifest const* sub_fest =
+                ledger_io_manifest_get_c(manifest, i);
+              struct cJSON* chapter;
+              if (!ledger_io_manifest_check_edge(manifest, sub_fest))
+                break;
+              chapter = ledger_io_manifest_print(sub_fest);
+              if (chapter == NULL) break;
+              cJSON_AddItemToArray(chapter_array, chapter);
+            }
+            if (i < count) break;
           }
         }
         result = 1;
@@ -227,6 +286,35 @@ int ledger_io_manifest_parse
                   manifest->flags |= LEDGER_IO_MANIFEST_NOTES;
               }
             }
+          }
+        }
+        /* process chapters array */{
+          struct cJSON* chapters_array =
+            cJSON_GetObjectItemCaseSensitive(json, "chapters");
+          if (chapters_array != NULL){
+            struct cJSON* chapter_item;
+            int ok = 1;
+            int const array_size = cJSON_GetArraySize(chapters_array);
+            int active_size = 0;
+            if (!ledger_io_manifest_set_count(manifest, array_size))
+              break;
+            cJSON_ArrayForEach(chapter_item, chapters_array){
+              if (!cJSON_IsObject(chapter_item)){
+                /* malformed JSON */
+                ok = 0;
+                break;
+              }
+              if (cJSON_HasObjectItem(chapter_item, "ledger") ){
+                /* this is a ledger */
+                struct ledger_io_manifest *next_manifest =
+                    ledger_io_manifest_get(manifest, active_size);
+                ok = ledger_io_manifest_parse
+                  (next_manifest, chapter_item, LEDGER_IO_MANIFEST_LEDGER);
+                if (!ok) break;
+                active_size += 1;
+              }
+            }
+            if (!ok) break;
           }
         }
         result = 1;
