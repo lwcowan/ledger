@@ -13,6 +13,7 @@ static int set_limit_long_test(void);
 static int internal_allocate_test(void);
 static int get_text_test(void);
 static int set_text_test(void);
+static int number_swap_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -25,7 +26,8 @@ struct test_struct test_array[] = {
   { set_long_test, "set long" },
   { set_limit_long_test, "set limit long" },
   { get_text_test, "get text" },
-  { set_text_test, "set text" }
+  { set_text_test, "set text" },
+  { number_swap_test, "number swap" }
 };
 
 int allocate_test(void){
@@ -187,6 +189,31 @@ int set_text_test(void){
     if (ledger_bignum_get_long(ptr) != +9515) break;
     result = 1;
   } while (0);
+  ledger_bignum_free(ptr);
+  return result;
+}
+
+int number_swap_test(void){
+  int result = 0;
+  struct ledger_bignum* ptr, * other_ptr;
+  ptr = ledger_bignum_new();
+  if (ptr == NULL) return 0;
+  other_ptr = ledger_bignum_new();
+  if (other_ptr == NULL){
+    ledger_bignum_free(ptr);
+    return 0;
+  }
+  do {
+    if (!ledger_bignum_set_long(ptr, -43)) break;
+    if (!ledger_bignum_set_long(other_ptr, +45)) break;
+    if (ledger_bignum_get_long(ptr) != -43) break;
+    if (ledger_bignum_get_long(other_ptr) != +45) break;
+    ledger_bignum_swap(ptr, other_ptr);
+    if (ledger_bignum_get_long(ptr) != +45) break;
+    if (ledger_bignum_get_long(other_ptr) != -43) break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(other_ptr);
   ledger_bignum_free(ptr);
   return result;
 }

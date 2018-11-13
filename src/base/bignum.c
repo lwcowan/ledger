@@ -502,4 +502,14 @@ int ledger_bignum_get_text
   return byte_count;
 }
 
+void ledger_bignum_swap(struct ledger_bignum* n, struct ledger_bignum* n2){
+  unsigned char *tmp_p;
+  int tmp_i;
+  tmp_p = n->digits; n->digits = n2->digits; n2->digits = tmp_p;
+  tmp_i = n->digit_count;n->digit_count=n2->digit_count;n2->digit_count=tmp_i;
+  tmp_i = n->point_place;n->point_place=n2->point_place;n2->point_place=tmp_i;
+  tmp_i = n->negative;n->negative=n2->negative;n2->negative=tmp_i;
+  return;
+}
+
 /* END   implementation */

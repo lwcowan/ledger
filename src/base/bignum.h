@@ -87,5 +87,11 @@ int ledger_bignum_set_text
  */
 int ledger_bignum_get_text
   (struct ledger_bignum const* n, unsigned char* buf, int len, int want_plus);
+/*
+ * Swap two big numbers.
+ * - n a number
+ * - n2 another number
+ */
+void ledger_bignum_swap(struct ledger_bignum* n, struct ledger_bignum* n2);
 
 #endif /*__Ledger_base_bigNum_H__*/
