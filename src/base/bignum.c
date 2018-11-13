@@ -39,6 +39,38 @@ static int ledger_bignum_init(struct ledger_bignum* n);
  * - n number to clear
  */
 static void ledger_bignum_clear(struct ledger_bignum* n);
+/*
+ * Zero out a number.
+ * - n number to zero
+ */
+static void ledger_bignum_zero_all(struct ledger_bignum* n);
+/*
+ * Zero out the fractional part of a number.
+ * - n number to zero
+ */
+static void ledger_bignum_zero_cents(struct ledger_bignum* n);
+/*
+ * Allocate and partition only more space for a big number.
+ * This function resets the number to zero.
+ * - n the number structure to configure
+ * - digits number of base-100 digits to allocate
+ * - point_place position of centesimal point; must be less
+ *     than or equal to `digits`
+ * @return one on success, zero otherwise
+ */
+static int ledger_bignum_extend
+  (struct ledger_bignum* n, int digits, int point_place);
+/*
+ * Allocate and partition space for a big number without
+ * checking arguments. This function resets the number to zero.
+ * - n the number structure to configure
+ * - digits number of base-100 digits to allocate
+ * - point_place position of centesimal point; must be less
+ *     than or equal to `digits`
+ * @return one on success, zero otherwise
+ */
+static int ledger_bignum_alloc_unchecked
+  (struct ledger_bignum* n, int digits, int point_place);
 
 
 /* BEGIN static implementation */
@@ -58,6 +90,65 @@ void ledger_bignum_clear(struct ledger_bignum* n){
   n->point_place = 0;
   n->negative = 0;
   return;
+}
+
+void ledger_bignum_zero_all(struct ledger_bignum* n){
+  memset(n->digits,0,n->digit_count*sizeof(unsigned char));
+}
+void ledger_bignum_zero_cents(struct ledger_bignum* n){
+  memset(n->digits,0,n->point_place*sizeof(unsigned char));
+}
+
+int ledger_bignum_extend
+  (struct ledger_bignum* n, int digits, int point_place)
+{
+  /* sanitize the input */{
+    if (digits > LEDGER_BIGNUM_DIGIT_MAX)
+      return 0;
+    else if (digits < 0 || point_place < 0)
+      return 0;
+    else if (point_place > digits)
+      return 0;
+  }
+  /* skip allocation */if (point_place <= n->point_place
+    &&  digits <= n->digit_count)
+  {
+    ledger_bignum_zero_all(n);
+    return 1;
+  }
+  /* extend the arguments */
+  if (point_place < n->point_place) point_place = n->point_place;
+  if (digits-point_place < n->digit_count-n->point_place){
+    digits = n->digit_count-n->point_place+point_place;
+  }
+  return ledger_bignum_alloc_unchecked(n,digits,point_place);
+}
+
+int ledger_bignum_alloc_unchecked
+  (struct ledger_bignum* n, int digits, int point_place)
+{
+  if (digits > 0){
+    /* allocate new digit space */
+    unsigned char* new_digits = (unsigned char*)ledger_util_malloc
+      (sizeof(unsigned char)*(digits));
+    if (new_digits == NULL){
+      return 0;
+    } else {
+      ledger_util_free(n->digits);
+      n->digits = new_digits;
+      n->digit_count = digits;
+      n->point_place = point_place;
+      ledger_bignum_zero_all(n);
+      return 1;
+    }
+  } else {
+    /* free up the digits */
+    ledger_util_free(n->digits);
+    n->digits = NULL;
+    n->digit_count = 0;
+    n->point_place = 0;
+    return 1;
+  }
 }
 
 /* END   static implementation */
@@ -115,16 +206,15 @@ int ledger_bignum_set_long(struct ledger_bignum* n, long int v){
       }
     }
     /* allocate if needed */{
-      if (n->digit_count - n->point_place < digit_count){
-        int const ok = ledger_bignum_alloc(n,digit_count,n->point_place);
-        if (!ok) return 0;
-      }
+      int const ok = ledger_bignum_extend
+        (n,digit_count+n->point_place,n->point_place);
+      if (!ok) return 0;
     }
     /* set the number value */{
       int pos;
       unsigned long int modal_nv = nv;
       /* clear the decimal portion */
-      memset(n->digits,0,n->point_place*sizeof(unsigned char));
+      ledger_bignum_zero_cents(n);
       /* place the rest of the digits */
       for (pos = n->point_place; pos < n->digit_count; ++pos){
         unsigned char next_digit = (unsigned char)(modal_nv%100u);
@@ -183,28 +273,7 @@ int ledger_bignum_alloc
     else if (point_place > digits)
       return 0;
   }
-  if (digits > 0){
-    /* allocate new digit space */
-    unsigned char* new_digits = (unsigned char*)ledger_util_malloc
-      (sizeof(unsigned char)*(digits));
-    if (new_digits == NULL){
-      return 0;
-    } else {
-      ledger_util_free(n->digits);
-      memset(new_digits,0,digits*sizeof(unsigned char));
-      n->digits = new_digits;
-      n->digit_count = digits;
-      n->point_place = point_place;
-      return 1;
-    }
-  } else {
-    /* free up the digits */
-    ledger_util_free(n->digits);
-    n->digits = NULL;
-    n->digit_count = 0;
-    n->point_place = 0;
-    return 1;
-  }
+  return ledger_bignum_alloc_unchecked(n,digits,point_place);
 }
 
 int ledger_bignum_count_digits(struct ledger_bignum const* n){
@@ -213,6 +282,134 @@ int ledger_bignum_count_digits(struct ledger_bignum const* n){
 
 int ledger_bignum_find_point(struct ledger_bignum const* n){
   return n->point_place;
+}
+
+int ledger_bignum_set_text
+  ( struct ledger_bignum* n, unsigned char const* text,
+    unsigned char** endptr)
+{
+  size_t str_extent, fraction_extent;
+  size_t str_count, fraction_count;
+  unsigned short complement_extent = 0;
+  unsigned short dot_extent = 0;
+  /* compute the length of the valid number */{
+    str_extent = 0;
+    /* recognize the minus sign */
+    if (text[str_extent] == '-' || text[str_extent] == '+'){
+      str_extent = 1;
+      complement_extent = 1;
+    }
+    /* recognize numeric digits */
+    while (text[str_extent] >= '0' && text[str_extent] <= '9'){
+      str_extent += 1;
+    }
+    if (str_extent == complement_extent){
+      /* no number here */
+      str_extent = 0;
+    } else if (text[str_extent] == '.'){
+      /* recognize decimal portion */
+      str_extent += 1;
+      fraction_extent = 0;
+      dot_extent = 1;
+      while (text[str_extent] >= '0' && text[str_extent] <= '9'){
+        str_extent += 1;
+        fraction_extent += 1;
+      }
+    } else fraction_extent = 0;
+  }
+  /* set end pointer */if (endptr != NULL){
+    *endptr = (unsigned char*)(text+str_extent);
+  }
+  /* adjust to even, while watching string length */{
+    str_count = str_extent-dot_extent-complement_extent;
+    fraction_count = fraction_extent;
+    if (str_count >= INT_MAX)
+      return 0;
+    if (fraction_count % 2 != 0){
+      fraction_count += 1;
+      str_count += 1;
+    }
+    if (str_count >= INT_MAX)
+      return 0;
+    if (str_count % 2 != 0){
+      str_count += 1;
+    }
+    if (str_count >= INT_MAX)
+      return 0;
+  }
+  if (str_extent > 0){
+    /* prepare space for the number */
+    int const digit_count = (int)(str_count/2);
+    int const point_place = (int)(fraction_count/2);
+    int const ok = ledger_bignum_extend(n,digit_count,point_place);
+    int real_execution_start;
+    if (!ok) return 0;
+    real_execution_start = n->point_place+(digit_count-point_place);
+    /* transfer number */{
+      int i, read_point = 0;
+      if (complement_extent){
+        switch (text[read_point]){
+          case '-':
+            n->negative = 1;
+            break;
+          case '+':
+            n->negative = 0;
+            break;
+        }
+        read_point += 1;
+      } else n->negative = 0;
+      /* put the integral portion */{
+        if (real_execution_start == n->point_place){
+          /* fetch a zero */;
+          i = real_execution_start;
+        } else {
+          /* first digit */{
+            unsigned char next_digit;
+            size_t const integral_length =
+              (str_extent-fraction_extent-dot_extent-complement_extent);
+            i = real_execution_start-1;
+            if (integral_length%2 == 0){
+              /* get two digits */
+              if (read_point < str_extent)
+                next_digit = (text[read_point++]-'0')*10;
+              if (read_point < str_extent)
+                next_digit += (text[read_point++]-'0');
+            } else {
+              /* get one digit */
+              if (read_point < str_extent)
+                next_digit = (text[read_point++]-'0');
+            }
+            n->digits[i] = next_digit;
+          }
+          for (; i > n->point_place; --i){
+            /* get two digits */
+            unsigned char next_digit = 0;
+            if (read_point < str_extent)
+              next_digit = (text[read_point++]-'0')*10;
+            if (read_point < str_extent)
+              next_digit += (text[read_point++]-'0');
+            n->digits[i-1] = next_digit;
+          }
+        }
+      }
+      /* put the fractional portion */if (text[read_point] == '.'){
+        read_point += 1;
+        i -= 1;
+        for (; i >= 0; --i){
+          /* get two digits */
+          unsigned char next_digit = 0;
+          if (read_point < str_extent)
+            next_digit = (text[read_point++]-'0')*10;
+          if (read_point < str_extent)
+            next_digit += (text[read_point++]-'0');
+          n->digits[i] = next_digit;
+        }
+      }
+    }/* end transfer number */
+  } else {
+    ledger_bignum_zero_all(n);
+  }
+  return 1;
 }
 
 int ledger_bignum_get_text

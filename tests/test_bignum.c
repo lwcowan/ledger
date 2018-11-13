@@ -12,6 +12,7 @@ static int set_long_test(void);
 static int set_limit_long_test(void);
 static int internal_allocate_test(void);
 static int get_text_test(void);
+static int set_text_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -23,7 +24,8 @@ struct test_struct test_array[] = {
   { internal_allocate_test, "internal allocate" },
   { set_long_test, "set long" },
   { set_limit_long_test, "set limit long" },
-  { get_text_test, "get text" }
+  { get_text_test, "get text" },
+  { set_text_test, "set text" }
 };
 
 int allocate_test(void){
@@ -140,6 +142,49 @@ int get_text_test(void){
     if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 14) break;
     if (ledger_util_ustrcmp(
         (unsigned char const*)"+9515.00000000",buffer) != 0) break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(ptr);
+  return result;
+}
+
+int set_text_test(void){
+  int result = 0;
+  struct ledger_bignum* ptr;
+  unsigned char buffer[24];
+  ptr = ledger_bignum_new();
+  if (ptr == NULL) return 0;
+  do {
+    if (!ledger_bignum_set_text(
+        ptr,(unsigned char const*)"-378",NULL)) break;
+    if (ledger_bignum_get_long(ptr) != -378) break;
+    if (!ledger_bignum_set_text(
+        ptr,(unsigned char const*)"-378.",NULL)) break;
+    if (ledger_bignum_get_long(ptr) != -378) break;
+    if (!ledger_bignum_set_text(
+        ptr,(unsigned char const*)"-00000378.0",NULL)) break;
+    if (ledger_bignum_get_long(ptr) != -378) break;
+    if (ledger_bignum_get_text(ptr,NULL,0,0) != 7) break;
+    if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),0) != 7) break;
+    if (ledger_util_ustrcmp(
+        (unsigned char const*)"-378.00",buffer) != 0) break;
+    if (!ledger_bignum_alloc(ptr,8,4)) break;
+    /* endptr check */{
+      unsigned char const* text9515 = (unsigned char const*)"9515";
+      unsigned char* text_ptr;
+      if (!ledger_bignum_set_text(
+          ptr,text9515,&text_ptr)) break;
+      if (text_ptr != text9515+4) break;
+    }
+    if (ledger_bignum_get_text(ptr,NULL,0,0) != 13) break;
+    if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),0) != 13) break;
+    if (ledger_util_ustrcmp(
+        (unsigned char const*)"9515.00000000",buffer) != 0) break;
+    if (ledger_bignum_get_text(ptr,NULL,0,1) != 14) break;
+    if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 14) break;
+    if (ledger_util_ustrcmp(
+        (unsigned char const*)"+9515.00000000",buffer) != 0) break;
+    if (ledger_bignum_get_long(ptr) != +9515) break;
     result = 1;
   } while (0);
   ledger_bignum_free(ptr);

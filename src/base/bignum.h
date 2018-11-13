@@ -68,6 +68,16 @@ int ledger_bignum_count_digits(struct ledger_bignum const* n);
  */
 int ledger_bignum_find_point(struct ledger_bignum const* n);
 /*
+ * Assign a long integer value to a big number.
+ * - n the number to modify
+ * - text string holding a numerical value (format: NNN.nnn)
+ * - endptr if available, the end-of-number is written here
+ * @return one on success, zero otherwise
+ */
+int ledger_bignum_set_text
+  ( struct ledger_bignum* n, unsigned char const* text,
+    unsigned char** endptr);
+/*
  * Retrieve a long integer from a big number.
  * - n the number to read
  * - buf buffer to receive the NUL-terminated string
