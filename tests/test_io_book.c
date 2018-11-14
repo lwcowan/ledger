@@ -1,5 +1,6 @@
 
 #include "../src/base/book.h"
+#include "../src/base/ledger.h"
 #include "../src/io/book.h"
 #include <stdio.h>
 #include <string.h>
@@ -7,6 +8,7 @@
 
 static int io_write_zero_test(char const* );
 static int io_write_nonzero_test(char const* );
+static int io_write_ledger_test(char const* );
 
 struct test_struct {
   int (*fn)(char const* );
@@ -14,7 +16,8 @@ struct test_struct {
 };
 struct test_struct test_array[] = {
   { io_write_zero_test, "i/o write zero" },
-  { io_write_nonzero_test, "i/o write nonzero" }
+  { io_write_nonzero_test, "i/o write nonzero" },
+  { io_write_ledger_test, "ledger writing" }
 };
 
 int io_write_zero_test(char const* fn){
@@ -55,6 +58,51 @@ int io_write_nonzero_test(char const* fn){
     ok = ledger_book_set_description(book, text);
     if (!ok) break;
     ok = ledger_book_set_notes(book, note);
+    if (!ok) break;
+    ok = ledger_io_book_write(fn,book);
+    if (!ok) break;
+    ok = ledger_io_book_read(fn,back_book);
+    if (!ok) break;
+    if (!ledger_book_is_equal(back_book,book)) break;
+    result = 1;
+  } while (0);
+  ledger_book_free(book);
+  ledger_book_free(back_book);
+  return result;
+}
+int io_write_ledger_test(char const* fn){
+  int result = 0;
+  struct ledger_book* book, * back_book;
+  back_book = ledger_book_new();
+  if (back_book == NULL) return 0;
+  book = ledger_book_new();
+  if (book == NULL){
+    ledger_book_free(back_book);
+    return 0;
+  } else do {
+    int ok;
+    unsigned char const *text = (unsigned char const*)"text note";
+    unsigned char const *note = (unsigned char const*)"note text";
+    ok = ledger_book_set_description(book, text);
+    if (!ok) break;
+    ok = ledger_book_set_notes(book, note);
+    if (!ok) break;
+    ok = ledger_book_set_sequence(book, 98);
+    if (!ok) break;
+    ok = ledger_book_set_ledger_count(book, 2);
+    if (!ok) break;
+    /* encounter the ledger */do {
+      int ledger_ok;
+      struct ledger_ledger* ledger;
+      ok = 0;
+      ledger = ledger_book_get_ledger(book,1);
+      if (ledger == NULL) break;
+      ledger_ok = ledger_ledger_set_name(ledger, "food");
+      if (!ledger_ok) break;
+      ledger_ok = ledger_ledger_set_description(ledger, text);
+      if (!ledger_ok) break;
+      ok = 1;
+    } while (0);
     if (!ok) break;
     ok = ledger_io_book_write(fn,book);
     if (!ok) break;

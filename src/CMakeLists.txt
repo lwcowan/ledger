@@ -16,6 +16,7 @@ set(ledger_io_SOURCES
   io/book.h            io/book.c
   io/manifest.h        io/manifest.c
   io/util.h            io/util.c
+  io/ledger.h          io/ledger.c
   )
 
 add_library(ledger_io ${ledger_io_SOURCES})

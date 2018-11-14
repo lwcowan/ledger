@@ -1,8 +1,10 @@
 
 #include "book.h"
 #include "util.h"
+#include "ledger.h"
 #include "../base/book.h"
 #include "../base/util.h"
+#include "../base/bignum.h"
 #include "../../deps/zip/src/zip.h"
 #include "../../deps/cJSON/cJSON.h"
 #include "manifest.h"
@@ -25,10 +27,15 @@ int ledger_io_book_read(char const* filename, struct ledger_book* book){
     return 0;
   } else {
     int result = 0;
+    struct ledger_bignum *tmp_num = NULL;
     struct ledger_io_manifest* manifest;
     do {
       manifest = ledger_io_manifest_new();
       if (manifest == NULL) break;
+      tmp_num = ledger_bignum_new();
+      if (tmp_num == NULL) break;
+      if (!ledger_bignum_alloc(tmp_num, (sizeof(int)*3+2)/2, 0))
+        break;
       /* read top-level content */{
         /* read the manifest */{
           int ok;
@@ -62,9 +69,48 @@ int ledger_io_book_read(char const* filename, struct ledger_book* book){
             ledger_util_free(notes);
           }
         }
+        /* read the chapters */{
+          int const count = ledger_io_manifest_get_count(manifest);
+          int i;
+          int ledger_i = 0;
+          int ledger_count = 0;
+          /* first pass: enumerate objects of each type */
+          for (i = 0; i < count; ++i){
+            struct ledger_io_manifest const* sub_fest =
+              ledger_io_manifest_get_c(manifest, i);
+            switch (ledger_io_manifest_get_type(sub_fest)){
+            case LEDGER_IO_MANIFEST_LEDGER:
+              ledger_count += 1;
+              break;
+            }
+          }
+          /* next allocate the objects needed */{
+            int const ok = ledger_book_set_ledger_count(book, ledger_count);
+            if (!ok) break;
+          }
+          /* second pass: process objects */
+          for (i = 0; i < count; ++i){
+            int ok = 0;
+            struct ledger_io_manifest const* sub_fest =
+              ledger_io_manifest_get_c(manifest, i);
+            switch (ledger_io_manifest_get_type(sub_fest)){
+            case LEDGER_IO_MANIFEST_LEDGER:
+              {
+                struct ledger_ledger* ledger =
+                  ledger_book_get_ledger(book, ledger_i);
+                ok = ledger_io_ledger_read_items
+                  (active_zip, sub_fest, ledger, tmp_num);
+                ledger_i += 1;
+              }break;
+            }
+            if (!ok) break;
+          }
+          if (i < count) break;
+        }
       }
       result = 1;
     } while (0);
+    ledger_bignum_free(tmp_num);
     ledger_io_manifest_free(manifest);
     zip_close(active_zip);
     return result;
@@ -78,10 +124,15 @@ int ledger_io_book_write
     return 0;
   } else {
     int result = 0;
+    struct ledger_bignum *tmp_num = NULL;
     struct ledger_io_manifest *manifest = NULL;
     do {
       manifest = ledger_io_manifest_new();
       if (manifest == NULL) break;
+      tmp_num = ledger_bignum_new();
+      if (tmp_num == NULL) break;
+      if (!ledger_bignum_alloc(tmp_num, (sizeof(int)*3+2)/2, 0))
+        break;
       /* write top-level content */{
         int ok;
         /* compose the manifest */{
@@ -109,8 +160,31 @@ int ledger_io_book_write
           }
         }
       }
+      /* write the chapters */{
+        int const count = ledger_io_manifest_get_count(manifest);
+        int i;
+        int ledger_i = 0;
+        for (i = 0; i < count; ++i){
+          int ok = 0;
+          struct ledger_io_manifest const* sub_fest =
+            ledger_io_manifest_get_c(manifest, i);
+          switch (ledger_io_manifest_get_type(sub_fest)){
+          case LEDGER_IO_MANIFEST_LEDGER:
+            {
+              struct ledger_ledger const* ledger =
+                ledger_book_get_ledger_c(book, ledger_i);
+              ok = ledger_io_ledger_write_items
+                (active_zip, sub_fest, ledger, tmp_num);
+              ledger_i += 1;
+            }break;
+          }
+          if (!ok) break;
+        }
+        if (i < count) break;
+      }
       result = 1;
     } while (0);
+    ledger_bignum_free(tmp_num);
     ledger_io_manifest_free(manifest);
     zip_close(active_zip);
     return result;
