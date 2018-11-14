@@ -6,6 +6,7 @@
 
 static int allocate_test(void);
 static int trivial_equal_test(void);
+static int trivial_mark_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -13,7 +14,8 @@ struct test_struct {
 };
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
-  { trivial_equal_test, "trivial_equal" }
+  { trivial_equal_test, "trivial_equal" },
+  { trivial_mark_test, "trivial_mark_test" }
 };
 
 int allocate_test(void){
@@ -38,6 +40,32 @@ int trivial_equal_test(void){
   ledger_table_free(ptr);
   return result;
 }
+
+int trivial_mark_test(void){
+  int result = 0;
+  struct ledger_table* ptr;
+  struct ledger_table_mark* mark, * back_mark;
+  ptr = ledger_table_new();
+  if (ptr == NULL) return 0;
+  else do {
+    mark = ledger_table_begin(ptr);
+    if (mark == NULL) break;
+    back_mark = ledger_table_begin_c(ptr);
+    if (back_mark == NULL) break;
+    if (!ledger_table_mark_is_equal(mark, back_mark)) break;
+    ledger_table_mark_free(back_mark);
+    back_mark = NULL;
+    back_mark = ledger_table_end(ptr);
+    if (back_mark == NULL) break;
+    if (!ledger_table_mark_is_equal(mark, back_mark)) break;
+    result = 1;
+  } while (0);
+  ledger_table_mark_free(back_mark);
+  ledger_table_mark_free(mark);
+  ledger_table_free(ptr);
+  return result;
+}
+
 
 int main(int argc, char **argv){
   int pass_count = 0;

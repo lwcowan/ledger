@@ -1,6 +1,7 @@
 
 #include "table.h"
 #include "util.h"
+#include <string.h>
 
 /*
  * Table item
@@ -40,9 +41,13 @@ struct ledger_table {
   struct ledger_table_row root;
 };
 
-struct ledger_table_iterator {
-  struct ledger_table* source;
-  struct ledger_table_row* row_ptr;
+/*
+ * Table row iterator.
+ */
+struct ledger_table_mark {
+  struct ledger_table const* source;
+  struct ledger_table_row* row;
+  unsigned char mutable_flag;
 };
 
 /*
@@ -57,6 +62,17 @@ static int ledger_table_init(struct ledger_table* t);
  * - t table to clear
  */
 static void ledger_table_clear(struct ledger_table* t);
+
+/*
+ * Construct a new mark.
+ * - t table to use
+ * - row row pointer
+ * @return the mark on success, NULL otherwise
+ */
+static struct ledger_table_mark* ledger_table_mark_new
+  ( struct ledger_table const* t, struct ledger_table_row const* r,
+    int mutable_flag);
+
 
 
 /* BEGIN static implementation */
@@ -76,6 +92,20 @@ void ledger_table_clear(struct ledger_table* t){
   t->column_types = NULL;
   t->columns = 0;
   return;
+}
+
+struct ledger_table_mark* ledger_table_mark_new
+  ( struct ledger_table const* t, struct ledger_table_row const* r,
+    int mutable_flag)
+{
+  struct ledger_table_mark* ptr = (struct ledger_table_mark*)
+    ledger_util_malloc(sizeof(struct ledger_table_mark));
+  if (ptr != NULL){
+    ptr->source = t;
+    ptr->row = (struct ledger_table_row*)r;
+    ptr->mutable_flag = mutable_flag;
+  }
+  return ptr;
 }
 
 /* END   static implementation */
@@ -118,6 +148,34 @@ int ledger_table_is_equal
       return 0;
   }
   return 1;
+}
+
+struct ledger_table_mark* ledger_table_begin(struct ledger_table* t){
+  return ledger_table_mark_new(t, t->root.next, 1);
+}
+
+struct ledger_table_mark* ledger_table_begin_c
+  (struct ledger_table const* t)
+{
+  return ledger_table_mark_new(t, t->root.next, 0);
+}
+
+struct ledger_table_mark* ledger_table_end(struct ledger_table* t){
+  return ledger_table_mark_new(t, &t->root, 1);
+}
+
+struct ledger_table_mark* ledger_table_end_c(struct ledger_table const* t){
+  return ledger_table_mark_new(t, &t->root, 0);
+}
+
+int ledger_table_mark_is_equal
+  (struct ledger_table_mark const* a, struct ledger_table_mark const* b)
+{
+  return (a->source == b->source &&  a->row == b->row);
+}
+
+void ledger_table_mark_free(struct ledger_table_mark* m){
+  ledger_util_free(m);
 }
 
 /* END   implementation */
