@@ -84,6 +84,64 @@ void ledger_ledger_set_id(struct ledger_ledger* l, int item_id);
 int ledger_ledger_is_equal
   (struct ledger_ledger const* a, struct ledger_ledger const* b);
 
+
+/*
+ * Query the sequence identifier of a ledger.
+ * - l ledger to query
+ * @return the next identifier
+ */
+int ledger_ledger_get_sequence(struct ledger_ledger const* l);
+
+/*
+ * Modify the sequence identifier of a ledger.
+ * - l ledger to query
+ * - item_id new identifier (non-negative)
+ */
+int ledger_ledger_set_sequence(struct ledger_ledger* l, int item_id);
+
+/*
+ * Allocate a sequence identifier from a ledger.
+ * - l ledger to use
+ * @return a new identifier (non-negative) on success,
+ *   or -1 if out of identifiers
+ */
+int ledger_ledger_alloc_id(struct ledger_ledger* l);
+
+
+/*
+ * Get an account count.
+ * - l ledger to query
+ * @return the number of accounts in this ledger
+ */
+int ledger_ledger_get_account_count(struct ledger_ledger const* l);
+
+/*
+ * Set a account count.
+ * - l ledger to configure
+ * - n number of ledgers
+ * @return one on success, zero otherwise
+ */
+int ledger_ledger_set_account_count(struct ledger_ledger* l, int n);
+
+/*
+ * Get an account.
+ * - l ledger to adjust
+ * - i array index
+ * @return the account at that array index
+ */
+struct ledger_account* ledger_ledger_get_account
+  (struct ledger_ledger* l, int i);
+
+/*
+ * Get an account.
+ * - l ledger to read
+ * - i array index
+ * @return the account at that array index
+ */
+struct ledger_account const* ledger_ledger_get_account_c
+  (struct ledger_ledger const* l, int i);
+
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/
