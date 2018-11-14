@@ -3,6 +3,7 @@
 #include "../base/util.h"
 #include "../base/book.h"
 #include "../base/ledger.h"
+#include "../base/account.h"
 #include "../../deps/cJSON/cJSON.h"
 #include <string.h>
 #include <limits.h>
@@ -73,6 +74,9 @@ int ledger_io_manifest_check_edge
   if (parent == NULL || child == NULL) return 0;
   else if (parent->type_code == LEDGER_IO_MANIFEST_BOOK
   &&  child->type_code == LEDGER_IO_MANIFEST_LEDGER)
+    return 1;
+  else if (parent->type_code == LEDGER_IO_MANIFEST_LEDGER
+  &&  child->type_code == LEDGER_IO_MANIFEST_ACCOUNT)
     return 1;
   else return 0;
 }
@@ -180,7 +184,46 @@ int ledger_io_manifest_prepare_ledger
     ledger_io_manifest_set_id(manifest,
             ledger_ledger_get_id(ledger) );
   }
+  /* check ledger internals */{
+    int ok;
+    int i;
+    int const account_count = ledger_ledger_get_account_count(ledger);
+    if (account_count > INT_MAX){
+      return 0;
+    }
+    ok = ledger_io_manifest_set_count(manifest, account_count);
+    if (!ok) return 0;
+    for (i = 0; i < account_count; ++i){
+      struct ledger_io_manifest* sub_fest =
+        ledger_io_manifest_get(manifest, i);
+      struct ledger_account const* account =
+        ledger_ledger_get_account_c(ledger, i);
+      ok = ledger_io_manifest_prepare_account(sub_fest, account);
+      if (!ok) break;
+    }
+    if (i < account_count) return 0;
+  }
   ledger_io_manifest_set_type(manifest, LEDGER_IO_MANIFEST_LEDGER);
+  return 1;
+}
+
+int ledger_io_manifest_prepare_account
+  (struct ledger_io_manifest* manifest, struct ledger_account const* account)
+{
+  ledger_io_manifest_clear(manifest);
+  /* check account marks */{
+    int flags = 0;
+    if (ledger_account_get_description(account) != NULL){
+      flags |= LEDGER_IO_MANIFEST_DESC;
+    }
+    if (ledger_account_get_name(account) != NULL){
+      flags |= LEDGER_IO_MANIFEST_NAME;
+    }
+    ledger_io_manifest_set_top_flags(manifest, flags);
+    ledger_io_manifest_set_id(manifest,
+            ledger_account_get_id(account) );
+  }
+  ledger_io_manifest_set_type(manifest, LEDGER_IO_MANIFEST_ACCOUNT);
   return 1;
 }
 
@@ -250,6 +293,52 @@ struct cJSON* ledger_io_manifest_print
           }
           /* add ID */{
             struct cJSON* item = cJSON_AddNumberToObject(ledger_level,"id",
+                manifest->item_id);
+            if (item == NULL) break;
+          }
+        }
+        /* create subsidiary objects */{
+          int const count = ledger_io_manifest_get_count(manifest);
+          if (count > 0){
+            int i;
+            struct cJSON* section_array =
+              cJSON_AddArrayToObject(out,"sections");
+            if (section_array == NULL) break;
+            for (i = 0; i < count; ++i){
+              struct ledger_io_manifest const* sub_fest =
+                ledger_io_manifest_get_c(manifest, i);
+              struct cJSON* section;
+              if (!ledger_io_manifest_check_edge(manifest, sub_fest))
+                break;
+              section = ledger_io_manifest_print(sub_fest);
+              if (section == NULL) break;
+              cJSON_AddItemToArray(section_array, section);
+            }
+            if (i < count) break;
+          }
+        }
+        result = 1;
+      }break;
+    case LEDGER_IO_MANIFEST_ACCOUNT:
+      {
+        /* create account object */{
+          struct cJSON* account_level =
+            cJSON_AddObjectToObject(out,"account");
+          if (account_level == NULL) break;
+          /* add description */if (manifest->flags & LEDGER_IO_MANIFEST_DESC){
+            struct cJSON* item = cJSON_AddBoolToObject(account_level,"desc",
+                (manifest->flags & LEDGER_IO_MANIFEST_DESC)?1:0
+              );
+            if (item == NULL) break;
+          }
+          /* add notes */if (manifest->flags & LEDGER_IO_MANIFEST_NAME){
+            struct cJSON* item = cJSON_AddBoolToObject(account_level,"name",
+                (manifest->flags & LEDGER_IO_MANIFEST_NAME)?1:0
+              );
+            if (item == NULL) break;
+          }
+          /* add ID */{
+            struct cJSON* item = cJSON_AddNumberToObject(account_level,"id",
                 manifest->item_id);
             if (item == NULL) break;
           }
@@ -345,6 +434,64 @@ int ledger_io_manifest_parse
                 /* notes flag */
                 if (cJSON_IsNumber(ledger_item))
                   manifest->item_id = (int)ledger_item->valuedouble;
+                else ok = 0;
+              }
+            }
+            if (!ok) break;
+          }
+        }
+        /* process sections array */{
+          struct cJSON* sections_array =
+            cJSON_GetObjectItemCaseSensitive(json, "sections");
+          if (sections_array != NULL){
+            struct cJSON* section_item;
+            int ok = 1;
+            int const array_size = cJSON_GetArraySize(sections_array);
+            int active_size = 0;
+            if (!ledger_io_manifest_set_count(manifest, array_size))
+              break;
+            cJSON_ArrayForEach(section_item, sections_array){
+              if (!cJSON_IsObject(section_item)){
+                /* malformed JSON */
+                ok = 0;
+                break;
+              }
+              if (cJSON_HasObjectItem(section_item, "account") ){
+                /* this is an account */
+                struct ledger_io_manifest *next_manifest =
+                    ledger_io_manifest_get(manifest, active_size);
+                ok = ledger_io_manifest_parse
+                  (next_manifest, section_item, LEDGER_IO_MANIFEST_ACCOUNT);
+                if (!ok) break;
+                active_size += 1;
+              }
+            }
+            if (!ok) break;
+          }
+        }
+        result = 1;
+      }break;
+    case LEDGER_IO_MANIFEST_ACCOUNT:
+      {
+        /* process account-level object */{
+          struct cJSON* account_level =
+            cJSON_GetObjectItemCaseSensitive(json, "account");
+          if (account_level != NULL){
+            struct cJSON* account_item;
+            int ok = 1;
+            cJSON_ArrayForEach(account_item, account_level){
+              if (strcmp(account_item->string, "desc") == 0){
+                /* description flag */
+                if (cJSON_IsTrue(account_item))
+                  manifest->flags |= LEDGER_IO_MANIFEST_DESC;
+              } else if (strcmp(account_item->string, "name") == 0){
+                /* notes flag */
+                if (cJSON_IsTrue(account_item))
+                  manifest->flags |= LEDGER_IO_MANIFEST_NAME;
+              } else if (strcmp(account_item->string, "id") == 0){
+                /* notes flag */
+                if (cJSON_IsNumber(account_item))
+                  manifest->item_id = (int)account_item->valuedouble;
                 else ok = 0;
               }
             }
