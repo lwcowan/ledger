@@ -1,5 +1,6 @@
 
 #include "ledger.h"
+#include "account.h"
 #include "../base/bignum.h"
 #include "../base/ledger.h"
 #include "util.h"
@@ -56,6 +57,28 @@ int ledger_io_ledger_write_items
           break;
       }
     }
+    /* write the sections */{
+      int const count = ledger_io_manifest_get_count(manifest);
+      int i;
+      int account_i = 0;
+      for (i = 0; i < count; ++i){
+        int ok = 0;
+        struct ledger_io_manifest const* sub_fest =
+          ledger_io_manifest_get_c(manifest, i);
+        switch (ledger_io_manifest_get_type(sub_fest)){
+        case LEDGER_IO_MANIFEST_ACCOUNT:
+          {
+            struct ledger_account const* account =
+              ledger_ledger_get_account_c(ledger, account_i);
+            ok = ledger_io_account_write_items
+              (zip, sub_fest, account, tmp_num, ledger_id);
+            account_i += 1;
+          }break;
+        }
+        if (!ok) break;
+      }
+      if (i < count) break;
+    }
     result = 1;
   } while (0);
   return result;
@@ -103,6 +126,45 @@ int ledger_io_ledger_read_items
         ledger_util_free(name);
         if (!ok) break;
       } else break;
+    }
+    /* read sections */{
+      int const count = ledger_io_manifest_get_count(manifest);
+      int i;
+      int account_i = 0;
+      int account_count = 0;
+      /* first pass: enumerate objects of each type */
+      for (i = 0; i < count; ++i){
+        struct ledger_io_manifest const* sub_fest =
+          ledger_io_manifest_get_c(manifest, i);
+        switch (ledger_io_manifest_get_type(sub_fest)){
+        case LEDGER_IO_MANIFEST_ACCOUNT:
+          account_count += 1;
+          break;
+        }
+      }
+      /* next allocate the objects needed */{
+        int const ok =
+          ledger_ledger_set_account_count(ledger, account_count);
+        if (!ok) break;
+      }
+      /* second pass: process objects */
+      for (i = 0; i < count; ++i){
+        int ok = 0;
+        struct ledger_io_manifest const* sub_fest =
+          ledger_io_manifest_get_c(manifest, i);
+        switch (ledger_io_manifest_get_type(sub_fest)){
+        case LEDGER_IO_MANIFEST_ACCOUNT:
+          {
+            struct ledger_account* account =
+              ledger_ledger_get_account(ledger, account_i);
+            ok = ledger_io_account_read_items
+              (zip, sub_fest, account, tmp_num, ledger_id);
+            account_i += 1;
+          }break;
+        }
+        if (!ok) break;
+      }
+      if (i < count) break;
     }
     result = 1;
   } while (0);
