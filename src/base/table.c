@@ -2,6 +2,18 @@
 #include "table.h"
 #include "util.h"
 #include <string.h>
+#include <limits.h>
+
+
+/*
+ * sanity check on digit count
+ */
+#ifndef LEDGER_TABLE_SCHEMA_MAX
+#  define LEDGER_TABLE_SCHEMA_MAX 100
+#endif /*LEDGER_TABLE_SCHEMA_MAX*/
+#if LEDGER_TABLE_SCHEMA_MAX > (INT_MAX/(8*16))
+#  error "LEDGER_TABLE_SCHEMA_MAX too large"
+#endif /*LEDGER_TABLE_SCHEMA_MAX*/
 
 /*
  * Table item
@@ -36,7 +48,7 @@ struct ledger_table {
   /* row count cache */
   int rows;
   /* column types */
-  unsigned char* column_types;
+  int* column_types;
   /* double-linked list of table rows */
   struct ledger_table_row root;
 };
@@ -176,6 +188,48 @@ int ledger_table_mark_is_equal
 
 void ledger_table_mark_free(struct ledger_table_mark* m){
   ledger_util_free(m);
+}
+
+int ledger_table_get_column_count(struct ledger_table const* t){
+  return t->columns;
+}
+
+int ledger_table_get_column_type(struct ledger_table const* t, int i){
+  if (i < 0 || i >= t->columns) return 0;
+  else return t->column_types[i];
+}
+
+int ledger_table_set_column_types
+  (struct ledger_table* t, int n, int const* types)
+{
+  int *new_schema;
+  /* validate the types */{
+    int i;
+    if (n > LEDGER_TABLE_SCHEMA_MAX) return 0;
+    for (i = 0; i < n; ++i){
+      if (types[i] >= 1 && types[i] <= 3)
+        continue;
+      else
+        break;
+    }
+    if (i < n) /* invalid schema so */return 0;
+  }
+  /* allocate the column schema */{
+    new_schema = (int*)ledger_util_malloc(n*sizeof(int));
+    if (new_schema == NULL) return 0;
+    else {
+      if (n > 0)
+        memcpy(new_schema,types,sizeof(int)*n);
+    }
+  }
+  /* TODO reset the rows */{
+  }
+  /* store the new schema */{
+    ledger_util_free(t->column_types);
+    t->column_types = new_schema;
+    t->columns = n;
+  }
+  return 1;
 }
 
 /* END   implementation */

@@ -95,6 +95,32 @@ int ledger_table_mark_is_equal
  */
 void ledger_table_mark_free(struct ledger_table_mark* m);
 
+/*
+ * Query the number of table columns.
+ * - t table to query
+ * @return a column count
+ */
+int ledger_table_get_column_count(struct ledger_table const* t);
+
+/*
+ * Query the type code for a table column.
+ * - t table to query
+ * - c column index
+ * @return a type code for the column, or zero if the
+ *   column is unavailable
+ */
+int ledger_table_get_column_type(struct ledger_table const* t, int i);
+
+/*
+ * Configure a table's columns.
+ * - t table to query
+ * - n number of columns
+ * - types array of types
+ * @return one on success, zero otherwise
+ */
+int ledger_table_set_column_types
+  (struct ledger_table* t, int n, int const* types);
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/

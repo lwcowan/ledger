@@ -7,6 +7,7 @@
 static int allocate_test(void);
 static int trivial_equal_test(void);
 static int trivial_mark_test(void);
+static int set_schema_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -15,7 +16,8 @@ struct test_struct {
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
   { trivial_equal_test, "trivial_equal" },
-  { trivial_mark_test, "trivial_mark_test" }
+  { trivial_mark_test, "trivial_mark_test" },
+  { set_schema_test, "set schema" }
 };
 
 int allocate_test(void){
@@ -62,6 +64,26 @@ int trivial_mark_test(void){
   } while (0);
   ledger_table_mark_free(back_mark);
   ledger_table_mark_free(mark);
+  ledger_table_free(ptr);
+  return result;
+}
+int set_schema_test(void){
+  int result = 0;
+  struct ledger_table* ptr;
+  ptr = ledger_table_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int ok;
+    int column_types[3] =
+      { LEDGER_TABLE_ID, LEDGER_TABLE_USTR, LEDGER_TABLE_BIGNUM };
+    ok = ledger_table_set_column_types(ptr,3,column_types);
+    if (!ok) break;
+    if (ledger_table_get_column_count(ptr) != 3) break;
+    if (ledger_table_get_column_type(ptr,0) != 1) break;
+    if (ledger_table_get_column_type(ptr,1) != 3) break;
+    if (ledger_table_get_column_type(ptr,2) != 2) break;
+    result = 1;
+  } while (0);
   ledger_table_free(ptr);
   return result;
 }
