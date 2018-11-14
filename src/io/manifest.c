@@ -248,6 +248,11 @@ struct cJSON* ledger_io_manifest_print
               );
             if (item == NULL) break;
           }
+          /* add ID */{
+            struct cJSON* item = cJSON_AddNumberToObject(ledger_level,"id",
+                manifest->item_id);
+            if (item == NULL) break;
+          }
         }
         result = 1;
       }break;
@@ -326,6 +331,7 @@ int ledger_io_manifest_parse
             cJSON_GetObjectItemCaseSensitive(json, "ledger");
           if (ledger_level != NULL){
             struct cJSON* ledger_item;
+            int ok = 1;
             cJSON_ArrayForEach(ledger_item, ledger_level){
               if (strcmp(ledger_item->string, "desc") == 0){
                 /* description flag */
@@ -335,8 +341,14 @@ int ledger_io_manifest_parse
                 /* notes flag */
                 if (cJSON_IsTrue(ledger_item))
                   manifest->flags |= LEDGER_IO_MANIFEST_NAME;
+              } else if (strcmp(ledger_item->string, "id") == 0){
+                /* notes flag */
+                if (cJSON_IsNumber(ledger_item))
+                  manifest->item_id = (int)ledger_item->valuedouble;
+                else ok = 0;
               }
             }
+            if (!ok) break;
           }
         }
         result = 1;

@@ -402,7 +402,7 @@ int print_ledger_test(void){
       cJSON* ledger_json = cJSON_GetObjectItemCaseSensitive(json, "ledger");
       if (ledger_json == NULL) break;
       if (!cJSON_IsObject(ledger_json)) break;
-      if (cJSON_GetArraySize(ledger_json) != 2) break;
+      if (cJSON_GetArraySize(ledger_json) != 3) break;
       /* check description */{
         cJSON* desc_json =
           cJSON_GetObjectItemCaseSensitive(ledger_json, "desc");
@@ -414,6 +414,12 @@ int print_ledger_test(void){
           cJSON_GetObjectItemCaseSensitive(ledger_json, "name");
         if (name_json == NULL) break;
         if (!cJSON_IsTrue(name_json)) break;
+      }
+      /* check ID */{
+        cJSON* id_json =
+          cJSON_GetObjectItemCaseSensitive(ledger_json, "id");
+        if (id_json == NULL) break;
+        if (!cJSON_IsNumber(id_json)) break;
       }
     }
     result = 1;
@@ -463,7 +469,7 @@ int parse_ledger_test(void){
   struct cJSON* json;
   char const *json_text =
     "{"
-      " \"ledger\":{ \"desc\": true, \"name\": true }"
+      " \"ledger\":{ \"desc\": true, \"id\": 7, \"name\": true }"
     "}";
   json = cJSON_Parse(json_text);
   if (json == NULL){
@@ -478,6 +484,7 @@ int parse_ledger_test(void){
     ok = ledger_io_manifest_parse(manifest, json, LEDGER_IO_MANIFEST_LEDGER);
     if (!ok) break;
     if (ledger_io_manifest_get_type(manifest) != 2) break;
+    if (ledger_io_manifest_get_id(manifest) != 7) break;
     if (ledger_io_manifest_get_top_flags(manifest) != 5) break;
     result = 1;
   } while (0);
