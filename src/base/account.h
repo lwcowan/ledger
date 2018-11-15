@@ -84,6 +84,21 @@ void ledger_account_set_id(struct ledger_account* a, int item_id);
 int ledger_account_is_equal
   (struct ledger_account const* a, struct ledger_account const* b);
 
+/*
+ * Modify an account's transaction table.
+ * - a account to modify
+ * @return the transaction table
+ */
+struct ledger_table* ledger_account_get_table(struct ledger_account* a);
+
+/*
+ * Read an account's transaction table.
+ * - a account to read
+ * @return the transaction table
+ */
+struct ledger_table const* ledger_account_get_table_c
+  (struct ledger_account const* a);
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/

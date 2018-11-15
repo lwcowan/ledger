@@ -8,6 +8,7 @@ set(ledger_base_SOURCES
   base/ledger.h        base/ledger.c
   base/bignum.h        base/bignum.c
   base/account.h       base/account.c
+  base/table.h         base/table.c
   )
 
 add_library(ledger_base ${ledger_base_SOURCES})

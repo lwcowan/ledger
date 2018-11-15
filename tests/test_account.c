@@ -1,10 +1,12 @@
 
 #include "../src/base/account.h"
+#include "../src/base/table.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
 static int allocate_test(void);
+static int allocate_table_test(void);
 static int description_test(void);
 static int null_description_test(void);
 static int name_test(void);
@@ -19,6 +21,7 @@ struct test_struct {
 };
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
+  { allocate_table_test, "table pre-allocation" },
   { description_test, "description" },
   { null_description_test, "null_description" },
   { name_test, "name" },
@@ -35,6 +38,30 @@ int allocate_test(void){
   ledger_account_free(ptr);
   return 1;
 }
+
+int allocate_table_test(void){
+  int result = 0;
+  struct ledger_account* ptr;
+  ptr = ledger_account_new();
+  if (ptr == NULL) return 0;
+  else do {
+    if (ledger_account_get_table(ptr) == NULL) break;
+    if (ledger_account_get_table_c(ptr) == NULL) break;
+    /* check the table */{
+      struct ledger_table const* table = ledger_account_get_table_c(ptr);
+      if (ledger_table_get_column_count(table) != 5) break;
+      if (ledger_table_get_column_type(table,0) != 1) break;
+      if (ledger_table_get_column_type(table,1) != 1) break;
+      if (ledger_table_get_column_type(table,2) != 2) break;
+      if (ledger_table_get_column_type(table,3) != 3) break;
+      if (ledger_table_get_column_type(table,4) != 3) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_account_free(ptr);
+  return result;
+}
+
 int description_test(void){
   int result = 0;
   struct ledger_account* ptr;

@@ -57,6 +57,24 @@ int ledger_util_ustrcmp(unsigned char const* a, unsigned char const* b);
  */
 int ledger_util_uiszero(unsigned char const* a, size_t siz);
 
+/*
+ * Convert an integer to a string.
+ * - n the integer to convert
+ * - buf buffer to receive the string
+ * - siz size of buffer in bytes
+ * - want_plus nonzero if a plus sign is desired for positive integers
+ * @return the number of bytes needed to perform the conversion,
+ *   not including a NUL terminator
+ */
+size_t ledger_util_itoa(int n, unsigned char* buf, size_t siz, int want_plus);
+
+/*
+ * Convert a string to an integer.
+ * - str the string to convert
+ * @return the number
+ */
+int ledger_util_atoi(unsigned char const* str);
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/

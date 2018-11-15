@@ -104,4 +104,32 @@ int ledger_bignum_get_text
  */
 void ledger_bignum_swap(struct ledger_bignum* n, struct ledger_bignum* n2);
 
+/*
+ * Copy a big number, replacing the storage.
+ * - dst number to overwrite
+ * - src number to read
+ * @return one on success, zero otherwise
+ */
+int ledger_bignum_copy
+  (struct ledger_bignum* dst, struct ledger_bignum const* src);
+
+/*
+ * Copy a big number, reusing storage if possible.
+ * - dst number to overwrite
+ * - src number to read
+ * @return one on success, zero otherwise
+ */
+int ledger_bignum_assign
+  (struct ledger_bignum* dst, struct ledger_bignum const* src);
+
+/*
+ * Copy a big number, reusing storage and clipping the number
+ *   if necessary.
+ * - dst number to overwrite
+ * - src number to read
+ * @return one on success, zero otherwise
+ */
+int ledger_bignum_truncate
+  (struct ledger_bignum* dst, struct ledger_bignum const* src);
+
 #endif /*__Ledger_base_bigNum_H__*/

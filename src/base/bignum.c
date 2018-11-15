@@ -508,7 +508,7 @@ int ledger_bignum_get_text
       }
       real_execution_start = i;
     } else {
-      byte_count = 0;
+      byte_count = 1;
     }
     if (n->negative || want_plus){
       /* add minus sign */
@@ -526,7 +526,7 @@ int ledger_bignum_get_text
     } else if (want_plus){
       if (write_point < len) buf[write_point++] = '+';
     }
-    /* put the integral portion */{
+    /* put the integral portion */if (n->digit_count > 0){
       if (real_execution_start == n->point_place){
         /* plop a zero down */
         if (write_point < len) buf[write_point++] = '0';
@@ -553,6 +553,9 @@ int ledger_bignum_get_text
             buf[write_point++] = '0'+(n->digits[i-1]%10);
         }
       }
+    } else {
+      if (write_point < len)
+        buf[write_point++] = '0';
     }
     /* put the fractional portion */if (n->point_place > 0){
       if (write_point < len) buf[write_point++] = '.';
@@ -581,6 +584,51 @@ void ledger_bignum_swap(struct ledger_bignum* n, struct ledger_bignum* n2){
   tmp_i = n->point_place;n->point_place=n2->point_place;n2->point_place=tmp_i;
   tmp_i = n->negative;n->negative=n2->negative;n2->negative=tmp_i;
   return;
+}
+
+int ledger_bignum_copy
+  (struct ledger_bignum* dst, struct ledger_bignum const* src)
+{
+  int const digit_count = src->digit_count;
+  int ok =
+    ledger_bignum_alloc_unchecked(dst, digit_count, src->point_place);
+  if (!ok) return 0;
+  memcpy(dst->digits, src->digits, digit_count);
+  dst->negative = src->negative;
+  return 1;
+}
+
+int ledger_bignum_assign
+  (struct ledger_bignum* dst, struct ledger_bignum const* src)
+{
+  int const digit_count = src->digit_count;
+  int ok =
+    ledger_bignum_extend(dst, digit_count, src->point_place);
+  int const disparity = dst->point_place-src->point_place;
+  if (!ok) return 0;
+  memcpy(dst->digits+disparity, src->digits, digit_count);
+  dst->negative = src->negative;
+  return 1;
+}
+
+int ledger_bignum_truncate
+  (struct ledger_bignum* dst, struct ledger_bignum const* src)
+{
+  int digit_count = src->digit_count;
+  int initial_digit = 0;
+  int disparity = dst->point_place-src->point_place;
+  if (disparity < 0){
+    initial_digit = -disparity;
+    digit_count += disparity;
+    disparity = 0;
+  }
+  if (digit_count+disparity > dst->digit_count){
+    digit_count = dst->digit_count-disparity;
+  }
+  if (digit_count > 0)
+    memcpy(dst->digits+disparity, src->digits+initial_digit, digit_count);
+  dst->negative = src->negative;
+  return 1;
 }
 
 /* END   implementation */
