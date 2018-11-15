@@ -126,6 +126,22 @@ int equal_test(void){
     if (!ok) break;
     if (!ledger_account_is_equal(other_ptr,ptr)) break;
     if (!ledger_account_is_equal(ptr,other_ptr)) break;
+    /* add a row */{
+      struct ledger_table *const table = ledger_account_get_table(ptr);
+      struct ledger_table_mark *mark;
+      ok = 0;
+      do {
+        mark = ledger_table_begin(table);
+        if (mark == NULL) break;
+        if (!ledger_table_add_row(mark))
+          break;
+        ok = 1;
+      } while (0);
+      ledger_table_mark_free(mark);
+    }
+    if (!ok) break;
+    if (ledger_account_is_equal(ptr,other_ptr)) break;
+    if (ledger_account_is_equal(other_ptr,ptr)) break;
     result = 1;
   } while (0);
   ledger_account_free(ptr);
