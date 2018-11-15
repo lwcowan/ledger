@@ -15,6 +15,7 @@ static int set_row_string_test(void);
 static int switch_schema_test(void);
 static int set_row_bignum_test(void);
 static int move_mark_test(void);
+static int nonzero_equal_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -29,7 +30,8 @@ struct test_struct test_array[] = {
   { switch_schema_test, "switch schema" },
   { set_row_string_test, "set row string" },
   { set_row_bignum_test, "set row bignum" },
-  { move_mark_test, "mark move" }
+  { move_mark_test, "mark move" },
+  { nonzero_equal_test, "nonzero equal" }
 };
 
 int allocate_test(void){
@@ -352,6 +354,133 @@ int move_mark_test(void){
   ledger_bignum_free(numeric);
   return result;
 }
+
+int nonzero_equal_test(void){
+  int result = 0;
+  struct ledger_table* ptr, * other_ptr;
+  ptr = ledger_table_new();
+  if (ptr == NULL) return 0;
+  other_ptr = ledger_table_new();
+  if (other_ptr == NULL){
+    ledger_table_free(ptr);
+    return 0;
+  }
+  int column_types[3] =
+    { LEDGER_TABLE_BIGNUM, LEDGER_TABLE_USTR, LEDGER_TABLE_ID };
+  int other_column_types[3] =
+    { LEDGER_TABLE_USTR, LEDGER_TABLE_ID, LEDGER_TABLE_BIGNUM };
+  int const column_count = 3;
+  do {
+    int ok;
+    if (!ledger_table_is_equal(ptr, other_ptr)) break;
+    if (!ledger_table_is_equal(other_ptr, ptr)) break;
+    /* set mismatched schemata */{
+      if (!ledger_table_set_column_types(
+          ptr, column_count, column_types)) break;
+      if (ledger_table_is_equal(ptr, other_ptr)) break;
+      if (ledger_table_is_equal(other_ptr, ptr)) break;
+      if (!ledger_table_set_column_types(
+          other_ptr, column_count, other_column_types))
+        break;
+      if (ledger_table_is_equal(ptr, other_ptr)) break;
+      if (ledger_table_is_equal(other_ptr, ptr)) break;
+    }
+    /* set mismatched rows (one) */{
+      ok = 0;
+      struct ledger_table_mark* mark = NULL;
+      do {
+        int i, j;
+        int const row_count = 3;
+        mark = ledger_table_begin(ptr);
+        if (mark == NULL) break;
+        /* write the tables */{
+          for (j = 0; j < row_count; ++j){
+            if (!ledger_table_add_row(mark)) break;
+            for (i = 0; i < column_count; ++i){
+              if (!ledger_table_put_string(mark, i,
+                  (unsigned char*)"099.99"))
+                break;
+            }
+            if (i < column_count) break;
+            ledger_table_mark_move(mark, +1);
+          }
+          if (j < row_count) break;
+        }
+        ok = 1;
+      } while (0);
+      ledger_table_mark_free(mark);
+    }
+    if (!ok) break;
+    /* set mismatched rows (other) */{
+      ok = 0;
+      struct ledger_table_mark* mark = NULL;
+      do {
+        int i, j;
+        int const row_count = 3;
+        mark = ledger_table_begin(other_ptr);
+        if (mark == NULL) break;
+        /* write the tables */{
+          for (j = 0; j < row_count; ++j){
+            if (!ledger_table_add_row(mark)) break;
+            for (i = 0; i < column_count; ++i){
+              if (!ledger_table_put_string(mark, i,
+                  (unsigned char*)"099.99"))
+                break;
+            }
+            if (i < column_count) break;
+            ledger_table_mark_move(mark, +1);
+          }
+          if (j < row_count) break;
+        }
+        ok = 1;
+      } while (0);
+      ledger_table_mark_free(mark);
+    }
+    if (!ok) break;
+    if (ledger_table_is_equal(ptr, other_ptr)) break;
+    if (ledger_table_is_equal(other_ptr, ptr)) break;
+    /* set matched schemata */{
+      if (!ledger_table_set_column_types(
+          other_ptr, column_count, column_types))
+        break;
+      if (ledger_table_is_equal(ptr, other_ptr)) break;
+      if (ledger_table_is_equal(other_ptr, ptr)) break;
+    }
+    /* set matched rows (other) */{
+      ok = 0;
+      struct ledger_table_mark* mark = NULL;
+      do {
+        int i, j;
+        int const row_count = 3;
+        mark = ledger_table_begin(other_ptr);
+        if (mark == NULL) break;
+        /* write the tables */{
+          for (j = 0; j < row_count; ++j){
+            if (!ledger_table_add_row(mark)) break;
+            for (i = 0; i < column_count; ++i){
+              if (!ledger_table_put_string(mark, i,
+                  (unsigned char*)"099.99"))
+                break;
+            }
+            if (i < column_count) break;
+            ledger_table_mark_move(mark, +1);
+          }
+          if (j < row_count) break;
+        }
+        ok = 1;
+      } while (0);
+      ledger_table_mark_free(mark);
+    }
+    if (!ok) break;
+    if (!ledger_table_is_equal(ptr, other_ptr)) break;
+    if (!ledger_table_is_equal(other_ptr, ptr)) break;
+    result = 1;
+  } while (0);
+  ledger_table_free(other_ptr);
+  ledger_table_free(ptr);
+  return result;
+}
+
 
 
 int main(int argc, char **argv){
