@@ -490,7 +490,6 @@ int ledger_table_put_string
           }
         }break;
       }
-      result = 1;
     }
     return result;
   } else return 0;
