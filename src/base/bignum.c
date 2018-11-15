@@ -586,4 +586,49 @@ void ledger_bignum_swap(struct ledger_bignum* n, struct ledger_bignum* n2){
   return;
 }
 
+int ledger_bignum_copy
+  (struct ledger_bignum* dst, struct ledger_bignum const* src)
+{
+  int const digit_count = src->digit_count;
+  int ok =
+    ledger_bignum_alloc_unchecked(dst, digit_count, src->point_place);
+  if (!ok) return 0;
+  memcpy(dst->digits, src->digits, digit_count);
+  dst->negative = src->negative;
+  return 1;
+}
+
+int ledger_bignum_assign
+  (struct ledger_bignum* dst, struct ledger_bignum const* src)
+{
+  int const digit_count = src->digit_count;
+  int ok =
+    ledger_bignum_extend(dst, digit_count, src->point_place);
+  int const disparity = dst->point_place-src->point_place;
+  if (!ok) return 0;
+  memcpy(dst->digits+disparity, src->digits, digit_count);
+  dst->negative = src->negative;
+  return 1;
+}
+
+int ledger_bignum_truncate
+  (struct ledger_bignum* dst, struct ledger_bignum const* src)
+{
+  int digit_count = src->digit_count;
+  int initial_digit = 0;
+  int disparity = dst->point_place-src->point_place;
+  if (disparity < 0){
+    initial_digit = -disparity;
+    digit_count += disparity;
+    disparity = 0;
+  }
+  if (digit_count+disparity > dst->digit_count){
+    digit_count = dst->digit_count-disparity;
+  }
+  if (digit_count > 0)
+    memcpy(dst->digits+disparity, src->digits+initial_digit, digit_count);
+  dst->negative = src->negative;
+  return 1;
+}
+
 /* END   implementation */

@@ -15,6 +15,10 @@ static int get_text_test(void);
 static int set_text_test(void);
 static int number_swap_test(void);
 static int nonzero_compare_test(void);
+static int number_overprimed_copy_test(void);
+static int number_primed_copy_test(void);
+static int number_copy_test(void);
+static int number_unprimed_copy_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -29,6 +33,10 @@ struct test_struct test_array[] = {
   { get_text_test, "get text" },
   { set_text_test, "set text" },
   { number_swap_test, "number swap" },
+  { number_unprimed_copy_test, "number copy: unprimed" },
+  { number_primed_copy_test, "number copy: underprimed" },
+  { number_copy_test, "number copy: primed" },
+  { number_overprimed_copy_test, "number copy: overprimed" },
   { nonzero_compare_test, "nonzero compare" }
 };
 
@@ -254,6 +262,212 @@ int nonzero_compare_test(void){
   ledger_bignum_free(ptr);
   return result;
 }
+
+int number_overprimed_copy_test(void){
+  int result = 0;
+  struct ledger_bignum* ptr, * other_ptr;
+  ptr = ledger_bignum_new();
+  if (ptr == NULL) return 0;
+  other_ptr = ledger_bignum_new();
+  if (other_ptr == NULL){
+    ledger_bignum_free(ptr);
+    return 0;
+  }
+  do {
+    unsigned char const *numeric = (unsigned char const*)"-2345.98";
+    if (!ledger_bignum_set_text(other_ptr, numeric, NULL)) break;
+    if (ledger_bignum_get_long(other_ptr) != -2345) break;
+    /* test the overprimed truncate */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 5, 2);
+      if (!ok) break;
+      ledger_bignum_truncate(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 10) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-2345.9800",buffer) != 0) break;
+    }
+    /* test the overprimed assign */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 5, 2);
+      if (!ok) break;
+      ledger_bignum_assign(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 10) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-2345.9800",buffer) != 0) break;
+    }
+    /* test the overprimed copy */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 5, 2);
+      if (!ok) break;
+      ledger_bignum_copy(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 8) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-2345.98",buffer) != 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_bignum_free(other_ptr);
+  ledger_bignum_free(ptr);
+  return result;
+}
+
+int number_copy_test(void){
+  int result = 0;
+  struct ledger_bignum* ptr, * other_ptr;
+  ptr = ledger_bignum_new();
+  if (ptr == NULL) return 0;
+  other_ptr = ledger_bignum_new();
+  if (other_ptr == NULL){
+    ledger_bignum_free(ptr);
+    return 0;
+  }
+  do {
+    unsigned char const *numeric = (unsigned char const*)"-2345.98";
+    if (!ledger_bignum_set_text(other_ptr, numeric, NULL)) break;
+    if (ledger_bignum_get_long(other_ptr) != -2345) break;
+    /* test the primed truncate */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 3, 1);
+      if (!ok) break;
+      ledger_bignum_truncate(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 8) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-2345.98",buffer) != 0) break;
+    }
+    /* test the primed assign */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 3, 1);
+      if (!ok) break;
+      ledger_bignum_assign(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 8) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-2345.98",buffer) != 0) break;
+    }
+    /* test the primed copy */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 3, 1);
+      if (!ok) break;
+      ledger_bignum_copy(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 8) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-2345.98",buffer) != 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_bignum_free(other_ptr);
+  ledger_bignum_free(ptr);
+  return result;
+}
+
+
+int number_unprimed_copy_test(void){
+  int result = 0;
+  struct ledger_bignum* ptr, * other_ptr;
+  ptr = ledger_bignum_new();
+  if (ptr == NULL) return 0;
+  other_ptr = ledger_bignum_new();
+  if (other_ptr == NULL){
+    ledger_bignum_free(ptr);
+    return 0;
+  }
+  do {
+    unsigned char const *numeric = (unsigned char const*)"-2345.98";
+    if (!ledger_bignum_set_text(other_ptr, numeric, NULL)) break;
+    if (ledger_bignum_get_long(other_ptr) != -2345) break;
+    /* test the unprimed truncate */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 0, 0);
+      if (!ok) break;
+      ledger_bignum_truncate(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 2) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-0",buffer) != 0) break;
+    }
+    /* test the unprimed assign */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 0, 0);
+      if (!ok) break;
+      ledger_bignum_assign(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 8) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-2345.98",buffer) != 0) break;
+    }
+    /* test the unprimed copy */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 0, 0);
+      if (!ok) break;
+      ledger_bignum_copy(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 8) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-2345.98",buffer) != 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_bignum_free(other_ptr);
+  ledger_bignum_free(ptr);
+  return result;
+}
+
+int number_primed_copy_test(void){
+  int result = 0;
+  struct ledger_bignum* ptr, * other_ptr;
+  ptr = ledger_bignum_new();
+  if (ptr == NULL) return 0;
+  other_ptr = ledger_bignum_new();
+  if (other_ptr == NULL){
+    ledger_bignum_free(ptr);
+    return 0;
+  }
+  do {
+    unsigned char const *numeric = (unsigned char const*)"-2345.98";
+    if (!ledger_bignum_set_text(other_ptr, numeric, NULL)) break;
+    if (ledger_bignum_get_long(other_ptr) != -2345) break;
+    /* test the primed truncate */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 1, 0);
+      if (!ok) break;
+      ledger_bignum_truncate(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 3) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-45",buffer) != 0) break;
+    }
+    /* test the primed assign */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 1, 0);
+      if (!ok) break;
+      ledger_bignum_assign(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 8) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-2345.98",buffer) != 0) break;
+    }
+    /* test the primed copy */{
+      unsigned char buffer[16];
+      int ok;
+      ok = ledger_bignum_alloc(ptr, 1, 0);
+      if (!ok) break;
+      ledger_bignum_copy(ptr, other_ptr);
+      if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),1) != 8) break;
+      if (ledger_util_ustrcmp(
+          (unsigned char const*)"-2345.98",buffer) != 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_bignum_free(other_ptr);
+  ledger_bignum_free(ptr);
+  return result;
+}
+
 
 int main(int argc, char **argv){
   int pass_count = 0;
