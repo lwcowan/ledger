@@ -121,6 +121,29 @@ int ledger_table_get_column_type(struct ledger_table const* t, int i);
 int ledger_table_set_column_types
   (struct ledger_table* t, int n, int const* types);
 
+/*
+ * Query a table's row count.
+ * - t table to query
+ * @return a table's row count
+ */
+int ledger_table_count_rows(struct ledger_table const* t);
+
+/*
+ * Add a row just before the mark's current position.
+ * The mark will then point to the new row.
+ * - mark a mutable mark
+ * @return one on success, zero otherwise
+ */
+int ledger_table_add_row(struct ledger_table_mark* mark);
+
+/*
+ * Drop the row at the mark's current position.
+ * The mark will then point to the previous row.
+ * - mark a mutable mark
+ * @return one on success, zero otherwise
+ */
+int ledger_table_drop_row(struct ledger_table_mark* mark);
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/

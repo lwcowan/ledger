@@ -1,6 +1,7 @@
 
 #include "table.h"
 #include "util.h"
+#include "bignum.h"
 #include <string.h>
 #include <limits.h>
 
@@ -35,8 +36,8 @@ struct ledger_table_row {
   struct ledger_table_row* prev;
   /* link to next row */
   struct ledger_table_row* next;
-  /* data content */
-  union ledger_table_item* data;
+  /* data content (C99 feature) */
+  union ledger_table_item data[];
 };
 
 /*
@@ -85,6 +86,24 @@ static struct ledger_table_mark* ledger_table_mark_new
   ( struct ledger_table const* t, struct ledger_table_row const* r,
     int mutable_flag);
 
+/*
+ * Construct a row given a schema.
+ * - n row length
+ * - schema array of data types
+ * @return the row on success
+ */
+static struct ledger_table_row* ledger_table_row_new
+  (int n, int const* schema);
+
+/*
+ * Destroy a row given a schema.
+ * - r row to free
+ * - n row length
+ * - schema array of data types
+ */
+static void ledger_table_row_free
+  (struct ledger_table_row* r, int n, int const* schema);
+
 
 
 /* BEGIN static implementation */
@@ -95,7 +114,6 @@ int ledger_table_init(struct ledger_table* t){
   t->column_types = NULL;
   t->root.prev = &t->root;
   t->root.next = &t->root;
-  t->root.data = NULL;
   return 1;
 }
 
@@ -118,6 +136,69 @@ struct ledger_table_mark* ledger_table_mark_new
     ptr->mutable_flag = mutable_flag;
   }
   return ptr;
+}
+
+struct ledger_table_row* ledger_table_row_new(int n, int const* schema){
+  struct ledger_table_row* new_row = (struct ledger_table_row*)
+      ledger_util_malloc
+        (sizeof(struct ledger_table_row)+n*sizeof(union ledger_table_item));
+  if (new_row != NULL){
+    int ok = 0;
+    do {
+      /* initialize each element in the row */
+      int i;
+      int entry_ok = 0;
+      for (i = 0; i < n; ++i){
+        switch (schema[i]){
+        case LEDGER_TABLE_ID:
+          new_row->data[i].item_id = 0;
+          entry_ok = 1;
+          break;
+        case LEDGER_TABLE_BIGNUM:
+          new_row->data[i].bignum = NULL;
+          entry_ok = 1;
+          break;
+        case LEDGER_TABLE_USTR:
+          new_row->data[i].string = NULL;
+          entry_ok = 1;
+          break;
+        }
+        if (!entry_ok) break;
+      }
+      if (!entry_ok) break;
+      ok = 1;
+    } while (0);
+    if (!ok){
+      ledger_util_free(new_row);
+      new_row = NULL;
+    }
+  }
+  return new_row;
+}
+
+void ledger_table_row_free
+  (struct ledger_table_row* r, int n, int const* schema)
+{
+  /* free the row entries */{
+    int i;
+    for (i = 0; i < n; ++i){
+      switch (schema[i]){
+      case LEDGER_TABLE_ID:
+        r->data[i].item_id = 0;
+        break;
+      case LEDGER_TABLE_BIGNUM:
+        ledger_bignum_free(r->data[i].bignum);
+        break;
+      case LEDGER_TABLE_USTR:
+        ledger_util_free(r->data[i].string);
+        break;
+      }
+    }
+  }
+  /* free the row */{
+    ledger_util_free(r);
+  }
+  return;
 }
 
 /* END   static implementation */
@@ -231,5 +312,62 @@ int ledger_table_set_column_types
   }
   return 1;
 }
+
+int ledger_table_count_rows(struct ledger_table const* t){
+  return t->rows;
+}
+
+int ledger_table_add_row(struct ledger_table_mark* mark){
+  if (mark->mutable_flag){
+    int result = 0;
+    struct ledger_table* const table = (struct ledger_table *)mark->source;
+    struct ledger_table_row * const old_row = mark->row;
+    struct ledger_table_row *new_row = NULL;
+    do {
+      /* allocate the row */
+      new_row = ledger_table_row_new(table->columns, table->column_types);
+      if (new_row == NULL) break;
+      /* attach the row */
+      new_row->prev = old_row->prev;
+      new_row->next = old_row;
+      old_row->prev->next = new_row;
+      old_row->prev = new_row;
+      /* set mark to new row */
+      mark->row = new_row;
+      /* cache the new row count */
+      table->rows += 1;
+      result = 1;
+    } while (0);
+    if (!result){
+      ledger_table_row_free(new_row, table->columns, table->column_types);
+    }
+    return result;
+  } else return 0;
+}
+
+int ledger_table_drop_row(struct ledger_table_mark* mark){
+  if (mark->mutable_flag){
+    int result;
+    struct ledger_table* const table = (struct ledger_table *)mark->source;
+    struct ledger_table_row * const old_row = mark->row;
+    if (old_row == &table->root){
+      /* don't allow it */;
+      result = 0;
+    } else /* remove the row */{
+      /* detach the row */
+      old_row->prev->next = old_row->next;
+      old_row->next->prev = old_row->prev;
+      /* move the mark */
+      mark->row = old_row->prev;
+      /* free the row */
+      ledger_table_row_free(old_row, table->columns, table->column_types);
+      /* cache the new row count */
+      table->rows -= 1;
+      result = 1;
+    }
+    return result;
+  } else return 0;
+}
+
 
 /* END   implementation */
