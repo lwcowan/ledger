@@ -257,6 +257,39 @@ int ledger_table_is_equal
         sizeof(unsigned char)*a->columns) != 0)
       return 0;
   }
+  /* compare row by row */{
+    int const columns = a->columns;
+    int const* const schema = a->column_types;
+    struct ledger_table_mark a_mark = {a,a->root.next,0};
+    struct ledger_table_mark b_mark = {b,b->root.next,0};
+    for (; a_mark.row != &a->root && b_mark.row != &b->root;
+         a_mark.row = a_mark.row->next, b_mark.row = b_mark.row->next)
+    {
+      /* perform field-wise comparison */
+      int i;
+      for (i = 0; i < columns; ++i){
+        switch (schema[i]){
+        case LEDGER_TABLE_ID:
+          {
+            if (a_mark.row->data[i].item_id != b_mark.row->data[i].item_id)
+              return 0;
+          }break;
+        case LEDGER_TABLE_BIGNUM:
+          {
+            if (ledger_bignum_compare(
+                a_mark.row->data[i].bignum, b_mark.row->data[i].bignum) != 0)
+              return 0;
+          }break;
+        case LEDGER_TABLE_USTR:
+          {
+            if (ledger_util_ustrcmp(
+                a_mark.row->data[i].string, b_mark.row->data[i].string) != 0)
+              return 0;
+          }break;
+        }
+      }
+    }
+  }
   return 1;
 }
 
