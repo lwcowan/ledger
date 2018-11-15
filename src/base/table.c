@@ -104,6 +104,11 @@ static struct ledger_table_row* ledger_table_row_new
 static void ledger_table_row_free
   (struct ledger_table_row* r, int n, int const* schema);
 
+/*
+ * Drop all rows from a table.
+ * - table table to clear out
+ */
+static void ledger_table_drop_all_rows(struct ledger_table* table);
 
 
 /* BEGIN static implementation */
@@ -118,6 +123,7 @@ int ledger_table_init(struct ledger_table* t){
 }
 
 void ledger_table_clear(struct ledger_table* t){
+  ledger_table_drop_all_rows(t);
   ledger_util_free(t->column_types);
   t->column_types = NULL;
   t->columns = 0;
@@ -197,6 +203,17 @@ void ledger_table_row_free
   }
   /* free the row */{
     ledger_util_free(r);
+  }
+  return;
+}
+
+void ledger_table_drop_all_rows(struct ledger_table* table){
+  struct ledger_table_mark quick_mark;
+  quick_mark.source = table;
+  quick_mark.row = table->root.prev;
+  quick_mark.mutable_flag = 1;
+  while (quick_mark.row != &table->root){
+    ledger_table_drop_row(&quick_mark);
   }
   return;
 }
@@ -303,7 +320,8 @@ int ledger_table_set_column_types
         memcpy(new_schema,types,sizeof(int)*n);
     }
   }
-  /* TODO reset the rows */{
+  /* reset the rows */{
+    ledger_table_drop_all_rows(t);
   }
   /* store the new schema */{
     ledger_util_free(t->column_types);
