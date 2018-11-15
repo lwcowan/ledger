@@ -508,7 +508,7 @@ int ledger_bignum_get_text
       }
       real_execution_start = i;
     } else {
-      byte_count = 0;
+      byte_count = 1;
     }
     if (n->negative || want_plus){
       /* add minus sign */
@@ -526,7 +526,7 @@ int ledger_bignum_get_text
     } else if (want_plus){
       if (write_point < len) buf[write_point++] = '+';
     }
-    /* put the integral portion */{
+    /* put the integral portion */if (n->digit_count > 0){
       if (real_execution_start == n->point_place){
         /* plop a zero down */
         if (write_point < len) buf[write_point++] = '0';
@@ -553,6 +553,9 @@ int ledger_bignum_get_text
             buf[write_point++] = '0'+(n->digits[i-1]%10);
         }
       }
+    } else {
+      if (write_point < len)
+        buf[write_point++] = '0';
     }
     /* put the fractional portion */if (n->point_place > 0){
       if (write_point < len) buf[write_point++] = '.';
