@@ -12,6 +12,8 @@ static int null_string_dup_test(void);
 static int string_cmp_test(void);
 static int trivial_string_cmp_test(void);
 static int zero_check_test(void);
+static int itoa_test(void);
+static int atoi_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -25,7 +27,9 @@ struct test_struct test_array[] = {
   { null_string_dup_test, "null string duplicate" },
   { string_cmp_test, "string compare" },
   { trivial_string_cmp_test, "trivial string compare" },
-  { zero_check_test, "zero check" }
+  { zero_check_test, "zero check" },
+  { itoa_test, "integer to string" },
+  { atoi_test, "string to integer" }
 };
 
 int allocate_test(void){
@@ -137,6 +141,36 @@ int zero_check_test(void){
     buffer[1] = 9;
     if (ledger_util_uiszero(buffer,sizeof(buffer))) return 0;
   }
+  return 1;
+}
+
+int itoa_test(void){
+  unsigned char buffer[16];
+  if (ledger_util_itoa(0, buffer,sizeof(buffer), 0) != 1) return 0;
+  if (ledger_util_ustrcmp(buffer,
+      (unsigned char const*)"0") != 0)
+    return 0;
+  if (ledger_util_itoa(20, buffer,sizeof(buffer), 1) != 3) return 0;
+  if (ledger_util_ustrcmp(buffer,
+      (unsigned char const*)"+20") != 0)
+    return 0;
+  if (ledger_util_itoa(-5362, buffer, sizeof(buffer), 1) != 5) return 0;
+  if (ledger_util_ustrcmp(buffer,
+      (unsigned char const*)"-5362") != 0)
+    return 0;
+  if (ledger_util_itoa(-5362, buffer, sizeof(buffer), 0) != 5) return 0;
+  if (ledger_util_ustrcmp(buffer,
+      (unsigned char const*)"-5362") != 0)
+    return 0;
+  return 1;
+}
+
+int atoi_test(void){
+  if (ledger_util_atoi((unsigned char const*)"0") != 0) return 0;
+  if (ledger_util_atoi((unsigned char const*)"+0") != 0) return 0;
+  if (ledger_util_atoi((unsigned char const*)"-0") != 0) return 0;
+  if (ledger_util_atoi((unsigned char const*)"+20") != 20) return 0;
+  if (ledger_util_atoi((unsigned char const*)"-5362") != -5362) return 0;
   return 1;
 }
 
