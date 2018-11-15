@@ -160,6 +160,10 @@ int ledger_account_is_equal
     if (ledger_util_ustrcmp(a->description, b->description) != 0)
       return 0;
   }
+  /* compare tables */{
+    if (!ledger_table_is_equal(a->table, b->table))
+      return 0;
+  }
   return 1;
 }
 
