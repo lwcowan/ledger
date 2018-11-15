@@ -387,5 +387,113 @@ int ledger_table_drop_row(struct ledger_table_mark* mark){
   } else return 0;
 }
 
+int ledger_table_fetch_string
+  (struct ledger_table_mark const* mark, int i, unsigned char* buf, int len)
+{
+  if (mark->mutable_flag){
+    int result;
+    struct ledger_table* const table = (struct ledger_table *)mark->source;
+    struct ledger_table_row * const old_row = mark->row;
+    if (old_row == &table->root
+    ||  i < 0
+    ||  i >= table->columns)
+    {
+      /* don't allow it */;
+      result = -1;
+    } else /* fetch the string */{
+      switch (table->column_types[i]){
+      case LEDGER_TABLE_ID:
+        if (old_row->data[i].item_id < 0){
+          result = 0;
+          if (len > 0) buf[0] = 0;
+        } else {
+          result = (int)ledger_util_itoa(old_row->data[i].item_id,buf,len,0);
+        }break;
+      case LEDGER_TABLE_BIGNUM:
+        if (old_row->data[i].bignum == NULL){
+          result = 0;
+          if (len > 0) buf[0] = 0;
+        } else {
+          result =
+            ledger_bignum_get_text(old_row->data[i].bignum, buf, len,0);
+        }break;
+      case LEDGER_TABLE_USTR:
+        if (old_row->data[i].string == NULL){
+          result = 0;
+          if (len > 0) buf[0] = 0;
+        } else {
+          result = ledger_util_ustrlen(old_row->data[i].string);
+          if (len > 0){
+            int truncated_result = result>=len?len-1:result;
+            memcpy(buf, old_row->data[i].string,
+                truncated_result*sizeof(unsigned char));
+            buf[truncated_result] = 0;
+          }
+        }break;
+      }
+    }
+    return result;
+  } else return 0;
+}
+
+int ledger_table_put_string
+  (struct ledger_table_mark const* mark, int i, unsigned char const* value)
+{
+  if (mark->mutable_flag){
+    int result;
+    struct ledger_table* const table = (struct ledger_table *)mark->source;
+    struct ledger_table_row * const old_row = mark->row;
+    if (old_row == &table->root
+    ||  i < 0
+    ||  i >= table->columns)
+    {
+      /* don't allow it */;
+      result = -1;
+    } else /* put the string */{
+      switch (table->column_types[i]){
+      case LEDGER_TABLE_ID:
+        if (value == NULL || *value == 0){
+          old_row->data[i].item_id = -1;
+          result = 1;
+        } else {
+          old_row->data[i].item_id = ledger_util_atoi(value);
+          result = 1;
+        }break;
+      case LEDGER_TABLE_BIGNUM:
+        if (value == NULL || *value == 0){
+          ledger_bignum_free(old_row->data[i].bignum);
+          old_row->data[i].bignum = NULL;
+          result = 1;
+        } else {
+          int is_new_ptr = 0;
+          struct ledger_bignum* bignum = old_row->data[i].bignum;
+          if (bignum == NULL){
+            bignum = ledger_bignum_new();
+            if (bignum == NULL) break;
+            else is_new_ptr = 1;
+          }
+          /* put the big number */{
+            result = ledger_bignum_set_text(bignum, value, NULL);
+            if (result){
+              old_row->data[i].bignum = bignum;
+            } else if (is_new_ptr){
+              ledger_bignum_free(bignum);
+            }
+          }
+        }break;
+      case LEDGER_TABLE_USTR:
+        /* duplicate, free, replace */{
+          unsigned char *new_string = ledger_util_ustrdup(value,&result);
+          if (result){
+            ledger_util_free(old_row->data[i].string);
+            old_row->data[i].string = new_string;
+          }
+        }break;
+      }
+      result = 1;
+    }
+    return result;
+  } else return 0;
+}
 
 /* END   implementation */

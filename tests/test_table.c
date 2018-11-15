@@ -1,5 +1,6 @@
 
 #include "../src/base/table.h"
+#include "../src/base/util.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,6 +10,7 @@ static int trivial_equal_test(void);
 static int trivial_mark_test(void);
 static int set_schema_test(void);
 static int add_row_test(void);
+static int set_row_string_test(void);
 static int switch_schema_test(void);
 
 struct test_struct {
@@ -21,7 +23,8 @@ struct test_struct test_array[] = {
   { trivial_mark_test, "trivial_mark_test" },
   { set_schema_test, "set schema" },
   { add_row_test, "add row" },
-  { switch_schema_test, "switch schema" }
+  { switch_schema_test, "switch schema" },
+  { set_row_string_test, "set row string" }
 };
 
 int allocate_test(void){
@@ -146,6 +149,60 @@ int switch_schema_test(void){
       mark = ledger_table_begin(ptr);
       ok = ledger_table_drop_row(mark);
       if (ok) break;
+      if (ledger_table_count_rows(ptr) != 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_table_mark_free(mark);
+  ledger_table_free(ptr);
+  return result;
+}
+
+int set_row_string_test(void){
+  int result = 0;
+  struct ledger_table* ptr;
+  struct ledger_table_mark* mark = NULL;
+  ptr = ledger_table_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int ok;
+    int column_types[3] =
+      { LEDGER_TABLE_BIGNUM, LEDGER_TABLE_USTR, LEDGER_TABLE_ID };
+    ok = ledger_table_set_column_types(ptr,3,column_types);
+    if (!ok) break;
+    /* iterate from the start */{
+      unsigned char const* numeric =
+        (unsigned char const*)"034.56";
+      mark = ledger_table_begin(ptr);
+      if (mark == NULL) break;
+      ok = ledger_table_add_row(mark);
+      if (!ok) break;
+      if (ledger_table_count_rows(ptr) != 1) break;
+      /* set the row */{
+        if (!ledger_table_put_string(mark, 0, numeric)) break;
+        if (!ledger_table_put_string(mark, 1, numeric)) break;
+        if (!ledger_table_put_string(mark, 2, numeric)) break;
+      }
+      /* check the row */{
+        unsigned char buf[16];
+        if (ledger_table_fetch_string(mark, 0, buf, sizeof(buf)) != 5)
+          break;
+        if (ledger_util_ustrcmp(buf,
+            (unsigned char const*)"34.56") != 0)
+          break;
+        if (ledger_table_fetch_string(mark, 1, buf, sizeof(buf)) != 6)
+          break;
+        if (ledger_util_ustrcmp(buf,
+            (unsigned char const*)"034.56") != 0)
+          break;
+        if (ledger_table_fetch_string(mark, 2, buf, sizeof(buf)) != 2)
+          break;
+        if (ledger_util_ustrcmp(buf,
+            (unsigned char const*)"34") != 0)
+          break;
+      }
+      ok = ledger_table_drop_row(mark);
+      if (!ok) break;
       if (ledger_table_count_rows(ptr) != 0) break;
     }
     result = 1;

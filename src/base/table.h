@@ -144,6 +144,28 @@ int ledger_table_add_row(struct ledger_table_mark* mark);
  */
 int ledger_table_drop_row(struct ledger_table_mark* mark);
 
+/*
+ * Fetch a row item as a string.
+ * - mark any mark
+ * - i column index
+ * - buf buffer to hold text string
+ * - len size of the buffer
+ * @return the number of bytes needed to hold the string on success,
+ *   negative otherwise
+ */
+int ledger_table_fetch_string
+  (struct ledger_table_mark const* mark, int i, unsigned char* buf, int len);
+
+/*
+ * Put a string value to a row item.
+ * - mark any mark
+ * - i column index
+ * - value NUL-terminated string
+ * @return one on success, zero otherwise
+ */
+int ledger_table_put_string
+  (struct ledger_table_mark const* mark, int i, unsigned char const* value);
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/
