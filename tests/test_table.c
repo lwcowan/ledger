@@ -14,6 +14,7 @@ static int add_row_test(void);
 static int set_row_string_test(void);
 static int switch_schema_test(void);
 static int set_row_bignum_test(void);
+static int move_mark_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -27,7 +28,8 @@ struct test_struct test_array[] = {
   { add_row_test, "add row" },
   { switch_schema_test, "switch schema" },
   { set_row_string_test, "set row string" },
-  { set_row_bignum_test, "set row bignum" }
+  { set_row_bignum_test, "set row bignum" },
+  { move_mark_test, "mark move" }
 };
 
 int allocate_test(void){
@@ -284,6 +286,73 @@ int set_row_bignum_test(void){
   ledger_bignum_free(numeric);
   return result;
 }
+
+int move_mark_test(void){
+  int result = 0;
+  struct ledger_table* ptr;
+  struct ledger_table_mark* mark = NULL;
+  struct ledger_bignum* storage;
+  struct ledger_bignum* numeric;
+  storage = ledger_bignum_new();
+  if (storage == NULL) return 0;
+  numeric = ledger_bignum_new();
+  if (numeric == NULL){
+    ledger_bignum_free(storage);
+    return 0;
+  }
+  if (!ledger_bignum_alloc(numeric,1,0)){
+    ledger_bignum_free(storage);
+    ledger_bignum_free(numeric);
+    return 0;
+  }
+  ptr = ledger_table_new();
+  if (ptr == NULL){
+    ledger_bignum_free(storage);
+    ledger_bignum_free(numeric);
+    return 0;
+  } else do {
+    int ok;
+    int column_types[1] = { LEDGER_TABLE_ID };
+    ok = ledger_table_set_column_types(ptr,1,column_types);
+    if (!ok) break;
+    /* iterate from the start */{
+      int const row_count = 5;
+      int const count_offset = 35;
+      int i;
+      mark = ledger_table_begin(ptr);
+      if (mark == NULL) break;
+      for (i = 0; i < row_count; ++i){
+        ok = ledger_table_add_row(mark);
+        if (!ok) break;
+        if (ledger_table_count_rows(ptr) != i+1) break;
+        /* set the row */{
+          if (!ledger_bignum_set_long(numeric, i+count_offset)) break;
+          if (!ledger_table_put_bignum(mark, 0, numeric)) break;
+        }
+        ledger_table_mark_move(mark, +1);
+      }
+      if (i < row_count) break;
+      ledger_table_mark_free(mark);
+      mark = ledger_table_end(ptr);
+      if (mark == NULL) break;
+      for (i = row_count-1; i >= 0; --i){
+        ledger_table_mark_move(mark, -1);
+        if (!ledger_table_fetch_bignum(mark, 0, storage))
+          break;
+        if (ledger_bignum_get_long(storage) != i+count_offset)
+          break;
+      }
+      if (i >= 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_table_mark_free(mark);
+  ledger_table_free(ptr);
+  ledger_bignum_free(storage);
+  ledger_bignum_free(numeric);
+  return result;
+}
+
 
 int main(int argc, char **argv){
   int pass_count = 0;

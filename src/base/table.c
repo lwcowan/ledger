@@ -605,4 +605,18 @@ int ledger_table_put_bignum
   } else return 0;
 }
 
+void ledger_table_mark_move(struct ledger_table_mark* m, int n){
+  if (n > 0){
+    int i;
+    for (i = 0; i < n; ++i){
+      m->row = m->row->next;
+    }
+  } else if (n < 0){
+    int i;
+    for (i = 0; i > n; --i){
+      m->row = m->row->prev;
+    }
+  } else /* stay put and */return;
+}
+
 /* END   implementation */

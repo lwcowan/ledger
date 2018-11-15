@@ -98,6 +98,13 @@ int ledger_table_mark_is_equal
 void ledger_table_mark_free(struct ledger_table_mark* m);
 
 /*
+ * Move a mark forward `n` rows.
+ * - m mark to move forward
+ * - n number of steps to move (can be negative)
+ */
+void ledger_table_mark_move(struct ledger_table_mark* m, int n);
+
+/*
  * Query the number of table columns.
  * - t table to query
  * @return a column count
