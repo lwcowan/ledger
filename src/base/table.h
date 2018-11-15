@@ -10,6 +10,8 @@
 extern "C" {
 #endif /*__cplusplus*/
 
+struct ledger_bignum;
+
 /*
  * brief: Table column types
  */
@@ -165,6 +167,27 @@ int ledger_table_fetch_string
  */
 int ledger_table_put_string
   (struct ledger_table_mark const* mark, int i, unsigned char const* value);
+
+/*
+ * Fetch a row item as a big number.
+ * - mark any mark
+ * - i column index
+ * - n structure to hold the number, extended as needed
+ * @return one on success, zero otherwise
+ */
+int ledger_table_fetch_bignum
+  (struct ledger_table_mark const* mark, int i, struct ledger_bignum* n);
+
+/*
+ * Put a string value to a row item.
+ * - mark any mark
+ * - i column index
+ * - value big number
+ * @return one on success, zero otherwise
+ */
+int ledger_table_put_bignum
+  ( struct ledger_table_mark const* mark, int i,
+    struct ledger_bignum const* value);
 
 #ifdef __cplusplus
 };

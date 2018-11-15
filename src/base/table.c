@@ -495,4 +495,114 @@ int ledger_table_put_string
   } else return 0;
 }
 
+int ledger_table_fetch_bignum
+  (struct ledger_table_mark const* mark, int i, struct ledger_bignum* n)
+{
+  if (mark->mutable_flag){
+    int result;
+    struct ledger_table* const table = (struct ledger_table *)mark->source;
+    struct ledger_table_row * const old_row = mark->row;
+    if (old_row == &table->root
+    ||  i < 0
+    ||  i >= table->columns)
+    {
+      /* don't allow it */;
+      result = -1;
+    } else /* fetch the string */{
+      switch (table->column_types[i]){
+      case LEDGER_TABLE_ID:
+        if (old_row->data[i].item_id < 0){
+          result = ledger_bignum_set_long(n, -1);
+        } else {
+          result = ledger_bignum_set_long(n, old_row->data[i].item_id);
+        }break;
+      case LEDGER_TABLE_BIGNUM:
+        if (old_row->data[i].bignum == NULL){
+          result = ledger_bignum_set_long(n, 0);
+        } else {
+          result = ledger_bignum_assign(n, old_row->data[i].bignum);
+        }break;
+      case LEDGER_TABLE_USTR:
+        if (old_row->data[i].string == NULL){
+          result = ledger_bignum_set_long(n, 0);
+        } else {
+          result = ledger_bignum_set_text(n, old_row->data[i].string, NULL);
+        }break;
+      }
+    }
+    return result;
+  } else return 0;
+}
+
+int ledger_table_put_bignum
+  ( struct ledger_table_mark const* mark, int i,
+    struct ledger_bignum const* value)
+{
+  if (mark->mutable_flag){
+    int result;
+    struct ledger_table* const table = (struct ledger_table *)mark->source;
+    struct ledger_table_row * const old_row = mark->row;
+    if (old_row == &table->root
+    ||  i < 0
+    ||  i >= table->columns)
+    {
+      /* don't allow it */;
+      result = -1;
+    } else /* put the string */{
+      switch (table->column_types[i]){
+      case LEDGER_TABLE_ID:
+        if (value == NULL){
+          old_row->data[i].item_id = 0;
+          result = 1;
+        } else {
+          old_row->data[i].item_id = ledger_bignum_get_long(value);
+          result = 1;
+        }break;
+      case LEDGER_TABLE_BIGNUM:
+        if (value == NULL){
+          ledger_bignum_free(old_row->data[i].bignum);
+          old_row->data[i].bignum = NULL;
+          result = 1;
+        } else {
+          int is_new_ptr = 0;
+          struct ledger_bignum* bignum = old_row->data[i].bignum;
+          if (bignum == NULL){
+            bignum = ledger_bignum_new();
+            if (bignum == NULL) break;
+            else is_new_ptr = 1;
+          }
+          /* put the big number */{
+            result = ledger_bignum_assign(bignum, value);
+            if (result){
+              old_row->data[i].bignum = bignum;
+            } else if (is_new_ptr){
+              ledger_bignum_free(bignum);
+            }
+          }
+        }break;
+      case LEDGER_TABLE_USTR:
+        /* construct the string */{
+          int len = ledger_bignum_get_text(value,NULL,0,0);
+          if (len > 0){
+            unsigned char *new_string = ledger_util_malloc(len+1);
+            if (new_string != NULL){
+              ledger_bignum_get_text(value,new_string,len+1,0);
+              ledger_util_free(old_row->data[i].string);
+              old_row->data[i].string = new_string;
+              result = 1;
+            } else result = 0;
+          } else if (len == 0){
+            ledger_util_free(old_row->data[i].string);
+            old_row->data[i].string = NULL;
+            result = 1;
+          } else {
+            result = 0;
+          }
+        }break;
+      }
+    }
+    return result;
+  } else return 0;
+}
+
 /* END   implementation */
