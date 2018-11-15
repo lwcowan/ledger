@@ -3,6 +3,7 @@
 #include "../base/bignum.h"
 #include "../base/account.h"
 #include "util.h"
+#include "table.h"
 #include "manifest.h"
 #include "../../deps/zip/src/zip.h"
 #include "../../deps/cJSON/cJSON.h"
@@ -59,6 +60,23 @@ int ledger_io_account_write_items
           break;
       }
     }
+    /* write transaction entries */{
+      struct ledger_table const* table = ledger_account_get_table_c(account);
+      if (table != NULL){
+        int ok;
+        unsigned char *data_csv;
+        ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
+              tmp_num, "ledger-%i/account-%i/entries.csv",
+              ledger_id, account_id);
+        if (ok < 0) break;
+        data_csv = ledger_io_table_print_csv(table);
+        if (data_csv != NULL){
+          ok = ledger_io_util_archive_text(zip, name_buffer, data_csv);
+          ledger_util_free(data_csv);
+          if (!ok) break;
+        } else break;
+      } else break;
+    }
     result = 1;
   } while (0);
   return result;
@@ -108,6 +126,25 @@ int ledger_io_account_read_items
         }
         ledger_util_free(name);
         if (!ok) break;
+      } else break;
+    }
+    /* read transaction entries */{
+      struct ledger_table* table = ledger_account_get_table(account);
+      if (table != NULL){
+        int ok;
+        unsigned char *data_csv;
+        ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
+              tmp_num, "ledger-%i/account-%i/entries.csv",
+              ledger_id, account_id);
+        if (ok > 0){
+          unsigned char* data_csv =
+            ledger_io_util_extract_text(zip, name_buffer, &ok);
+          if (data_csv != NULL){
+            ok = ledger_io_table_parse_csv(table, data_csv);
+            ledger_util_free(data_csv);
+          } else ok = 0;
+          if (!ok) break;
+        } else break;
       } else break;
     }
     result = 1;
