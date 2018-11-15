@@ -19,8 +19,9 @@ set(ledger_io_SOURCES
   io/manifest.h        io/manifest.c
   io/util.h            io/util.c
   io/ledger.h          io/ledger.c
+  io/table.h           io/table.c
   io/account.h         io/account.c
   )
 
 add_library(ledger_io ${ledger_io_SOURCES})
-target_link_libraries(ledger_io  zip cjson)
+target_link_libraries(ledger_io  zip cjson minicsv)
