@@ -259,6 +259,9 @@ int set_row_bignum_test(void){
         if (!ledger_table_put_bignum(mark, 1, numeric)) break;
         if (!ledger_table_put_bignum(mark, 2, numeric)) break;
       }
+      ledger_table_mark_free(mark);
+      mark = ledger_table_begin_c(ptr);
+      if (mark == NULL) break;
       /* check the row */{
         if (!ledger_table_fetch_bignum(mark, 0, storage))
           break;
@@ -276,6 +279,9 @@ int set_row_bignum_test(void){
         if (ledger_bignum_get_long(storage) != 45)
           break;
       }
+      ledger_table_mark_free(mark);
+      mark = ledger_table_begin(ptr);
+      if (mark == NULL) break;
       ok = ledger_table_drop_row(mark);
       if (!ok) break;
       if (ledger_table_count_rows(ptr) != 0) break;

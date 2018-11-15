@@ -423,7 +423,7 @@ int ledger_table_drop_row(struct ledger_table_mark* mark){
 int ledger_table_fetch_string
   (struct ledger_table_mark const* mark, int i, unsigned char* buf, int len)
 {
-  if (mark->mutable_flag){
+  /* const or mutable accepted */{
     int result;
     struct ledger_table* const table = (struct ledger_table *)mark->source;
     struct ledger_table_row * const old_row = mark->row;
@@ -466,7 +466,7 @@ int ledger_table_fetch_string
       }
     }
     return result;
-  } else return 0;
+  }
 }
 
 int ledger_table_put_string
@@ -531,7 +531,7 @@ int ledger_table_put_string
 int ledger_table_fetch_bignum
   (struct ledger_table_mark const* mark, int i, struct ledger_bignum* n)
 {
-  if (mark->mutable_flag){
+  /* const or mutable accepted */{
     int result;
     struct ledger_table* const table = (struct ledger_table *)mark->source;
     struct ledger_table_row * const old_row = mark->row;
@@ -564,7 +564,7 @@ int ledger_table_fetch_bignum
       }
     }
     return result;
-  } else return 0;
+  }
 }
 
 int ledger_table_put_bignum
