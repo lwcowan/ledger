@@ -1,6 +1,7 @@
 
 #include "account.h"
 #include "util.h"
+#include "table.h"
 
 /*
  * Actualization of the account structure
@@ -9,7 +10,16 @@ struct ledger_account {
   unsigned char *name;
   unsigned char *description;
   int item_id;
+  struct ledger_table *table;
 };
+
+static int ledger_account_schema[] =
+  { LEDGER_TABLE_ID /* journal ID */,
+    LEDGER_TABLE_ID /* transaction ID */,
+    LEDGER_TABLE_BIGNUM /* amount (+ debit, - credit) */,
+    LEDGER_TABLE_USTR /* check number */,
+    LEDGER_TABLE_USTR /* date */
+  };
 
 /*
  * Initialize an account.
@@ -28,6 +38,25 @@ static void ledger_account_clear(struct ledger_account* a);
 /* BEGIN static implementation */
 
 int ledger_account_init(struct ledger_account* a){
+  /* prepare the table */{
+    int ok = 0;
+    int const schema_size = sizeof(ledger_account_schema)/
+        sizeof(ledger_account_schema[0]);
+    struct ledger_table *new_table = ledger_table_new();
+    if (new_table == NULL) return 0;
+    else do {
+      if (!ledger_table_set_column_types
+          (new_table, schema_size, ledger_account_schema))
+        break;
+      ok = 1;
+    } while (0);
+    if (!ok){
+      ledger_table_free(new_table);
+      return 0;
+    } else {
+      a->table = new_table;
+    }
+  }
   a->description = NULL;
   a->name = NULL;
   a->item_id = -1;
@@ -35,6 +64,8 @@ int ledger_account_init(struct ledger_account* a){
 }
 
 void ledger_account_clear(struct ledger_account* a){
+  ledger_table_free(a->table);
+  a->table = NULL;
   ledger_util_free(a->description);
   a->description = NULL;
   ledger_util_free(a->name);
@@ -132,5 +163,14 @@ int ledger_account_is_equal
   return 1;
 }
 
+struct ledger_table* ledger_account_get_table(struct ledger_account* a){
+  return a->table;
+}
+
+struct ledger_table const* ledger_account_get_table_c
+  (struct ledger_account const* a)
+{
+  return a->table;
+}
 
 /* END   implementation */
