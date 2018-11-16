@@ -5,6 +5,7 @@
 #include "util.h"
 #include "table.h"
 #include "manifest.h"
+#include "entry.h"
 #include "../../deps/zip/src/zip.h"
 #include "../../deps/cJSON/cJSON.h"
 #include "../base/util.h"
@@ -31,6 +32,7 @@ int ledger_io_journal_write_items
   if (ledger_io_manifest_get_id(manifest) != journal_id)
     return 0;
   else do {
+    int ok;
     /* write description */if (
       ledger_io_manifest_get_top_flags(manifest) & LEDGER_IO_MANIFEST_DESC)
     {
@@ -76,6 +78,36 @@ int ledger_io_journal_write_items
         } else break;
       } else break;
     }
+    ok = 0;
+    /* write transaction entries */{
+      int const count = ledger_journal_get_entry_count(journal);
+      ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
+            tmp_num, "journal-%i/entries.json",
+            journal_id);
+      if (ok < 0) break;
+      /* put even if zero */{
+        int i;
+        struct cJSON* entry_array = cJSON_CreateArray();
+        if (entry_array == NULL) break;
+        for (i = 0; i < count; ++i){
+          struct ledger_entry const* entry =
+            ledger_journal_get_entry_c(journal, i);
+          struct cJSON* entry_json;
+          if (entry == NULL) break;
+          entry_json = ledger_io_entry_print_json(entry);
+          if (entry_json == NULL) break;
+          cJSON_AddItemToArray(entry_array, entry_json);
+        }
+        if (i < count){
+          cJSON_Delete(entry_array);
+          break;
+        } else {
+          ok = ledger_io_util_archive_json(zip, name_buffer, entry_array);
+          cJSON_Delete(entry_array);
+        }
+      }
+    }
+    if (!ok) break;
     result = 1;
   } while (0);
   return result;
@@ -142,6 +174,39 @@ int ledger_io_journal_read_items
           } else ok = 0;
           if (!ok) break;
         } else break;
+      } else break;
+    }
+    /* read transaction entries */{
+      int ok;
+      struct cJSON* array_json;
+      ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
+            tmp_num, "journal-%i/entries.json",
+            journal_id);
+      if (ok > 0){
+        array_json =
+          ledger_io_util_extract_json(zip, name_buffer, &ok);
+        if (array_json != NULL){
+          if (cJSON_IsArray(array_json)) do {
+            /* process entry array */{
+              struct cJSON* entry_item;
+              int ok = 1;
+              int const array_size = cJSON_GetArraySize(array_json);
+              int active_size = 0;
+              if (!ledger_journal_set_entry_count(journal, array_size))
+                break;
+              cJSON_ArrayForEach(entry_item, array_json){
+                struct ledger_entry *next_entry =
+                    ledger_journal_get_entry(journal, active_size);
+                ok = ledger_io_entry_parse_json(next_entry, entry_item);
+                if (!ok) break;
+                active_size += 1;
+              }
+              if (!ok) break;
+            }
+          } while (0);
+          cJSON_Delete(array_json);
+        } else ok = 0;
+        if (!ok) break;
       } else break;
     }
     result = 1;

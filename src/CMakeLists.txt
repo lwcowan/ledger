@@ -23,6 +23,7 @@ set(ledger_io_SOURCES
   io/ledger.h          io/ledger.c
   io/table.h           io/table.c
   io/account.h         io/account.c
+  io/entry.h           io/entry.c
   io/journal.h         io/journal.c
   )
 
