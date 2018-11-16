@@ -2,6 +2,7 @@
 #include "../src/base/book.h"
 #include "../src/base/ledger.h"
 #include "../src/base/account.h"
+#include "../src/base/journal.h"
 #include "../src/io/manifest.h"
 #include "../deps/cJSON/cJSON.h"
 #include <stdio.h>
@@ -32,6 +33,12 @@ static int parse_account_test(void);
 static int prepare_ledger_with_account_test(void );
 static int print_ledger_with_account_test(void );
 static int parse_ledger_with_account_test(void);
+static int print_journal_test(void);
+static int prepare_journal_test(void);
+static int parse_journal_test(void);
+static int prepare_book_with_journal_test(void );
+static int print_book_with_journal_test(void );
+static int parse_book_with_journal_test(void);
 
 
 struct test_struct {
@@ -62,7 +69,13 @@ struct test_struct test_array[] = {
   { parse_account_test, "parse account JSON" },
   { prepare_ledger_with_account_test, "prepare ledger with accounts" },
   { print_ledger_with_account_test, "print ledger JSON with accounts" },
-  { parse_ledger_with_account_test, "parse ledger JSON with accounts" }
+  { parse_ledger_with_account_test, "parse ledger JSON with accounts" },
+  { print_journal_test, "print journal JSON" },
+  { prepare_journal_test, "prepare journal JSON" },
+  { parse_journal_test, "parse journal JSON" },
+  { prepare_book_with_journal_test, "prepare book with journals" },
+  { print_book_with_journal_test, "print book JSON with journals" },
+  { parse_book_with_journal_test, "parse book JSON with journals" }
 };
 
 
@@ -1035,6 +1048,329 @@ int parse_ledger_with_account_test(void){
   cJSON_Delete(json);
   return result;
 }
+
+
+
+int print_journal_test(void){
+  int result = 0;
+  struct ledger_io_manifest* manifest;
+  struct cJSON* json = NULL;
+  manifest = ledger_io_manifest_new();
+  if (manifest == NULL){
+    cJSON_Delete(json);
+    return 0;
+  } else do {
+    int ok;
+    /* set the manifest */{
+      ledger_io_manifest_set_type(manifest,LEDGER_IO_MANIFEST_JOURNAL);
+      ledger_io_manifest_set_top_flags(manifest,5);
+    }
+    json = ledger_io_manifest_print(manifest);
+    if (json == NULL) break;
+    if (!cJSON_IsObject(json)) break;
+    /* check journal level */{
+      cJSON* journal_json = cJSON_GetObjectItemCaseSensitive(json, "journal");
+      if (journal_json == NULL) break;
+      if (!cJSON_IsObject(journal_json)) break;
+      if (cJSON_GetArraySize(journal_json) != 3) break;
+      /* check description */{
+        cJSON* desc_json =
+          cJSON_GetObjectItemCaseSensitive(journal_json, "desc");
+        if (desc_json == NULL) break;
+        if (!cJSON_IsTrue(desc_json)) break;
+      }
+      /* check name */{
+        cJSON* name_json =
+          cJSON_GetObjectItemCaseSensitive(journal_json, "name");
+        if (name_json == NULL) break;
+        if (!cJSON_IsTrue(name_json)) break;
+      }
+      /* check ID */{
+        cJSON* id_json =
+          cJSON_GetObjectItemCaseSensitive(journal_json, "id");
+        if (id_json == NULL) break;
+        if (!cJSON_IsNumber(id_json)) break;
+      }
+    }
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(manifest);
+  if (json != NULL) cJSON_Delete(json);
+  return result;
+}
+
+int prepare_journal_test(void){
+  int result = 0;
+  struct ledger_journal* journal;
+  struct ledger_io_manifest* manifest;
+  journal = ledger_journal_new();
+  if (journal == NULL) return 0;
+  manifest = ledger_io_manifest_new();
+  if (manifest == NULL){
+    ledger_journal_free(journal);
+    return 0;
+  } else do {
+    int ok;
+    unsigned char const *text = (unsigned char const*)"text text";
+    ok = ledger_journal_set_name(journal, text);
+    if (!ok) break;
+    ok = ledger_journal_set_description(journal, text);
+    if (!ok) break;
+    ok = ledger_io_manifest_prepare_journal(manifest,journal);
+    if (!ok) break;
+    if (ledger_io_manifest_get_top_flags(manifest) != 5) break;
+    if (ledger_io_manifest_get_type(manifest) != 4) break;
+    ok = ledger_journal_set_description(journal, NULL);
+    if (!ok) break;
+    ok = ledger_io_manifest_prepare_journal(manifest,journal);
+    if (!ok) break;
+    if (ledger_io_manifest_get_top_flags(manifest) != 4) break;
+    if (ledger_io_manifest_get_type(manifest) != 4) break;
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(manifest);
+  ledger_journal_free(journal);
+  return result;
+}
+
+int parse_journal_test(void){
+  int result = 0;
+  struct ledger_io_manifest* manifest;
+  struct cJSON* json;
+  char const *json_text =
+    "{"
+      " \"journal\":{ \"desc\": true, \"id\": 7, \"name\": true }"
+    "}";
+  json = cJSON_Parse(json_text);
+  if (json == NULL){
+    return 0;
+  }
+  manifest = ledger_io_manifest_new();
+  if (manifest == NULL){
+    cJSON_Delete(json);
+    return 0;
+  } else do {
+    int ok;
+    ok = ledger_io_manifest_parse(manifest, json, LEDGER_IO_MANIFEST_JOURNAL);
+    if (!ok) break;
+    if (ledger_io_manifest_get_type(manifest) != 4) break;
+    if (ledger_io_manifest_get_id(manifest) != 7) break;
+    if (ledger_io_manifest_get_top_flags(manifest) != 5) break;
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(manifest);
+  cJSON_Delete(json);
+  return result;
+}
+
+int prepare_book_with_journal_test(void ){
+  int result = 0;
+  struct ledger_book* book;
+  struct ledger_io_manifest* manifest;
+  book = ledger_book_new();
+  if (book == NULL) return 0;
+  manifest = ledger_io_manifest_new();
+  if (manifest == NULL){
+    ledger_book_free(book);
+    return 0;
+  } else do {
+    int ok;
+    unsigned char const *text = (unsigned char const*)"text text";
+    ok = ledger_book_set_notes(book, text);
+    if (!ok) break;
+    ok = ledger_book_set_description(book, text);
+    if (!ok) break;
+    ok = ledger_book_set_journal_count(book, 2);
+    if (!ok) break;
+    /* modify one journal */{
+      struct ledger_journal* journal = ledger_book_get_journal(book, 1);
+      if (journal == NULL) break;
+      ok = ledger_journal_set_name(journal, text);
+      if (!ok) break;
+    }
+    ok = ledger_io_manifest_prepare(manifest,book);
+    if (!ok) break;
+    if (ledger_io_manifest_get_type(manifest) != 1) break;
+    if (ledger_io_manifest_get_top_flags(manifest) != 3) break;
+    ok = ledger_book_set_description(book, NULL);
+    if (!ok) break;
+    ok = ledger_io_manifest_prepare(manifest,book);
+    if (!ok) break;
+    if (ledger_io_manifest_get_type(manifest) != 1) break;
+    if (ledger_io_manifest_get_top_flags(manifest) != 2) break;
+    if (ledger_io_manifest_get_count(manifest) != 2) break;
+    /* check first sub-fest */{
+      struct ledger_io_manifest* sub_fest =
+        ledger_io_manifest_get(manifest,0);
+      if (sub_fest == NULL) break;
+      if (ledger_io_manifest_get_top_flags(sub_fest) != 0) break;
+      if (ledger_io_manifest_get_type(sub_fest) != 4) break;
+      if (ledger_io_manifest_get_count(sub_fest) != 0) break;
+    }
+    /* check second sub-fest */{
+      struct ledger_io_manifest* sub_fest =
+        ledger_io_manifest_get(manifest,1);
+      if (sub_fest == NULL) break;
+      if (ledger_io_manifest_get_top_flags(sub_fest) != 4) break;
+      if (ledger_io_manifest_get_type(sub_fest) != 4) break;
+      if (ledger_io_manifest_get_count(sub_fest) != 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(manifest);
+  ledger_book_free(book);
+  return result;
+}
+
+int print_book_with_journal_test(void ){
+  int result = 0;
+  struct ledger_io_manifest* manifest;
+  struct cJSON* json = NULL;
+  manifest = ledger_io_manifest_new();
+  if (manifest == NULL){
+    cJSON_Delete(json);
+    return 0;
+  } else do {
+    int ok;
+    /* set the manifest */{
+      ledger_io_manifest_set_type(manifest,LEDGER_IO_MANIFEST_BOOK);
+      ledger_io_manifest_set_top_flags(manifest,3);
+      ok = ledger_io_manifest_set_count(manifest, 2);
+      if (!ok) break;
+      /* initalize a journal manifest */{
+        struct ledger_io_manifest* sub_fest =
+            ledger_io_manifest_get(manifest, 0);
+        if (sub_fest == NULL) break;
+        ledger_io_manifest_set_type(sub_fest,LEDGER_IO_MANIFEST_JOURNAL);
+        ledger_io_manifest_set_top_flags(sub_fest,1);
+        ledger_io_manifest_set_id(sub_fest,2);
+      }
+      /* initalize a journal manifest */{
+        struct ledger_io_manifest* sub_fest =
+            ledger_io_manifest_get(manifest, 1);
+        if (sub_fest == NULL) break;
+        ledger_io_manifest_set_type(sub_fest,LEDGER_IO_MANIFEST_JOURNAL);
+        ledger_io_manifest_set_top_flags(sub_fest,5);
+        ledger_io_manifest_set_id(sub_fest,5);
+      }
+    }
+    json = ledger_io_manifest_print(manifest);
+    if (json == NULL) break;
+    if (!cJSON_IsObject(json)) break;
+    /* check top level */{
+      cJSON* top_json = cJSON_GetObjectItemCaseSensitive(json, "top");
+      if (top_json == NULL) break;
+      if (!cJSON_IsObject(top_json)) break;
+      if (cJSON_GetArraySize(top_json) != 2) break;
+      /* check description */{
+        cJSON* desc_json = cJSON_GetObjectItemCaseSensitive(top_json, "desc");
+        if (desc_json == NULL) break;
+        if (!cJSON_IsTrue(desc_json)) break;
+      }
+      /* check notes */{
+        cJSON* notes_json =
+          cJSON_GetObjectItemCaseSensitive(top_json, "notes");
+        if (notes_json == NULL) break;
+        if (!cJSON_IsTrue(notes_json)) break;
+      }
+    }
+    /* check chapters level */{
+      cJSON* chapter_json =
+        cJSON_GetObjectItemCaseSensitive(json, "chapters");
+      if (chapter_json == NULL) break;
+      if (!cJSON_IsArray(chapter_json)) break;
+      if (cJSON_GetArraySize(chapter_json) != 2) break;
+      /* check first journal object */{
+        cJSON* journal_json = cJSON_GetArrayItem(chapter_json, 0);
+        if (journal_json == NULL) break;
+        if (!cJSON_IsObject(journal_json)) break;
+        /* check journal top */{
+          cJSON* ledger_top_json =
+            cJSON_GetObjectItemCaseSensitive(journal_json, "journal");
+          if (ledger_top_json == NULL) break;
+          /* check description */{
+            cJSON* desc_json =
+              cJSON_GetObjectItemCaseSensitive(ledger_top_json, "desc");
+            if (desc_json == NULL) break;
+            if (!cJSON_IsTrue(desc_json)) break;
+          }
+          /* check name */{
+            cJSON* name_json =
+              cJSON_GetObjectItemCaseSensitive(ledger_top_json, "name");
+            if (name_json != NULL
+            &&  cJSON_IsTrue(name_json)) break;
+          }
+        }
+      }
+      /* check second journal object */{
+        cJSON* journal_json = cJSON_GetArrayItem(chapter_json, 1);
+        if (journal_json == NULL) break;
+        if (!cJSON_IsObject(journal_json)) break;
+        /* check journal top */{
+          cJSON* ledger_top_json =
+            cJSON_GetObjectItemCaseSensitive(journal_json, "journal");
+          if (ledger_top_json == NULL) break;
+          /* check description */{
+            cJSON* desc_json =
+              cJSON_GetObjectItemCaseSensitive(ledger_top_json, "desc");
+            if (desc_json == NULL) break;
+            if (!cJSON_IsTrue(desc_json)) break;
+          }
+          /* check name */{
+            cJSON* name_json =
+              cJSON_GetObjectItemCaseSensitive(ledger_top_json, "name");
+            if (name_json == NULL) break;
+            if (!cJSON_IsTrue(name_json)) break;
+          }
+        }
+      }
+    }
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(manifest);
+  if (json != NULL) cJSON_Delete(json);
+  return result;
+}
+int parse_book_with_journal_test(void){
+  int result = 0;
+  struct ledger_io_manifest* manifest;
+  struct cJSON* json;
+  char const *json_text =
+    "{"
+      " \"top\":{ \"desc\": true, \"notes\": true },"
+      " \"chapters\":["
+      "     {\"journal\": { \"desc\": false, \"name\": true }}"
+      "   ]"
+    "}";
+  json = cJSON_Parse(json_text);
+  if (json == NULL){
+    return 0;
+  }
+  manifest = ledger_io_manifest_new();
+  if (manifest == NULL){
+    cJSON_Delete(json);
+    return 0;
+  } else do {
+    int ok;
+    ok = ledger_io_manifest_parse(manifest, json, LEDGER_IO_MANIFEST_BOOK);
+    if (!ok) break;
+    if (ledger_io_manifest_get_top_flags(manifest) != 3) break;
+    if (ledger_io_manifest_get_count(manifest) != 1) break;
+    /* check first sub-fest */{
+      struct ledger_io_manifest const* sub_fest;
+      sub_fest = ledger_io_manifest_get_c(manifest, 0);
+      if (sub_fest == NULL) break;
+      if (ledger_io_manifest_get_top_flags(sub_fest) != 4) break;
+      if (ledger_io_manifest_get_count(sub_fest) != 0) break;
+      if (ledger_io_manifest_get_type(sub_fest) != 4) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_io_manifest_free(manifest);
+  cJSON_Delete(json);
+  return result;
+}
+
 
 
 

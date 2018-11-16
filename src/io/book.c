@@ -8,6 +8,7 @@
 #include "../../deps/zip/src/zip.h"
 #include "../../deps/cJSON/cJSON.h"
 #include "manifest.h"
+#include "journal.h"
 #include <string.h>
 #include <limits.h>
 
@@ -74,6 +75,8 @@ int ledger_io_book_read(char const* filename, struct ledger_book* book){
           int i;
           int ledger_i = 0;
           int ledger_count = 0;
+          int journal_i = 0;
+          int journal_count = 0;
           /* first pass: enumerate objects of each type */
           for (i = 0; i < count; ++i){
             struct ledger_io_manifest const* sub_fest =
@@ -82,10 +85,17 @@ int ledger_io_book_read(char const* filename, struct ledger_book* book){
             case LEDGER_IO_MANIFEST_LEDGER:
               ledger_count += 1;
               break;
+            case LEDGER_IO_MANIFEST_JOURNAL:
+              journal_count += 1;
+              break;
             }
           }
           /* next allocate the objects needed */{
             int const ok = ledger_book_set_ledger_count(book, ledger_count);
+            if (!ok) break;
+          }
+          /* then allocate the journals needed */{
+            int const ok = ledger_book_set_journal_count(book, journal_count);
             if (!ok) break;
           }
           /* second pass: process objects */
@@ -101,6 +111,14 @@ int ledger_io_book_read(char const* filename, struct ledger_book* book){
                 ok = ledger_io_ledger_read_items
                   (active_zip, sub_fest, ledger, tmp_num);
                 ledger_i += 1;
+              }break;
+            case LEDGER_IO_MANIFEST_JOURNAL:
+              {
+                struct ledger_journal* journal =
+                  ledger_book_get_journal(book, journal_i);
+                ok = ledger_io_journal_read_items
+                  (active_zip, sub_fest, journal, tmp_num);
+                journal_i += 1;
               }break;
             }
             if (!ok) break;
@@ -164,6 +182,7 @@ int ledger_io_book_write
         int const count = ledger_io_manifest_get_count(manifest);
         int i;
         int ledger_i = 0;
+        int journal_i = 0;
         for (i = 0; i < count; ++i){
           int ok = 0;
           struct ledger_io_manifest const* sub_fest =
@@ -176,6 +195,14 @@ int ledger_io_book_write
               ok = ledger_io_ledger_write_items
                 (active_zip, sub_fest, ledger, tmp_num);
               ledger_i += 1;
+            }break;
+          case LEDGER_IO_MANIFEST_JOURNAL:
+            {
+              struct ledger_journal const* journal =
+                ledger_book_get_journal_c(book, journal_i);
+              ok = ledger_io_journal_write_items
+                (active_zip, sub_fest, journal, tmp_num);
+              journal_i += 1;
             }break;
           }
           if (!ok) break;

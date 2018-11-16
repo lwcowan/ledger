@@ -2,6 +2,7 @@
 #include "../src/base/book.h"
 #include "../src/base/ledger.h"
 #include "../src/base/account.h"
+#include "../src/base/journal.h"
 #include "../src/io/book.h"
 #include <stdio.h>
 #include <string.h>
@@ -10,7 +11,9 @@
 static int io_write_zero_test(char const* );
 static int io_write_nonzero_test(char const* );
 static int io_write_ledger_test(char const* );
+static int io_write_journal_test(char const* );
 static int io_write_account_test(char const* );
+static int account_journal_test(char const* );
 
 struct test_struct {
   int (*fn)(char const* );
@@ -20,7 +23,9 @@ struct test_struct test_array[] = {
   { io_write_zero_test, "i/o write zero" },
   { io_write_nonzero_test, "i/o write nonzero" },
   { io_write_ledger_test, "ledger writing" },
-  { io_write_account_test, "account writing" }
+  { io_write_account_test, "account writing" },
+  { io_write_journal_test, "journal writing" },
+  { account_journal_test, "account and journal writing" }
 };
 
 int io_write_zero_test(char const* fn){
@@ -223,6 +228,173 @@ int io_write_account_test(char const* fn){
   ledger_book_free(back_book);
   return result;
 }
+int io_write_journal_test(char const* fn){
+  int result = 0;
+  struct ledger_book* book, * back_book;
+  back_book = ledger_book_new();
+  if (back_book == NULL) return 0;
+  book = ledger_book_new();
+  if (book == NULL){
+    ledger_book_free(back_book);
+    return 0;
+  } else do {
+    int ok;
+    unsigned char const *text = (unsigned char const*)"text note";
+    unsigned char const *note = (unsigned char const*)"note text";
+    ok = ledger_book_set_description(book, text);
+    if (!ok) break;
+    ok = ledger_book_set_notes(book, note);
+    if (!ok) break;
+    ok = ledger_book_set_sequence(book, 98);
+    if (!ok) break;
+    ok = ledger_book_set_journal_count(book, 2);
+    if (!ok) break;
+    /* encounter the journal */do {
+      int ledger_ok;
+      struct ledger_journal* journal;
+      ok = 0;
+      journal = ledger_book_get_journal(book,1);
+      if (journal == NULL) break;
+      ledger_ok = ledger_journal_set_name(journal, "food");
+      if (!ledger_ok) break;
+      ledger_ok = ledger_journal_set_description(journal, text);
+      if (!ledger_ok) break;
+      ok = 1;
+    } while (0);
+    if (!ok) break;
+    ok = ledger_io_book_write(fn,book);
+    if (!ok) break;
+    ok = ledger_io_book_read(fn,back_book);
+    if (!ok) break;
+    if (!ledger_book_is_equal(back_book,book)) break;
+    result = 1;
+  } while (0);
+  ledger_book_free(book);
+  ledger_book_free(back_book);
+  return result;
+}
+int account_journal_test(char const* fn){
+  int result = 0;
+  struct ledger_book* book, * back_book;
+  back_book = ledger_book_new();
+  if (back_book == NULL) return 0;
+  book = ledger_book_new();
+  if (book == NULL){
+    ledger_book_free(back_book);
+    return 0;
+  } else do {
+    int ok;
+    unsigned char const *text = (unsigned char const*)"text note";
+    unsigned char const *note = (unsigned char const*)"note text";
+    ok = ledger_book_set_description(book, text);
+    if (!ok) break;
+    ok = ledger_book_set_notes(book, note);
+    if (!ok) break;
+    ok = ledger_book_set_sequence(book, 98);
+    if (!ok) break;
+    ok = ledger_book_set_journal_count(book, 2);
+    if (!ok) break;
+    /* encounter the journal */do {
+      int ledger_ok;
+      struct ledger_journal* journal;
+      ok = 0;
+      journal = ledger_book_get_journal(book,1);
+      if (journal == NULL) break;
+      ledger_ok = ledger_journal_set_name(journal, "food");
+      if (!ledger_ok) break;
+      ledger_ok = ledger_journal_set_description(journal, text);
+      if (!ledger_ok) break;
+      ok = 1;
+    } while (0);
+    if (!ok) break;
+    ok = ledger_book_set_ledger_count(book, 2);
+    if (!ok) break;
+    /* encounter the ledger */do {
+      int ledger_ok;
+      struct ledger_ledger* ledger;
+      ok = 0;
+      ledger = ledger_book_get_ledger(book,1);
+      if (ledger == NULL) break;
+      ledger_ok = ledger_ledger_set_name(ledger, "food");
+      if (!ledger_ok) break;
+      ledger_ok = ledger_ledger_set_description(ledger, text);
+      if (!ledger_ok) break;
+      ledger_ok = ledger_ledger_set_account_count(ledger, 3);
+      if (!ledger_ok) break;
+      /* encounter the account */{
+        int account_ok;
+        struct ledger_account* account;
+        ledger_ok = 0;
+        account = ledger_ledger_get_account(ledger,0);
+        if (account == NULL) break;
+        account_ok = ledger_account_set_name(account, "pasta");
+        if (!account_ok) break;
+        ledger_ok = 1;
+      }
+      if (!ledger_ok) break;
+      /* encounter the account */{
+        int account_ok;
+        struct ledger_account* account;
+        ledger_ok = 0;
+        account = ledger_ledger_get_account(ledger,2);
+        if (account == NULL) break;
+        account_ok = ledger_account_set_name(account, "tofu");
+        if (!account_ok) break;
+        account_ok = ledger_account_set_description(account, "yummy!");
+        if (!account_ok) break;
+        ledger_ok = 1;
+      }
+      if (!ledger_ok) break;
+      ok = 1;
+    } while (0);
+    /* encounter the other ledger */do {
+      int ledger_ok;
+      struct ledger_ledger* ledger;
+      ok = 0;
+      ledger = ledger_book_get_ledger(book,0);
+      if (ledger == NULL) break;
+      ledger_ok = ledger_ledger_set_account_count(ledger, 2);
+      if (!ledger_ok) break;
+      /* encounter the account */{
+        int account_ok;
+        struct ledger_account* account;
+        ledger_ok = 0;
+        account = ledger_ledger_get_account(ledger,1);
+        if (account == NULL) break;
+        account_ok = ledger_account_set_name(account, "cash");
+        if (!account_ok) break;
+        ledger_ok = 1;
+      }
+      if (!ledger_ok) break;
+      /* encounter the account */{
+        int account_ok;
+        struct ledger_account* account;
+        ledger_ok = 0;
+        account = ledger_ledger_get_account(ledger,0);
+        if (account == NULL) break;
+        account_ok = ledger_account_set_name(account, "receivables");
+        if (!account_ok) break;
+        account_ok = ledger_account_set_description(account, "waiting...");
+        if (!account_ok) break;
+        ledger_ok = 1;
+      }
+      if (!ledger_ok) break;
+      ok = 1;
+    } while (0);
+    if (!ok) break;
+    ok = ledger_io_book_write(fn,book);
+    if (!ok) break;
+    ok = ledger_io_book_read(fn,back_book);
+    if (!ok) break;
+    if (!ledger_book_is_equal(back_book,book)) break;
+    result = 1;
+  } while (0);
+  ledger_book_free(book);
+  ledger_book_free(back_book);
+  return result;
+}
+
+
 
 int main(int argc, char **argv){
   int pass_count = 0;
