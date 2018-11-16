@@ -2,6 +2,7 @@
 #include "book.h"
 #include "util.h"
 #include "ledger.h"
+#include "journal.h"
 #include <limits.h>
 
 /*
@@ -28,6 +29,14 @@ struct ledger_book {
    * next id to use
    */
   int sequence_id;
+  /*
+   * brief: journal count
+   */
+  int journal_count;
+  /*
+   * brief: array of journals
+   */
+  struct ledger_journal** journals;
 };
 
 /*
@@ -52,10 +61,13 @@ int ledger_book_init(struct ledger_book* book){
   book->sequence_id = 0;
   book->ledgers = NULL;
   book->ledger_count = 0;
+  book->journals = NULL;
+  book->journal_count = 0;
   return 1;
 }
 
 void ledger_book_clear(struct ledger_book* book){
+  ledger_book_set_journal_count(book,0);
   ledger_book_set_ledger_count(book,0);
   ledger_util_free(book->description);
   book->description = NULL;
@@ -142,6 +154,15 @@ int ledger_book_is_equal
         break;
     }
     if (i < a->ledger_count) return 0;
+  }
+  /* compare journals */{
+    int i;
+    if (a->journal_count != b->journal_count) return 0;
+    else for (i = 0; i < a->journal_count; ++i){
+      if (!ledger_journal_is_equal(a->journals[i], b->journals[i]))
+        break;
+    }
+    if (i < a->journal_count) return 0;
   }
   return 1;
 }
@@ -253,6 +274,97 @@ int ledger_book_set_ledger_count(struct ledger_book* b, int n){
     b->ledger_count = n;
     return 1;
   } else return 1 /*since n == b->ledger_count */;
+}
+
+
+int ledger_book_get_journal_count(struct ledger_book const* b){
+  return b->journal_count;
+}
+struct ledger_journal* ledger_book_get_journal(struct ledger_book* b, int i){
+  if (i < 0 || i >= b->journal_count){
+    return NULL;
+  } else {
+    return b->journals[i];
+  }
+}
+struct ledger_journal const* ledger_book_get_journal_c
+  (struct ledger_book const* b, int i)
+{
+  if (i < 0 || i >= b->journal_count){
+    return NULL;
+  } else {
+    return b->journals[i];
+  }
+}
+int ledger_book_set_journal_count(struct ledger_book* b, int n){
+  if (n >= INT_MAX/sizeof(struct ledger_journal*)){
+    return 0;
+  } else if (n < 0){
+    return 0;
+  } else if (n == 0){
+    int i;
+    for (i = 0; i < b->journal_count; ++i){
+      ledger_journal_free(b->journals[i]);
+    }
+    ledger_util_free(b->journals);
+    b->journals = NULL;
+    b->journal_count = 0;
+    return 1;
+  } else if (n < b->journal_count){
+    int i;
+    /* allocate smaller array */
+    struct ledger_journal** new_array = (struct ledger_journal** )
+      ledger_util_malloc(n*sizeof(struct ledger_journal*));
+    if (new_array == NULL) return 0;
+    /* move old journals to new array */
+    for (i = 0; i < n; ++i){
+      new_array[i] = b->journals[i];
+    }
+    /* free rest of the journals */
+    for (; i < b->journal_count; ++i){
+      ledger_journal_free(b->journals[i]);
+    }
+    ledger_util_free(b->journals);
+    b->journals = new_array;
+    b->journal_count = n;
+    return 1;
+  } else if (n >= b->journal_count){
+    int save_id;
+    int i;
+    /* allocate larger array */
+    struct ledger_journal** new_array = (struct ledger_journal** )
+      ledger_util_malloc(n*sizeof(struct ledger_journal*));
+    if (new_array == NULL) return 0;
+    /* save the sequence number in case of rollback */
+    save_id = b->sequence_id;
+    /* make new journals */
+    for (i = b->journal_count; i < n; ++i){
+      int next_id = ledger_book_alloc_id(b);
+      if (next_id == -1) break;
+      new_array[i] = ledger_journal_new();
+      if (new_array[i] == NULL) break;
+      ledger_journal_set_id(new_array[i], next_id);
+    }
+    /* rollback and quit */if (i < n){
+      int j;
+      /* rollback */
+      for (j = b->journal_count; j < i; ++j){
+        ledger_journal_free(new_array[i]);
+      }
+      b->sequence_id = save_id;
+      /* quit */
+      return 0;
+    }
+    /* transfer old journals */
+    for (i = 0; i < b->journal_count; ++i){
+      new_array[i] = b->journals[i];
+    }
+    /* continue */
+    ledger_util_free(b->journals);
+    b->journals = new_array;
+    b->journal_count = n;
+    return 1;
+  } else return 1 /*since n == b->journal_count */;
 }
 
 /* END   implementation */

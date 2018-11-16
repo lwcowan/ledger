@@ -6,6 +6,7 @@
 #include <limits.h>
 #include "../src/base/ledger.h"
 #include "../src/base/util.h"
+#include "../src/base/journal.h"
 
 static int allocate_test(void);
 static int description_test(void);
@@ -19,6 +20,8 @@ static int resume_alloc_id_test(void);
 static int alloc_max_id_test(void);
 static int new_ledger_resize_test(void);
 static int new_ledger_equal_test(void);
+static int new_journal_resize_test(void);
+static int new_journal_equal_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -36,7 +39,9 @@ struct test_struct test_array[] = {
   { alloc_id_test, "alloc_id" },
   { alloc_max_id_test, "alloc max id" },
   { resume_alloc_id_test, "resume_alloc_id" },
-  { new_ledger_resize_test, "ledger resize" }
+  { new_ledger_resize_test, "ledger resize" },
+  { new_journal_equal_test, "journal equal" },
+  { new_journal_resize_test, "journal resize" }
 };
 
 int allocate_test(void){
@@ -385,6 +390,154 @@ int new_ledger_resize_test(void){
     result = 1;
   } while (0);
   ledger_book_free(ptr);
+  return result;
+}
+
+int new_journal_resize_test(void){
+  int result = 0;
+  struct ledger_book* ptr;
+  ptr = ledger_book_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int ok, i;
+    if (ledger_book_get_journal_count(ptr) != 0) break;
+    if (ledger_book_get_ledger_count(ptr) != 0) break;
+    if (!ledger_book_set_sequence(ptr,50)) break;
+    ok = ledger_book_set_journal_count(ptr,5);
+    if (!ok) break;
+    for (i = 0; i < 5; ++i){
+      struct ledger_journal const* l = ledger_book_get_journal_c(ptr,i);
+      if (l != ledger_book_get_journal(ptr,i)) break;
+      if (l == NULL) break;
+      if (ledger_journal_get_id(l) != i+50) break;
+    }
+    if (i < 5) break;
+    if (ledger_book_get_ledger_count(ptr) != 0) break;
+    if (ledger_book_get_journal_c(ptr,5) != NULL) break;
+    ok = ledger_journal_set_name
+        (ledger_book_get_journal(ptr,1), (unsigned char const*)"one");
+    if (!ok) break;
+    ok = ledger_journal_set_name
+        (ledger_book_get_journal(ptr,3), (unsigned char const*)"three");
+    if (!ok) break;
+    ok = ledger_book_set_journal_count(ptr,2);
+    if (!ok) break;
+    if (ledger_book_get_ledger_count(ptr) != 0) break;
+    ok = ledger_book_set_journal_count(ptr,4);
+    if (!ok) break;
+    if (ledger_book_get_ledger_count(ptr) != 0) break;
+    if (ledger_book_get_journal_count(ptr) != 4) break;
+    for (i = 0; i < 10; ++i){
+      struct ledger_journal const* l = ledger_book_get_journal_c(ptr,i);
+      if (i < 2){
+        if (l == NULL) break;
+        if (ledger_journal_get_id(l) != i+50) break;
+      } else if (i < 4){
+        if (l == NULL) break;
+        if (ledger_journal_get_id(l) != 55+i-2) break;
+      } else {
+        if (l != NULL) break;
+      }
+    }
+    if (i < 10) break;
+    if (ledger_util_ustrcmp(
+          ledger_journal_get_name(ledger_book_get_journal_c(ptr,1)),
+          (unsigned char const*)"one")
+        != 0)
+      break;
+    if (ledger_util_ustrcmp(
+          ledger_journal_get_name(ledger_book_get_journal_c(ptr,3)),
+          (unsigned char const*)"three")
+        == 0)
+      break;
+    if (ledger_book_get_ledger_count(ptr) != 0) break;
+    result = 1;
+  } while (0);
+  ledger_book_free(ptr);
+  return result;
+}
+int new_journal_equal_test(void){
+  int result = 0;
+  struct ledger_book* ptr, * other_ptr;
+  ptr = ledger_book_new();
+  if (ptr == NULL) return 0;
+  other_ptr = ledger_book_new();
+  if (other_ptr == NULL){
+    ledger_book_free(ptr);
+    return 0;
+  } else do {
+    int ok;
+    unsigned char const* description =
+      (unsigned char const*)"some long string";
+    unsigned char const* name =
+      (unsigned char const*)"short";
+    /* different ledger counts */
+    ok = ledger_book_set_journal_count(ptr,1);
+    if (!ok) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    /* different ledger counts */
+    ok = ledger_book_set_journal_count(other_ptr,2);
+    if (!ok) break;
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    /* same ledger count */
+    ok = ledger_book_set_journal_count(ptr,2);
+    if (!ok) break;
+    if (!ledger_book_is_equal(other_ptr,ptr)) break;
+    if (!ledger_book_is_equal(ptr,other_ptr)) break;
+    /* ledger modification */{
+      struct ledger_journal* new_journal = ledger_book_get_journal(ptr,0);
+      if (new_journal == NULL) break;
+      if (!ledger_journal_set_description(new_journal, description))
+        break;
+      if (!ledger_journal_set_name(new_journal, name))
+        break;
+    }
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    /* ledger modification */{
+      struct ledger_journal* new_journal = ledger_book_get_journal(other_ptr,1);
+      if (new_journal == NULL) break;
+      if (!ledger_journal_set_description(new_journal, description))
+        break;
+      if (!ledger_journal_set_name(new_journal, name))
+        break;
+    }
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    /* ledger modification */{
+      struct ledger_journal* new_journal = ledger_book_get_journal(other_ptr,1);
+      if (new_journal == NULL) break;
+      if (!ledger_journal_set_description(new_journal, name))
+        break;
+    }
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    /* ledger modification */{
+      struct ledger_journal* new_journal = ledger_book_get_journal(ptr,1);
+      if (new_journal == NULL) break;
+      if (!ledger_journal_set_name(new_journal, name))
+        break;
+      if (!ledger_journal_set_description(new_journal, name))
+        break;
+    }
+    if (ledger_book_is_equal(other_ptr,ptr)) break;
+    if (ledger_book_is_equal(ptr,other_ptr)) break;
+    /* ledger modification */{
+      struct ledger_journal* new_journal = ledger_book_get_journal(other_ptr,0);
+      if (new_journal == NULL) break;
+      if (!ledger_journal_set_description(new_journal, description))
+        break;
+      if (!ledger_journal_set_name(new_journal, name))
+        break;
+    }
+    if (!ledger_book_is_equal(other_ptr,ptr)) break;
+    if (!ledger_book_is_equal(ptr,other_ptr)) break;
+    result = 1;
+  } while (0);
+  ledger_book_free(ptr);
+  ledger_book_free(other_ptr);
   return result;
 }
 
