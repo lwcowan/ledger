@@ -59,13 +59,13 @@ int ledger_io_journal_write_items
           break;
       }
     }
-    /* write transaction entries */{
+    /* write transaction lines */{
       struct ledger_table const* table = ledger_journal_get_table_c(journal);
       if (table != NULL){
         int ok;
         unsigned char *data_csv;
         ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
-              tmp_num, "journal-%i/entries.csv",
+              tmp_num, "journal-%i/lines.csv",
               journal_id);
         if (ok < 0) break;
         data_csv = ledger_io_table_print_csv(table);
@@ -83,14 +83,14 @@ int ledger_io_journal_write_items
 
 int ledger_io_journal_read_items
   ( struct zip_t* zip, struct ledger_io_manifest const* manifest,
-    struct ledger_journal* account, struct ledger_bignum* tmp_num)
+    struct ledger_journal* journal, struct ledger_bignum* tmp_num)
 {
   int result = 0;
   int const journal_id = ledger_io_manifest_get_id(manifest);
   char name_buffer[100];
   do {
     /* set the ID */{
-      ledger_journal_set_id(account, journal_id);
+      ledger_journal_set_id(journal, journal_id);
     }
     /* read description */if (
       ledger_io_manifest_get_top_flags(manifest) & LEDGER_IO_MANIFEST_DESC)
@@ -103,7 +103,7 @@ int ledger_io_journal_read_items
         unsigned char* desc =
           ledger_io_util_extract_text(zip, name_buffer, &ok);
         if (desc != NULL){
-          ledger_journal_set_description(account, desc);
+          ledger_journal_set_description(journal, desc);
         }
         ledger_util_free(desc);
         if (!ok) break;
@@ -120,19 +120,18 @@ int ledger_io_journal_read_items
         unsigned char* name =
           ledger_io_util_extract_text(zip, name_buffer, &ok);
         if (name != NULL){
-          ledger_journal_set_name(account, name);
+          ledger_journal_set_name(journal, name);
         }
         ledger_util_free(name);
         if (!ok) break;
       } else break;
     }
-    /* read transaction entries */{
-      struct ledger_table* table = ledger_journal_get_table(account);
+    /* read transaction lines */{
+      struct ledger_table* table = ledger_journal_get_table(journal);
       if (table != NULL){
         int ok;
-        unsigned char *data_csv;
         ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
-              tmp_num, "journal-%i/entries.csv",
+              tmp_num, "journal-%i/lines.csv",
               journal_id);
         if (ok > 0){
           unsigned char* data_csv =
