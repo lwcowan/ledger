@@ -11,6 +11,7 @@ extern "C" {
 #endif /*__cplusplus*/
 
 struct ledger_ledger;
+struct ledger_journal;
 
 /*
  * brief: Account and transaction book
@@ -125,6 +126,40 @@ struct ledger_ledger* ledger_book_get_ledger(struct ledger_book* b, int i);
  * @return the ledger at that array index
  */
 struct ledger_ledger const* ledger_book_get_ledger_c
+  (struct ledger_book const* b, int i);
+
+
+
+/*
+ * Get a journal count.
+ * - b book to query
+ * @return the number of journals in this book
+ */
+int ledger_book_get_journal_count(struct ledger_book const* b);
+
+/*
+ * Set a journal count.
+ * - b book to configure
+ * - n number of journals
+ * @return one on success, zero otherwise
+ */
+int ledger_book_set_journal_count(struct ledger_book* b, int n);
+
+/*
+ * Get a journal.
+ * - b book to adjust
+ * - i array index
+ * @return the journal at that array index
+ */
+struct ledger_journal* ledger_book_get_journal(struct ledger_book* b, int i);
+
+/*
+ * Get a journal.
+ * - b book to read
+ * - i array index
+ * @return the journal at that array index
+ */
+struct ledger_journal const* ledger_book_get_journal_c
   (struct ledger_book const* b, int i);
 
 #ifdef __cplusplus
