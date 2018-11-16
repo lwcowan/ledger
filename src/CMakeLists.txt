@@ -8,6 +8,7 @@ set(ledger_base_SOURCES
   base/ledger.h        base/ledger.c
   base/bignum.h        base/bignum.c
   base/account.h       base/account.c
+  base/journal.h       base/journal.c
   base/table.h         base/table.c
   )
 
