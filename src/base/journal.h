@@ -99,6 +99,65 @@ struct ledger_table* ledger_journal_get_table(struct ledger_journal* a);
 struct ledger_table const* ledger_journal_get_table_c
   (struct ledger_journal const* a);
 
+
+
+/*
+ * Query the sequence identifier of a journal.
+ * - a journal to query
+ * @return the next identifier
+ */
+int ledger_journal_get_sequence(struct ledger_journal const* a);
+
+/*
+ * Modify the sequence identifier of a journal.
+ * - a journal to query
+ * - item_id new identifier (non-negative)
+ */
+int ledger_journal_set_sequence(struct ledger_journal* a, int item_id);
+
+/*
+ * Allocate a sequence identifier from a journal.
+ * - a journal to use
+ * @return a new identifier (non-negative) on success,
+ *   or -1 if out of identifiers
+ */
+int ledger_journal_alloc_id(struct ledger_journal* a);
+
+
+/*
+ * Get an entry count.
+ * - a journal to query
+ * @return the number of entries in this journal
+ */
+int ledger_journal_get_entry_count(struct ledger_journal const* a);
+
+/*
+ * Set a entry count.
+ * - a journal to configure
+ * - n number of entries
+ * @return one on success, zero otherwise
+ */
+int ledger_journal_set_entry_count(struct ledger_journal* a, int n);
+
+/*
+ * Get an entry.
+ * - a journal to adjust
+ * - i array index
+ * @return the entry at that array index
+ */
+struct ledger_entry* ledger_journal_get_entry
+  (struct ledger_journal* a, int i);
+
+/*
+ * Get an entry.
+ * - a journal to read
+ * - i array index
+ * @return the entry at that array index
+ */
+struct ledger_entry const* ledger_journal_get_entry_c
+  (struct ledger_journal const* a, int i);
+
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/

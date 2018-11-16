@@ -2,6 +2,8 @@
 #include "journal.h"
 #include "util.h"
 #include "table.h"
+#include "entry.h"
+#include <limits.h>
 
 /*
  * Actualization of the journal structure
@@ -11,6 +13,18 @@ struct ledger_journal {
   unsigned char *description;
   int item_id;
   struct ledger_table *table;
+  /*
+   * brief: entry count
+   */
+  int entry_count;
+  /*
+   * brief: array of entries
+   */
+  struct ledger_entry** entries;
+  /*
+   * next id to use
+   */
+  int sequence_id;
 };
 
 static int ledger_journal_schema[] =
@@ -61,10 +75,14 @@ int ledger_journal_init(struct ledger_journal* a){
   a->description = NULL;
   a->name = NULL;
   a->item_id = -1;
+  a->sequence_id = 0;
+  a->entries = NULL;
+  a->entry_count = 0;
   return 1;
 }
 
 void ledger_journal_clear(struct ledger_journal* a){
+  ledger_journal_set_entry_count(a,0);
   ledger_table_free(a->table);
   a->table = NULL;
   ledger_util_free(a->description);
@@ -72,6 +90,7 @@ void ledger_journal_clear(struct ledger_journal* a){
   ledger_util_free(a->name);
   a->description = NULL;
   a->item_id = -1;
+  a->sequence_id = 0;
   return;
 }
 
@@ -165,6 +184,15 @@ int ledger_journal_is_equal
     if (!ledger_table_is_equal(a->table, b->table))
       return 0;
   }
+  /* compare entries */{
+    int i;
+    if (a->entry_count != b->entry_count) return 0;
+    else for (i = 0; i < a->entry_count; ++i){
+      if (!ledger_entry_is_equal(a->entries[i], b->entries[i]))
+        break;
+    }
+    if (i < a->entry_count) return 0;
+  }
   return 1;
 }
 
@@ -177,5 +205,118 @@ struct ledger_table const* ledger_journal_get_table_c
 {
   return a->table;
 }
+
+
+int ledger_journal_get_sequence(struct ledger_journal const* a){
+  return a->sequence_id;
+}
+
+int ledger_journal_set_sequence(struct ledger_journal* a, int item_id){
+  if (item_id < 0) return 0;
+  a->sequence_id = item_id;
+  return 1;
+}
+
+int ledger_journal_alloc_id(struct ledger_journal* a){
+  if (a->sequence_id < INT_MAX){
+    int out;
+    out = a->sequence_id;
+    a->sequence_id += 1;
+    return out;
+  } else return -1;
+}
+
+int ledger_journal_get_entry_count(struct ledger_journal const* a){
+  return a->entry_count;
+}
+struct ledger_entry* ledger_journal_get_entry
+  (struct ledger_journal* a, int i)
+{
+  if (i < 0 || i >= a->entry_count){
+    return NULL;
+  } else {
+    return a->entries[i];
+  }
+}
+struct ledger_entry const* ledger_journal_get_entry_c
+  (struct ledger_journal const* a, int i)
+{
+  if (i < 0 || i >= a->entry_count){
+    return NULL;
+  } else {
+    return a->entries[i];
+  }
+}
+int ledger_journal_set_entry_count(struct ledger_journal* a, int n){
+  if (n >= INT_MAX/sizeof(struct ledger_entry*)){
+    return 0;
+  } else if (n < 0){
+    return 0;
+  } else if (n == 0){
+    int i;
+    for (i = 0; i < a->entry_count; ++i){
+      ledger_entry_free(a->entries[i]);
+    }
+    ledger_util_free(a->entries);
+    a->entries = NULL;
+    a->entry_count = 0;
+    return 1;
+  } else if (n < a->entry_count){
+    int i;
+    /* allocate smaller array */
+    struct ledger_entry** new_array = (struct ledger_entry** )
+      ledger_util_malloc(n*sizeof(struct ledger_entry*));
+    if (new_array == NULL) return 0;
+    /* move old entries to new array */
+    for (i = 0; i < n; ++i){
+      new_array[i] = a->entries[i];
+    }
+    /* free rest of the entries */
+    for (; i < a->entry_count; ++i){
+      ledger_entry_free(a->entries[i]);
+    }
+    ledger_util_free(a->entries);
+    a->entries = new_array;
+    a->entry_count = n;
+    return 1;
+  } else if (n >= a->entry_count){
+    int save_id;
+    int i;
+    /* allocate larger array */
+    struct ledger_entry** new_array = (struct ledger_entry** )
+      ledger_util_malloc(n*sizeof(struct ledger_entry*));
+    if (new_array == NULL) return 0;
+    /* save the sequence number in case of rollback */
+    save_id = a->sequence_id;
+    /* make new entries */
+    for (i = a->entry_count; i < n; ++i){
+      int next_id = ledger_journal_alloc_id(a);
+      if (next_id == -1) break;
+      new_array[i] = ledger_entry_new();
+      if (new_array[i] == NULL) break;
+      ledger_entry_set_id(new_array[i], next_id);
+    }
+    /* rollback and quit */if (i < n){
+      int j;
+      /* rollback */
+      for (j = a->entry_count; j < i; ++j){
+        ledger_entry_free(new_array[i]);
+      }
+      a->sequence_id = save_id;
+      /* quit */
+      return 0;
+    }
+    /* transfer old entries */
+    for (i = 0; i < a->entry_count; ++i){
+      new_array[i] = a->entries[i];
+    }
+    /* continue */
+    ledger_util_free(a->entries);
+    a->entries = new_array;
+    a->entry_count = n;
+    return 1;
+  } else return 1 /*since n == a->entry_count */;
+}
+
 
 /* END   implementation */
