@@ -27,6 +27,7 @@ struct cJSON;
  */
 unsigned char* ledger_io_util_extract_text
   (struct zip_t *zip, char const* name, int *ok);
+
 /*
  * Extract JSON from a zip archive.
  * - zip archive from which to extract
@@ -38,6 +39,7 @@ unsigned char* ledger_io_util_extract_text
  */
 struct cJSON* ledger_io_util_extract_json
   (struct zip_t *zip, char const* name, int *ok);
+
 /*
  * Add JSON to a zip archive.
  * - zip archive to which to add
@@ -47,6 +49,7 @@ struct cJSON* ledger_io_util_extract_json
  */
 int ledger_io_util_archive_text
   (struct zip_t *zip, char const* name, unsigned char const* text);
+
 /*
  * Add JSON to a zip archive.
  * - zip archive to which to add
@@ -57,6 +60,7 @@ int ledger_io_util_archive_text
  */
 int ledger_io_util_archive_json
   (struct zip_t *zip, char const* name, struct cJSON const* json);
+
 /*
  * Construct a file name.
  * - buf buffer to receive the etnry name

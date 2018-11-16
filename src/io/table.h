@@ -19,6 +19,7 @@ struct ledger_table;
  * @return one on success, zero otherwise
  */
 int ledger_io_table_parse_csv(struct ledger_table* table, unsigned char *csv);
+
 /*
  * Print a CSV text.
  * - table table to write out

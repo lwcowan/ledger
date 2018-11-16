@@ -26,6 +26,7 @@ struct ledger_bignum;
 int ledger_io_ledger_write_items
   ( struct zip_t* zip, struct ledger_io_manifest const* manifest,
     struct ledger_ledger const* ledger, struct ledger_bignum* tmp_num);
+
 /*
  * Read zip entries for a single ledger.
  * - zip open zip archive for reading

@@ -28,6 +28,7 @@ int ledger_io_account_write_items
   ( struct zip_t* zip, struct ledger_io_manifest const* manifest,
     struct ledger_account const* ledger, struct ledger_bignum* tmp_num,
     int ledger_id);
+
 /*
  * Read zip entries for a single account.
  * - zip open zip archive for reading

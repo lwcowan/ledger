@@ -19,6 +19,7 @@ struct ledger_book;
  * @return one on success, zero otherwise
  */
 int ledger_io_book_read(char const* filename, struct ledger_book* book);
+
 /*
  * Write a book file.
  * - filename name of book file to write

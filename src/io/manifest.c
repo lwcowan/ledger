@@ -30,11 +30,13 @@ struct ledger_io_manifest {
  * @return one on success, zero on failure
  */
 static int ledger_io_manifest_init(struct ledger_io_manifest* manifest);
+
 /*
  * Clear out a manifest.
  * - manifest manifest to clear
  */
 static void ledger_io_manifest_clear(struct ledger_io_manifest* manifest);
+
 /*
  * Check parent-child manifest relationships.
  * - parent parent manifest
