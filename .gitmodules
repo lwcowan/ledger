@@ -1,0 +1,9 @@
+[submodule "deps/zip"]
+	path = deps/zip
+	url = https://github.com/kuba--/zip.git
+[submodule "deps/cJSON"]
+	path = deps/cJSON
+	url = https://github.com/DaveGamble/cJSON.git
+[submodule "deps/minicsv"]
+	path = deps/minicsv
+	url = https://github.com/jedisct1/minicsv.git
