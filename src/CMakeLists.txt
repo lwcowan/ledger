@@ -37,3 +37,13 @@ set(ledger_act_SOURCES
 
 add_library(ledger_act ${ledger_act_SOURCES})
 target_link_libraries(ledger_act  ledger_base)
+
+#set ledger-cli code
+set(ledger_cli_SOURCES
+  cli/line.h           cli/line.c
+  cli/cli.c
+  )
+
+add_executable(ledger_cli ${ledger_cli_SOURCES})
+target_link_libraries(ledger_cli
+  ledger_act ledger_io ledger_base linenoise)
