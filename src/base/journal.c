@@ -88,7 +88,7 @@ void ledger_journal_clear(struct ledger_journal* a){
   ledger_util_free(a->description);
   a->description = NULL;
   ledger_util_free(a->name);
-  a->description = NULL;
+  a->name = NULL;
   a->item_id = -1;
   a->sequence_id = 0;
   return;

@@ -50,6 +50,34 @@ unsigned char* ledger_util_ustrdup(unsigned char const* str, int* ok){
   }
 }
 
+unsigned char* ledger_util_ustrndup
+  (unsigned char const* str, size_t sz, int* ok)
+{
+  if (str != NULL){
+    size_t len = sz;
+    unsigned char* ptr;
+    if (len >= 65534){
+      /* string too long */
+      if (ok) *ok = 0;
+      return NULL;
+    } else {
+      ptr = ledger_util_malloc(len+1);
+      if (ptr != NULL){
+        memcpy(ptr,str,len);
+        ptr[len] = 0;
+        if (ok) *ok = 1;
+      } else {
+        if (ok) *ok = 0;
+      }
+      return ptr;
+    }
+  } else {
+    if (ok) *ok = 1;
+    return NULL;
+  }
+}
+
+
 int ledger_util_ustrcmp(unsigned char const* a, unsigned char const* b){
   /* trivial comparisons */
   if (a == NULL && b == NULL) return 0;

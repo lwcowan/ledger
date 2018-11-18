@@ -34,6 +34,16 @@ void ledger_util_free(void* ptr);
 unsigned char* ledger_util_ustrdup(unsigned char const* str, int* ok);
 
 /*
+ * Duplicate a UTF-8 string.
+ * - str string to duplicate
+ * - sz length
+ * - ok (optional) success flag
+ * @return the cloned string on success, otherwise NULL
+ */
+unsigned char* ledger_util_ustrndup
+  (unsigned char const* str, size_t sz, int* ok);
+
+/*
  * Compute the length of a UTF-8 string.
  * - str string to test
  * @return the length of the string

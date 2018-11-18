@@ -14,6 +14,7 @@ static int trivial_string_cmp_test(void);
 static int zero_check_test(void);
 static int itoa_test(void);
 static int atoi_test(void);
+static int string_ndup_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -29,7 +30,8 @@ struct test_struct test_array[] = {
   { trivial_string_cmp_test, "trivial string compare" },
   { zero_check_test, "zero check" },
   { itoa_test, "integer to string" },
-  { atoi_test, "string to integer" }
+  { atoi_test, "string to integer" },
+  { string_ndup_test, "string length-restricted duplicate" }
 };
 
 int allocate_test(void){
@@ -173,6 +175,25 @@ int atoi_test(void){
   if (ledger_util_atoi((unsigned char const*)"-5362") != -5362) return 0;
   return 1;
 }
+
+int string_ndup_test(void){
+  int result = 0;
+  char const* text = "text text text";
+  unsigned char* new_text;
+  /* string duplication */do {
+    int ok;
+    new_text = ledger_util_ustrndup((unsigned char const*)text,7u,&ok);
+    if (!ok) break;
+    if (new_text == NULL) break;
+    if (strcmp((char const*)new_text, "text te")) break;
+    if (strlen(text) == strlen((char const*)new_text)) break;
+    if (7u != strlen((char const*)new_text)) break;
+    result = 1;
+  } while (0);
+  ledger_util_free(new_text);
+  return result;
+}
+
 
 int main(int argc, char **argv){
   int pass_count = 0;
