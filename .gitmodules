@@ -7,3 +7,6 @@
 [submodule "deps/minicsv"]
 	path = deps/minicsv
 	url = https://github.com/jedisct1/minicsv.git
+[submodule "deps/linenoise"]
+	path = deps/linenoise
+	url = https://github.com/antirez/linenoise.git
