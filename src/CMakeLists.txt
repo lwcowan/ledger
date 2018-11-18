@@ -29,3 +29,11 @@ set(ledger_io_SOURCES
 
 add_library(ledger_io ${ledger_io_SOURCES})
 target_link_libraries(ledger_io  zip cjson minicsv)
+
+#set action library code
+set(ledger_act_SOURCES
+  act/transact.h       act/transact.c
+  )
+
+add_library(ledger_act ${ledger_act_SOURCES})
+target_link_libraries(ledger_act  ledger_base)

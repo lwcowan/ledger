@@ -40,3 +40,10 @@ target_link_libraries("ledger_test_io_book" ledger_io ledger_base)
 target_link_libraries("ledger_test_io_manifest" ledger_io ledger_base cjson)
 target_link_libraries("ledger_test_io_table" ledger_io ledger_base)
 target_link_libraries("ledger_test_io_util" ledger_io ledger_base cjson)
+
+
+
+#transaction test
+add_executable("ledger_test_transaction" "test_transaction.c")
+
+target_link_libraries("ledger_test_transaction" ledger_act ledger_base)
