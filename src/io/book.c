@@ -134,6 +134,7 @@ int ledger_io_book_read(char const* filename, struct ledger_book* book){
     return result;
   }
 }
+
 int ledger_io_book_write
   (char const* filename, struct ledger_book const* book)
 {

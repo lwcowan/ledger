@@ -45,6 +45,7 @@ struct test_struct {
   int (*fn)(void);
   char const* name;
 };
+
 struct test_struct test_array[] = {
   { io_manifest_test, "i/o manifest allocate" },
   { io_manifest_top_flag_test, "i/o manifest top flag" },
@@ -118,6 +119,7 @@ int io_manifest_print_test(void){
   if (json != NULL) cJSON_Delete(json);
   return result;
 }
+
 int io_manifest_parse_test(void){
   int result = 0;
   struct ledger_io_manifest* manifest;
@@ -222,6 +224,7 @@ int print_zero_book_test(void){
   if (json != NULL) cJSON_Delete(json);
   return result;
 }
+
 int io_manifest_parse_zero_test(void){
   int result = 0;
   struct ledger_io_manifest* manifest;
@@ -249,6 +252,7 @@ int io_manifest_parse_zero_test(void){
   cJSON_Delete(json);
   return result;
 }
+
 int io_manifest_test(void){
   int result = 0;
   struct ledger_io_manifest* manifest;
@@ -261,6 +265,7 @@ int io_manifest_test(void){
   ledger_io_manifest_free(manifest);
   return result;
 }
+
 int io_manifest_top_flag_test(void){
   int result = 0;
   struct ledger_io_manifest* manifest;
@@ -276,6 +281,7 @@ int io_manifest_top_flag_test(void){
   ledger_io_manifest_free(manifest);
   return result;
 }
+
 int io_manifest_zero_test(void){
   int result = 0;
   struct ledger_book* book;
@@ -298,6 +304,7 @@ int io_manifest_zero_test(void){
   ledger_book_free(book);
   return result;
 }
+
 int io_manifest_nonzero_test(void ){
   int result = 0;
   struct ledger_book* book;
@@ -331,6 +338,7 @@ int io_manifest_nonzero_test(void ){
   ledger_book_free(book);
   return result;
 }
+
 int new_resize_test(void){
   int result = 0;
   struct ledger_io_manifest* ptr;
@@ -384,6 +392,7 @@ int new_resize_test(void){
   ledger_io_manifest_free(ptr);
   return result;
 }
+
 int type_code_test(void){
   int result = 0;
   struct ledger_io_manifest* ptr;
@@ -682,6 +691,7 @@ int print_book_with_ledger_test(void ){
   if (json != NULL) cJSON_Delete(json);
   return result;
 }
+
 int parse_book_with_ledger_test(void){
   int result = 0;
   struct ledger_io_manifest* manifest;
@@ -1002,6 +1012,7 @@ int print_ledger_with_account_test(void ){
   if (json != NULL) cJSON_Delete(json);
   return result;
 }
+
 int parse_ledger_with_account_test(void){
   int result = 0;
   struct ledger_io_manifest* manifest;
@@ -1323,6 +1334,7 @@ int print_book_with_journal_test(void ){
   if (json != NULL) cJSON_Delete(json);
   return result;
 }
+
 int parse_book_with_journal_test(void){
   int result = 0;
   struct ledger_io_manifest* manifest;

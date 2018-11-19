@@ -21,6 +21,7 @@ struct test_struct {
   int (*fn)(char const* );
   char const* name;
 };
+
 struct test_struct test_array[] = {
   { io_write_zero_test, "i/o write zero" },
   { io_write_nonzero_test, "i/o write nonzero" },
@@ -30,6 +31,7 @@ struct test_struct test_array[] = {
   { account_journal_test, "account and journal writing" },
   { account_journal_entry_test, "account and journal entry writing" }
 };
+
 
 int io_write_zero_test(char const* fn){
   int result = 0;
@@ -53,6 +55,7 @@ int io_write_zero_test(char const* fn){
   ledger_book_free(back_book);
   return result;
 }
+
 int io_write_nonzero_test(char const* fn){
   int result = 0;
   struct ledger_book* book, * back_book;
@@ -81,6 +84,7 @@ int io_write_nonzero_test(char const* fn){
   ledger_book_free(back_book);
   return result;
 }
+
 int io_write_ledger_test(char const* fn){
   int result = 0;
   struct ledger_book* book, * back_book;
@@ -127,6 +131,7 @@ int io_write_ledger_test(char const* fn){
   ledger_book_free(back_book);
   return result;
 }
+
 int io_write_account_test(char const* fn){
   int result = 0;
   struct ledger_book* book, * back_book;
@@ -239,6 +244,7 @@ int io_write_account_test(char const* fn){
   ledger_book_free(back_book);
   return result;
 }
+
 int io_write_journal_test(char const* fn){
   int result = 0;
   struct ledger_book* book, * back_book;
@@ -285,6 +291,7 @@ int io_write_journal_test(char const* fn){
   ledger_book_free(back_book);
   return result;
 }
+
 int account_journal_test(char const* fn){
   int result = 0;
   struct ledger_book* book, * back_book;

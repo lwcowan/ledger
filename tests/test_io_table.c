@@ -14,6 +14,7 @@ struct test_struct {
   int (*fn)(char const* );
   char const* name;
 };
+
 struct test_struct test_array[] = {
   { io_table_zero_test, "i/o table zero" },
   { io_table_nonzero_test, "i/o table nonzero" },
