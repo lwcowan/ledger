@@ -15,7 +15,9 @@ struct ledger_book;
 struct ledger_cli_line {
   /* flag set to nonzero when it is time to quit */
   int done;
+  /* nonzero if quit on first error */
   int first_quit;
+  /* active book */
   struct ledger_book* book;
 };
 
