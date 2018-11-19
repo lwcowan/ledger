@@ -136,5 +136,26 @@ int ledger_util_atoi(unsigned char const* str){
   return atoi((char const*)str);
 }
 
+int ledger_util_ustrncmp
+  (unsigned char const* a, unsigned char const* b, size_t sz)
+{
+  size_t i = 0;
+  /* trivial comparisons */
+  if (a == NULL && b == NULL) return 0;
+  else if (a == NULL) return -1;
+  else if (b == NULL) return +1;
+  /* bytewise comparisons */
+  while ((i < sz) && (*a != 0) && (*b != 0)){
+    if (*a != *b) break;
+    ++a;
+    ++b;
+    ++i;
+  }
+  if (i == sz) return 0;
+  else if (*a == *b) return 0;
+  else if (*a < *b) return -1;
+  else return +1;
+}
+
 /* END   implementation */
 
