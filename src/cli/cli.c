@@ -6,15 +6,12 @@
 
 int main(int argc, char **argv){
   int all_result = 0;
-  struct ledger_book *active_book;
-  /* construct a book */
-  active_book = ledger_book_new();
-  if (active_book == NULL){
-    fprintf(stderr,"Failed to initialize the book structure.\n");
+  struct ledger_cli_line line_tracking;
+  if (!ledger_cli_line_init(&line_tracking)){
+    fprintf(stderr,"Failed to initialize the line tracking structure.\n");
     return EXIT_FAILURE;
   }
   /* enter processing loop */{
-    struct ledger_cli_line line_tracking = {0,0,active_book};
     ledger_cli_set_history_len(&line_tracking, 10);
     int result = 0;
     while (!line_tracking.done){
@@ -33,8 +30,7 @@ int main(int argc, char **argv){
         ledger_cli_free_line(&line_tracking, line);
       }
     }
-    active_book = line_tracking.book;
   }
-  ledger_book_free(active_book);
+  ledger_cli_line_clear(&line_tracking);
   return all_result;
 }

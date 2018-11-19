@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../base/util.h"
+#include "../base/book.h"
 #include <stdlib.h>
 
 #include "test.h"
@@ -22,6 +23,21 @@ static struct ledger_cli_token const ledger_cli_cb_list[] = {
   { ledger_cli_read, "read" },
   { ledger_cli_write, "write" }
 };
+
+
+int ledger_cli_line_init(struct ledger_cli_line *tracking){
+  struct ledger_book *book = ledger_book_new();
+  if (book == NULL) return 0;
+  tracking->done = 0;
+  tracking->first_quit = 0;
+  tracking->book = book;
+  tracking->object_path = ledger_act_path_root();
+  return 1;
+}
+
+void ledger_cli_line_clear(struct ledger_cli_line *tracking){
+  ledger_book_free(tracking->book);
+}
 
 char* ledger_cli_get_line(struct ledger_cli_line *tracking){
   return linenoise("ledger-cli> ");

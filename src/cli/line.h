@@ -31,6 +31,19 @@ struct ledger_cli_line {
 typedef int (*ledger_cli_cb)
   (struct ledger_cli_line *tracking, int argc, char **argv);
 
+
+/*
+ * Initialize the line tracking structure.
+ * - tracking line tracking structure
+ */
+int ledger_cli_line_init(struct ledger_cli_line *tracking);
+
+/*
+ * Clear the line tracking structure.
+ * - tracking line tracking structure
+ */
+void ledger_cli_line_clear(struct ledger_cli_line *tracking);
+
 /*
  * Get a line of text from the input stream.
  * - tracking line tracking structure
