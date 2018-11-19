@@ -51,6 +51,44 @@ int ledger_find_journal_by_name
 int ledger_find_journal_by_id(struct ledger_book const* b, int item_id);
 
 
+
+/*
+ * Find an account by name.
+ * - b ledger to read
+ * - name account name
+ * @return the index of the account, or -1 if not found
+ */
+int ledger_find_account_by_name
+  (struct ledger_ledger const* b, unsigned char const* name);
+
+/*
+ * Find an account by identifier.
+ * - b ledger to read
+ * - name account identifier
+ * @return the index of the account, or -1 if not found
+ */
+int ledger_find_account_by_id(struct ledger_ledger const* b, int item_id);
+
+
+
+/*
+ * Find an entry by name.
+ * - b journal to read
+ * - name entry name
+ * @return the index of the entry, or -1 if not found
+ */
+int ledger_find_entry_by_name
+  (struct ledger_journal const* b, unsigned char const* name);
+
+/*
+ * Find an entry by identifier.
+ * - b journal to read
+ * - name entry identifier
+ * @return the index of the entry, or -1 if not found
+ */
+int ledger_find_entry_by_id(struct ledger_journal const* b, int item_id);
+
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/
