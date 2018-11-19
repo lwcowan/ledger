@@ -6,6 +6,8 @@
 #ifndef __Ledger_cli_Line_H__
 #define __Ledger_cli_Line_H__
 
+#include "../act/path.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /*__cplusplus*/
@@ -19,7 +21,10 @@ struct ledger_cli_line {
   int first_quit;
   /* active book */
   struct ledger_book* book;
+  /* path to current object */
+  struct ledger_act_path object_path;
 };
+
 
 /*
  * Command line callback.

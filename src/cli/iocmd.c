@@ -29,6 +29,7 @@ int ledger_cli_read(struct ledger_cli_line *tracking, int argc, char **argv){
   } else {
     ledger_book_free(tracking->book);
     tracking->book = new_book;
+    tracking->object_path = ledger_act_path_root();
     fputs("Load done.\n",stderr);
   }
   return 0;

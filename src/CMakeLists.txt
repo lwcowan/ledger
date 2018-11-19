@@ -34,6 +34,7 @@ target_link_libraries(ledger_io  zip cjson minicsv)
 #set action library code
 set(ledger_act_SOURCES
   act/transact.h       act/transact.c
+  act/path.h           act/path.c
   )
 
 add_library(ledger_act ${ledger_act_SOURCES})
@@ -45,6 +46,7 @@ set(ledger_cli_SOURCES
   cli/test.h           cli/test.c
   cli/quit.h           cli/quit.c
   cli/iocmd.h          cli/iocmd.c
+  cli/navigate.h       cli/navigate.c
   cli/cli.c
   )
 
