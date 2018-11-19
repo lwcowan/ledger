@@ -33,6 +33,7 @@ int main(int argc, char **argv){
         ledger_cli_free_line(&line_tracking, line);
       }
     }
+    active_book = line_tracking.book;
   }
   ledger_book_free(active_book);
   return all_result;
