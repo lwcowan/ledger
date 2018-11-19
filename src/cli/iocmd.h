@@ -16,12 +16,12 @@ struct ledger_cli_line;
 /*
  * Load a book.
  */
-int ledger_cli_load(struct ledger_cli_line *tracking, int argc, char **argv);
+int ledger_cli_read(struct ledger_cli_line *tracking, int argc, char **argv);
 
 /*
  * Save a book.
  */
-int ledger_cli_save(struct ledger_cli_line *tracking, int argc, char **argv);
+int ledger_cli_write(struct ledger_cli_line *tracking, int argc, char **argv);
 
 
 #ifdef __cplusplus

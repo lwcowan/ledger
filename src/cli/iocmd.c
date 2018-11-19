@@ -5,11 +5,12 @@
 #include "line.h"
 #include <stdio.h>
 
-int ledger_cli_load(struct ledger_cli_line *tracking, int argc, char **argv){
+int ledger_cli_read(struct ledger_cli_line *tracking, int argc, char **argv){
   int result = 1;
   struct ledger_book *new_book;
   if (argc < 2){
-    fputs("usage: load (filename)\n",stderr);
+    fputs("read: Read a book from a file.\n"
+      "usage: read (filename)\n",stderr);
     return 2;
   }
   new_book = ledger_book_new();
@@ -34,10 +35,11 @@ int ledger_cli_load(struct ledger_cli_line *tracking, int argc, char **argv){
 }
 
 
-int ledger_cli_save(struct ledger_cli_line *tracking, int argc, char **argv){
+int ledger_cli_write(struct ledger_cli_line *tracking, int argc, char **argv){
   int result = 1;
   if (argc < 2){
-    fputs("usage: save (filename)\n",stderr);
+    fputs("write: Write a book to a file.\n"
+      "usage: write (filename)\n",stderr);
     return 2;
   }
   do {
