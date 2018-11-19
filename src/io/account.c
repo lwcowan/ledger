@@ -66,7 +66,7 @@ int ledger_io_account_write_items
         int ok;
         unsigned char *data_csv;
         ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
-              tmp_num, "ledger-%i/account-%i/entries.csv",
+              tmp_num, "ledger-%i/account-%i/lines.csv",
               ledger_id, account_id);
         if (ok < 0) break;
         data_csv = ledger_io_table_print_csv(table);
@@ -133,7 +133,7 @@ int ledger_io_account_read_items
       if (table != NULL){
         int ok;
         ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
-              tmp_num, "ledger-%i/account-%i/entries.csv",
+              tmp_num, "ledger-%i/account-%i/lines.csv",
               ledger_id, account_id);
         if (ok > 0){
           unsigned char* data_csv =
