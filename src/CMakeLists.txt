@@ -42,6 +42,7 @@ target_link_libraries(ledger_act  ledger_base)
 set(ledger_cli_SOURCES
   cli/line.h           cli/line.c
   cli/test.h           cli/test.c
+  cli/quit.h           cli/quit.c
   cli/cli.c
   )
 

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "test.h"
+#include "quit.h"
 
 
 struct ledger_cli_token {
@@ -15,7 +16,8 @@ struct ledger_cli_token {
   char const* name;
 };
 static struct ledger_cli_token const ledger_cli_cb_list[] = {
-  { ledger_cli_test, "test" }
+  { ledger_cli_test, "test" },
+  { ledger_cli_quit, "quit" }
 };
 
 char* ledger_cli_get_line(struct ledger_cli_line *tracking){
