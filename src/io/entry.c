@@ -35,13 +35,13 @@ int ledger_io_entry_parse_json
             /* description flag */
             if (cJSON_IsString(entry_item)){
               ok = ledger_entry_set_description
-                (entry, cJSON_GetStringValue(entry_item));
+                (entry, (unsigned char*)cJSON_GetStringValue(entry_item));
             } else ok = 0;
           } else if (strcmp(entry_item->string, "name") == 0){
             /* name */
             if (cJSON_IsString(entry_item)){
               ok = ledger_entry_set_name
-                (entry, cJSON_GetStringValue(entry_item));
+                (entry, (unsigned char*)cJSON_GetStringValue(entry_item));
             } else ok = 0;
           } else if (strcmp(entry_item->string, "entry_id") == 0){
             /* entry identifier */
@@ -72,7 +72,7 @@ struct cJSON* ledger_io_entry_print_json(struct ledger_entry const* entry){
       unsigned char const* name = ledger_entry_get_name(entry);
       if (name != NULL){
         sub_json = cJSON_AddStringToObject
-          (json, "name", name);
+          (json, "name", (char const*)name);
         if (sub_json == NULL) break;
       }
     }
@@ -80,7 +80,7 @@ struct cJSON* ledger_io_entry_print_json(struct ledger_entry const* entry){
       unsigned char const* desc = ledger_entry_get_description(entry);
       if (desc != NULL){
         sub_json = cJSON_AddStringToObject
-          (json, "desc", desc);
+          (json, "desc", (char const*)desc);
         if (sub_json == NULL) break;
       }
     }

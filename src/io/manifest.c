@@ -61,7 +61,6 @@ int ledger_io_manifest_init(struct ledger_io_manifest* manifest){
 }
 
 void ledger_io_manifest_clear(struct ledger_io_manifest* manifest){
-  int i;
   manifest->flags = 0;
   manifest->type_code = 0;
   manifest->item_id = -1;
@@ -660,7 +659,6 @@ int ledger_io_manifest_set_count(struct ledger_io_manifest* m, int n){
     m->array_count = n;
     return 1;
   } else if (n >= m->array_count){
-    int save_id;
     int i;
     /* allocate larger array */
     struct ledger_io_manifest** new_array = (struct ledger_io_manifest** )

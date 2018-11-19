@@ -125,7 +125,8 @@ int ledger_io_table_parse_csv(struct ledger_table* table, unsigned char *csv){
     /* fill in the fields */{
       int i;
       for (i = 0; i < column_count; ++i){
-        ok = ledger_table_put_string(mark, i, token_lines[i]);
+        ok = ledger_table_put_string
+          (mark, i, (unsigned char*)token_lines[i]);
         if (!ok) break;
       }
       if (!ok) break;
@@ -141,7 +142,6 @@ int ledger_io_table_parse_csv(struct ledger_table* table, unsigned char *csv){
 }
 
 unsigned char* ledger_io_table_print_csv(struct ledger_table const* table){
-  int ok = 1;
   int const column_count = ledger_table_get_column_count(table);
   size_t entire_csv_length = 0;
   unsigned char* print_paper;

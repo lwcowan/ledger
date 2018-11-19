@@ -12,9 +12,11 @@ struct test_struct {
   int (*fn)(void);
   char const* name;
 };
+
 struct test_struct test_array[] = {
   { construct_name_test, "construct name" }
 };
+
 
 int construct_name_test(void){
   int result = 0;
@@ -35,6 +37,7 @@ int construct_name_test(void){
   ledger_bignum_free(num);
   return result;
 }
+
 
 int main(int argc, char **argv){
   int pass_count = 0;
