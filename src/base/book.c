@@ -189,6 +189,7 @@ int ledger_book_alloc_id(struct ledger_book* b){
 int ledger_book_get_ledger_count(struct ledger_book const* b){
   return b->ledger_count;
 }
+
 struct ledger_ledger* ledger_book_get_ledger(struct ledger_book* b, int i){
   if (i < 0 || i >= b->ledger_count){
     return NULL;
@@ -196,6 +197,7 @@ struct ledger_ledger* ledger_book_get_ledger(struct ledger_book* b, int i){
     return b->ledgers[i];
   }
 }
+
 struct ledger_ledger const* ledger_book_get_ledger_c
   (struct ledger_book const* b, int i)
 {
@@ -205,6 +207,7 @@ struct ledger_ledger const* ledger_book_get_ledger_c
     return b->ledgers[i];
   }
 }
+
 int ledger_book_set_ledger_count(struct ledger_book* b, int n){
   if (n >= INT_MAX/sizeof(struct ledger_ledger*)){
     return 0;
@@ -280,6 +283,7 @@ int ledger_book_set_ledger_count(struct ledger_book* b, int n){
 int ledger_book_get_journal_count(struct ledger_book const* b){
   return b->journal_count;
 }
+
 struct ledger_journal* ledger_book_get_journal(struct ledger_book* b, int i){
   if (i < 0 || i >= b->journal_count){
     return NULL;
@@ -287,6 +291,7 @@ struct ledger_journal* ledger_book_get_journal(struct ledger_book* b, int i){
     return b->journals[i];
   }
 }
+
 struct ledger_journal const* ledger_book_get_journal_c
   (struct ledger_book const* b, int i)
 {
@@ -296,6 +301,7 @@ struct ledger_journal const* ledger_book_get_journal_c
     return b->journals[i];
   }
 }
+
 int ledger_book_set_journal_count(struct ledger_book* b, int n){
   if (n >= INT_MAX/sizeof(struct ledger_journal*)){
     return 0;

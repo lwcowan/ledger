@@ -183,6 +183,7 @@ int ledger_ledger_alloc_id(struct ledger_ledger* l){
 int ledger_ledger_get_account_count(struct ledger_ledger const* l){
   return l->account_count;
 }
+
 struct ledger_account* ledger_ledger_get_account
   (struct ledger_ledger* l, int i)
 {
@@ -192,6 +193,7 @@ struct ledger_account* ledger_ledger_get_account
     return l->accounts[i];
   }
 }
+
 struct ledger_account const* ledger_ledger_get_account_c
   (struct ledger_ledger const* l, int i)
 {
@@ -201,6 +203,7 @@ struct ledger_account const* ledger_ledger_get_account_c
     return l->accounts[i];
   }
 }
+
 int ledger_ledger_set_account_count(struct ledger_ledger* l, int n){
   if (n >= INT_MAX/sizeof(struct ledger_account*)){
     return 0;

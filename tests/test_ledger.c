@@ -25,6 +25,7 @@ struct test_struct {
   int (*fn)(void);
   char const* name;
 };
+
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
   { description_test, "description" },
@@ -41,6 +42,7 @@ struct test_struct test_array[] = {
   { new_account_resize_test, "account resize" }
 };
 
+
 int allocate_test(void){
   struct ledger_ledger* ptr;
   ptr = ledger_ledger_new();
@@ -48,6 +50,7 @@ int allocate_test(void){
   ledger_ledger_free(ptr);
   return 1;
 }
+
 int description_test(void){
   int result = 0;
   struct ledger_ledger* ptr;
@@ -70,6 +73,7 @@ int description_test(void){
   ledger_ledger_free(ptr);
   return result;
 }
+
 int equal_test(void){
   int result = 0;
   struct ledger_ledger* ptr, * other_ptr;
@@ -118,6 +122,7 @@ int equal_test(void){
   ledger_ledger_free(other_ptr);
   return result;
 }
+
 int trivial_equal_test(void){
   int result = 0;
   struct ledger_ledger* ptr;
@@ -133,6 +138,7 @@ int trivial_equal_test(void){
   ledger_ledger_free(ptr);
   return result;
 }
+
 int null_description_test(void){
   int result = 0;
   struct ledger_ledger* ptr;
@@ -152,6 +158,7 @@ int null_description_test(void){
   ledger_ledger_free(ptr);
   return result;
 }
+
 int name_test(void){
   int result = 0;
   struct ledger_ledger* ptr;
@@ -174,6 +181,7 @@ int name_test(void){
   ledger_ledger_free(ptr);
   return result;
 }
+
 int id_test(void){
   int result = 0;
   struct ledger_ledger* ptr;
@@ -192,6 +200,7 @@ int id_test(void){
   ledger_ledger_free(ptr);
   return result;
 }
+
 int null_name_test(void){
   int result = 0;
   struct ledger_ledger* ptr;
@@ -227,6 +236,7 @@ int alloc_id_test(void){
   ledger_ledger_free(ptr);
   return result;
 }
+
 int resume_alloc_id_test(void){
   int result = 0;
   struct ledger_ledger* ptr;
@@ -248,6 +258,7 @@ int resume_alloc_id_test(void){
   ledger_ledger_free(ptr);
   return result;
 }
+
 int alloc_max_id_test(void){
   int result = 0;
   struct ledger_ledger* ptr;
@@ -266,6 +277,7 @@ int alloc_max_id_test(void){
   ledger_ledger_free(ptr);
   return result;
 }
+
 int new_account_resize_test(void){
   int result = 0;
   struct ledger_ledger* ptr;
@@ -324,6 +336,7 @@ int new_account_resize_test(void){
   ledger_ledger_free(ptr);
   return result;
 }
+
 int new_account_equal_test(void){
   int result = 0;
   struct ledger_ledger* ptr, * other_ptr;
@@ -408,6 +421,7 @@ int new_account_equal_test(void){
   ledger_ledger_free(other_ptr);
   return result;
 }
+
 
 int main(int argc, char **argv){
   int pass_count = 0;

@@ -22,6 +22,7 @@ struct test_struct {
   int (*fn)(void);
   char const* name;
 };
+
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
   { allocate_zero_test, "allocate_zero" },
@@ -38,6 +39,7 @@ struct test_struct test_array[] = {
   { trivial_string_ncmp_test, "trivial string length-restricted compare" }
 };
 
+
 int allocate_test(void){
   void* ptr;
   ptr = ledger_util_malloc(15);
@@ -45,6 +47,7 @@ int allocate_test(void){
   ledger_util_free(ptr);
   return 1;
 }
+
 int allocate_zero_test(void){
   void* ptr;
   ptr = ledger_util_malloc(0);
@@ -54,6 +57,7 @@ int allocate_zero_test(void){
   }
   return 1;
 }
+
 int string_test(void){
   int result = 0;
   char const* text = "text text text";
@@ -70,12 +74,14 @@ int string_test(void){
   ledger_util_free(new_text);
   return result;
 }
+
 int string_length_test(void){
   unsigned char buffer[] = { 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x00,
       0x77, 0x6f, 0x72, 0x6c, 0x64, 0x2e, 0x00 };
   if (ledger_util_ustrlen(buffer) != 6) return 0;
   return 1;
 }
+
 int trivial_string_cmp_test(void){
   unsigned char const static empty[1] = {0};
   unsigned char buffer[] = { 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x00,
@@ -97,6 +103,7 @@ int trivial_string_cmp_test(void){
   if (ledger_util_ustrcmp(empty, empty) != 0) return 0;
   return 1;
 }
+
 int string_cmp_test(void){
   unsigned char buffer[] = { 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x00,
       0x77, 0x6f, 0x72, 0x6c, 0x64, 0x2e, 0x00 };
@@ -197,6 +204,7 @@ int string_ndup_test(void){
   ledger_util_free(new_text);
   return result;
 }
+
 int trivial_string_ncmp_test(void){
   unsigned char const static empty[1] = {0};
   unsigned char buffer[] = { 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x00,

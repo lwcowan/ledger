@@ -44,6 +44,7 @@ struct test_struct test_array[] = {
   { new_journal_resize_test, "journal resize" }
 };
 
+
 int allocate_test(void){
   struct ledger_book* ptr;
   ptr = ledger_book_new();
@@ -51,6 +52,7 @@ int allocate_test(void){
   ledger_book_free(ptr);
   return 1;
 }
+
 int description_test(void){
   int result = 0;
   struct ledger_book* ptr;
@@ -73,6 +75,7 @@ int description_test(void){
   ledger_book_free(ptr);
   return result;
 }
+
 int equal_test(void){
   int result = 0;
   struct ledger_book* ptr, * other_ptr;
@@ -121,6 +124,7 @@ int equal_test(void){
   ledger_book_free(other_ptr);
   return result;
 }
+
 int new_ledger_equal_test(void){
   int result = 0;
   struct ledger_book* ptr, * other_ptr;
@@ -205,6 +209,7 @@ int new_ledger_equal_test(void){
   ledger_book_free(other_ptr);
   return result;
 }
+
 int trivial_equal_test(void){
   int result = 0;
   struct ledger_book* ptr;
@@ -220,6 +225,7 @@ int trivial_equal_test(void){
   ledger_book_free(ptr);
   return result;
 }
+
 int null_description_test(void){
   int result = 0;
   struct ledger_book* ptr;
@@ -239,6 +245,7 @@ int null_description_test(void){
   ledger_book_free(ptr);
   return result;
 }
+
 int notes_test(void){
   int result = 0;
   struct ledger_book* ptr;
@@ -261,6 +268,7 @@ int notes_test(void){
   ledger_book_free(ptr);
   return result;
 }
+
 int null_notes_test(void){
   int result = 0;
   struct ledger_book* ptr;
@@ -280,6 +288,7 @@ int null_notes_test(void){
   ledger_book_free(ptr);
   return result;
 }
+
 int alloc_id_test(void){
   int result = 0;
   struct ledger_book* ptr;
@@ -295,6 +304,7 @@ int alloc_id_test(void){
   ledger_book_free(ptr);
   return result;
 }
+
 int resume_alloc_id_test(void){
   int result = 0;
   struct ledger_book* ptr;
@@ -316,6 +326,7 @@ int resume_alloc_id_test(void){
   ledger_book_free(ptr);
   return result;
 }
+
 int alloc_max_id_test(void){
   int result = 0;
   struct ledger_book* ptr;
@@ -334,6 +345,7 @@ int alloc_max_id_test(void){
   ledger_book_free(ptr);
   return result;
 }
+
 int new_ledger_resize_test(void){
   int result = 0;
   struct ledger_book* ptr;
@@ -456,6 +468,7 @@ int new_journal_resize_test(void){
   ledger_book_free(ptr);
   return result;
 }
+
 int new_journal_equal_test(void){
   int result = 0;
   struct ledger_book* ptr, * other_ptr;
@@ -540,6 +553,8 @@ int new_journal_equal_test(void){
   ledger_book_free(other_ptr);
   return result;
 }
+
+
 
 int main(int argc, char **argv){
   int pass_count = 0;

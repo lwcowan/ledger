@@ -24,6 +24,7 @@ struct test_struct {
   int (*fn)(void);
   char const* name;
 };
+
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
   { trivial_compare_test, "trivial compare" },
@@ -39,6 +40,7 @@ struct test_struct test_array[] = {
   { number_overprimed_copy_test, "number copy: overprimed" },
   { nonzero_compare_test, "nonzero compare" }
 };
+
 
 int allocate_test(void){
   struct ledger_bignum* ptr;
@@ -92,6 +94,7 @@ int trivial_compare_test(void){
   ledger_bignum_free(ptr);
   return result;
 }
+
 int set_long_test(void){
   int result = 0;
   struct ledger_bignum* ptr;
@@ -111,6 +114,7 @@ int set_long_test(void){
   ledger_bignum_free(ptr);
   return result;
 }
+
 int set_limit_long_test(void){
   int result = 0;
   struct ledger_bignum* ptr;

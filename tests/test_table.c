@@ -21,6 +21,7 @@ struct test_struct {
   int (*fn)(void);
   char const* name;
 };
+
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
   { trivial_equal_test, "trivial_equal" },
@@ -34,6 +35,7 @@ struct test_struct test_array[] = {
   { nonzero_equal_test, "nonzero equal" }
 };
 
+
 int allocate_test(void){
   struct ledger_table* ptr;
   ptr = ledger_table_new();
@@ -41,6 +43,7 @@ int allocate_test(void){
   ledger_table_free(ptr);
   return 1;
 }
+
 int trivial_equal_test(void){
   int result = 0;
   struct ledger_table* ptr;
@@ -81,6 +84,7 @@ int trivial_mark_test(void){
   ledger_table_free(ptr);
   return result;
 }
+
 int set_schema_test(void){
   int result = 0;
   struct ledger_table* ptr;

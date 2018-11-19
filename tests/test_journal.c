@@ -27,6 +27,7 @@ struct test_struct {
   int (*fn)(void);
   char const* name;
 };
+
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
   { allocate_table_test, "table pre-allocation" },
@@ -43,6 +44,7 @@ struct test_struct test_array[] = {
   { resume_alloc_id_test, "resume_alloc_id" },
   { new_entry_resize_test, "entry resize" }
 };
+
 
 int allocate_test(void){
   struct ledger_journal* ptr;
@@ -98,6 +100,7 @@ int description_test(void){
   ledger_journal_free(ptr);
   return result;
 }
+
 int equal_test(void){
   int result = 0;
   struct ledger_journal* ptr, * other_ptr;
@@ -162,6 +165,7 @@ int equal_test(void){
   ledger_journal_free(other_ptr);
   return result;
 }
+
 int trivial_equal_test(void){
   int result = 0;
   struct ledger_journal* ptr;
@@ -177,6 +181,7 @@ int trivial_equal_test(void){
   ledger_journal_free(ptr);
   return result;
 }
+
 int null_description_test(void){
   int result = 0;
   struct ledger_journal* ptr;
@@ -196,6 +201,7 @@ int null_description_test(void){
   ledger_journal_free(ptr);
   return result;
 }
+
 int name_test(void){
   int result = 0;
   struct ledger_journal* ptr;
@@ -218,6 +224,7 @@ int name_test(void){
   ledger_journal_free(ptr);
   return result;
 }
+
 int id_test(void){
   int result = 0;
   struct ledger_journal* ptr;
@@ -236,6 +243,7 @@ int id_test(void){
   ledger_journal_free(ptr);
   return result;
 }
+
 int null_name_test(void){
   int result = 0;
   struct ledger_journal* ptr;
@@ -271,6 +279,7 @@ int alloc_id_test(void){
   ledger_journal_free(ptr);
   return result;
 }
+
 int resume_alloc_id_test(void){
   int result = 0;
   struct ledger_journal* ptr;
@@ -292,6 +301,7 @@ int resume_alloc_id_test(void){
   ledger_journal_free(ptr);
   return result;
 }
+
 int alloc_max_id_test(void){
   int result = 0;
   struct ledger_journal* ptr;
@@ -310,6 +320,7 @@ int alloc_max_id_test(void){
   ledger_journal_free(ptr);
   return result;
 }
+
 int new_entry_resize_test(void){
   int result = 0;
   struct ledger_journal* ptr;
@@ -368,6 +379,7 @@ int new_entry_resize_test(void){
   ledger_journal_free(ptr);
   return result;
 }
+
 int new_entry_equal_test(void){
   int result = 0;
   struct ledger_journal* ptr, * other_ptr;
@@ -452,6 +464,7 @@ int new_entry_equal_test(void){
   ledger_journal_free(other_ptr);
   return result;
 }
+
 
 int main(int argc, char **argv){
   int pass_count = 0;
