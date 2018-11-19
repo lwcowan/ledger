@@ -229,6 +229,7 @@ int ledger_journal_alloc_id(struct ledger_journal* a){
 int ledger_journal_get_entry_count(struct ledger_journal const* a){
   return a->entry_count;
 }
+
 struct ledger_entry* ledger_journal_get_entry
   (struct ledger_journal* a, int i)
 {
@@ -238,6 +239,7 @@ struct ledger_entry* ledger_journal_get_entry
     return a->entries[i];
   }
 }
+
 struct ledger_entry const* ledger_journal_get_entry_c
   (struct ledger_journal const* a, int i)
 {
@@ -247,6 +249,7 @@ struct ledger_entry const* ledger_journal_get_entry_c
     return a->entries[i];
   }
 }
+
 int ledger_journal_set_entry_count(struct ledger_journal* a, int n){
   if (n >= INT_MAX/sizeof(struct ledger_entry*)){
     return 0;

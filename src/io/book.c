@@ -134,6 +134,7 @@ int ledger_io_book_read(char const* filename, struct ledger_book* book){
     return result;
   }
 }
+
 int ledger_io_book_write
   (char const* filename, struct ledger_book const* book)
 {
@@ -154,9 +155,7 @@ int ledger_io_book_write
       /* write top-level content */{
         int ok;
         /* compose the manifest */{
-          char* printing;
           cJSON* arrangement;
-          size_t len;
           ok = ledger_io_manifest_prepare(manifest, book);
           if (!ok) break;
           arrangement = ledger_io_manifest_print(manifest);

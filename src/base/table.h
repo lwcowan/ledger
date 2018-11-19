@@ -23,10 +23,12 @@ enum ledger_table_type {
   /* unsigned character string */
   LEDGER_TABLE_USTR = 3
 };
+
 /*
  * brief: Table
  */
 struct ledger_table;
+
 /*
  * brief: Table row iterator
  */

@@ -108,6 +108,7 @@ void ledger_bignum_clear(struct ledger_bignum* n){
 void ledger_bignum_zero_all(struct ledger_bignum* n){
   memset(n->digits,0,n->digit_count*sizeof(unsigned char));
 }
+
 void ledger_bignum_zero_cents(struct ledger_bignum* n){
   memset(n->digits,0,n->point_place*sizeof(unsigned char));
 }

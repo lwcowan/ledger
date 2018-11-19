@@ -60,6 +60,17 @@ size_t ledger_util_ustrlen(unsigned char const* str);
 int ledger_util_ustrcmp(unsigned char const* a, unsigned char const* b);
 
 /*
+ * Compare two strings.
+ * - a first string to compare
+ * - b second string to compare
+ * - sz maximum length to compare
+ * @return zero if equal, negative if `a` is less than `b`,
+ *   positive if `a` is greater than `b`
+ */
+int ledger_util_ustrncmp
+  (unsigned char const* a, unsigned char const* b, size_t sz);
+
+/*
  * Compare a string of bytes to zero.
  * - a string to compare
  * - siz length of string in bytes

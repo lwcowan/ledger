@@ -10,6 +10,7 @@ set(ledger_base_SOURCES
   base/account.h       base/account.c
   base/journal.h       base/journal.c
   base/entry.h         base/entry.c
+  base/find.h          base/find.c
   base/table.h         base/table.c
   )
 
