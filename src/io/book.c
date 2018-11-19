@@ -154,9 +154,7 @@ int ledger_io_book_write
       /* write top-level content */{
         int ok;
         /* compose the manifest */{
-          char* printing;
           cJSON* arrangement;
-          size_t len;
           ok = ledger_io_manifest_prepare(manifest, book);
           if (!ok) break;
           arrangement = ledger_io_manifest_print(manifest);

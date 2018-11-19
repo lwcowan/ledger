@@ -132,7 +132,6 @@ int ledger_io_account_read_items
       struct ledger_table* table = ledger_account_get_table(account);
       if (table != NULL){
         int ok;
-        unsigned char *data_csv;
         ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
               tmp_num, "ledger-%i/account-%i/entries.csv",
               ledger_id, account_id);

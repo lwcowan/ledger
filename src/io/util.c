@@ -122,8 +122,10 @@ int ledger_io_util_construct_name
           if (numeric_length >= len-write_point){
             apt_length = len-write_point;
           } else apt_length = numeric_length+1;
-          if (apt_length > 0)
-            ledger_bignum_get_text(tmp_num, buf+write_point, apt_length, 0);
+          if (apt_length > 0) {
+            ledger_bignum_get_text
+              (tmp_num, ((unsigned char*)buf)+write_point, apt_length, 0);
+          }
           write_point += numeric_length;
         }break;
       default:

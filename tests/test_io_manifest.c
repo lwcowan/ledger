@@ -88,7 +88,6 @@ int io_manifest_print_test(void){
     cJSON_Delete(json);
     return 0;
   } else do {
-    int ok;
     /* set the manifest */{
       ledger_io_manifest_set_type(manifest,LEDGER_IO_MANIFEST_BOOK);
       ledger_io_manifest_set_top_flags(manifest,3);
@@ -184,7 +183,6 @@ int io_manifest_print_zero_test(void){
     cJSON_Delete(json);
     return 0;
   } else do {
-    int ok;
     /* set the manifest */{
       ;
     }
@@ -206,7 +204,6 @@ int print_zero_book_test(void){
     cJSON_Delete(json);
     return 0;
   } else do {
-    int ok;
     /* set the manifest */{
       ledger_io_manifest_set_type(manifest, LEDGER_IO_MANIFEST_BOOK);
     }
@@ -259,7 +256,6 @@ int io_manifest_test(void){
   if (manifest == NULL){
     return 0;
   } else do {
-    int ok;
     result = 1;
   } while (0);
   ledger_io_manifest_free(manifest);
@@ -272,7 +268,6 @@ int io_manifest_top_flag_test(void){
   if (manifest == NULL){
     return 0;
   } else do {
-    int ok;
     if (ledger_io_manifest_get_top_flags(manifest) != 0) break;
     ledger_io_manifest_set_top_flags(manifest, 03);
     if (ledger_io_manifest_get_top_flags(manifest) != 3) break;
@@ -417,7 +412,6 @@ int print_ledger_test(void){
     cJSON_Delete(json);
     return 0;
   } else do {
-    int ok;
     /* set the manifest */{
       ledger_io_manifest_set_type(manifest,LEDGER_IO_MANIFEST_LEDGER);
       ledger_io_manifest_set_top_flags(manifest,5);
@@ -738,7 +732,6 @@ int print_account_test(void){
     cJSON_Delete(json);
     return 0;
   } else do {
-    int ok;
     /* set the manifest */{
       ledger_io_manifest_set_type(manifest,LEDGER_IO_MANIFEST_ACCOUNT);
       ledger_io_manifest_set_top_flags(manifest,5);
@@ -1060,7 +1053,6 @@ int print_journal_test(void){
     cJSON_Delete(json);
     return 0;
   } else do {
-    int ok;
     /* set the manifest */{
       ledger_io_manifest_set_type(manifest,LEDGER_IO_MANIFEST_JOURNAL);
       ledger_io_manifest_set_top_flags(manifest,5);

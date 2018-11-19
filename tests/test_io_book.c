@@ -108,7 +108,8 @@ int io_write_ledger_test(char const* fn){
       ok = 0;
       ledger = ledger_book_get_ledger(book,1);
       if (ledger == NULL) break;
-      ledger_ok = ledger_ledger_set_name(ledger, "food");
+      ledger_ok =
+        ledger_ledger_set_name(ledger, (unsigned char const*)"food");
       if (!ledger_ok) break;
       ledger_ok = ledger_ledger_set_description(ledger, text);
       if (!ledger_ok) break;
@@ -153,7 +154,8 @@ int io_write_account_test(char const* fn){
       ok = 0;
       ledger = ledger_book_get_ledger(book,1);
       if (ledger == NULL) break;
-      ledger_ok = ledger_ledger_set_name(ledger, "food");
+      ledger_ok =
+        ledger_ledger_set_name(ledger, (unsigned char const*)"food");
       if (!ledger_ok) break;
       ledger_ok = ledger_ledger_set_description(ledger, text);
       if (!ledger_ok) break;
@@ -165,7 +167,8 @@ int io_write_account_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,0);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "pasta");
+        account_ok =
+          ledger_account_set_name(account, (unsigned char const*)"pasta");
         if (!account_ok) break;
         ledger_ok = 1;
       }
@@ -176,9 +179,11 @@ int io_write_account_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,2);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "tofu");
+        account_ok =
+          ledger_account_set_name(account, (unsigned char const*)"tofu");
         if (!account_ok) break;
-        account_ok = ledger_account_set_description(account, "yummy!");
+        account_ok = ledger_account_set_description
+          (account, (unsigned char const*)"yummy!");
         if (!account_ok) break;
         ledger_ok = 1;
       }
@@ -199,7 +204,8 @@ int io_write_account_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,1);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "cash");
+        account_ok = ledger_account_set_name
+          (account, (unsigned char const*)"cash");
         if (!account_ok) break;
         ledger_ok = 1;
       }
@@ -210,9 +216,11 @@ int io_write_account_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,0);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "receivables");
+        account_ok = ledger_account_set_name
+          (account, (unsigned char const*)"receivables");
         if (!account_ok) break;
-        account_ok = ledger_account_set_description(account, "waiting...");
+        account_ok = ledger_account_set_description
+          (account, (unsigned char const*)"waiting...");
         if (!account_ok) break;
         ledger_ok = 1;
       }
@@ -258,7 +266,8 @@ int io_write_journal_test(char const* fn){
       ok = 0;
       journal = ledger_book_get_journal(book,1);
       if (journal == NULL) break;
-      ledger_ok = ledger_journal_set_name(journal, "food");
+      ledger_ok =
+        ledger_journal_set_name(journal, (unsigned char const*)"food");
       if (!ledger_ok) break;
       ledger_ok = ledger_journal_set_description(journal, text);
       if (!ledger_ok) break;
@@ -303,7 +312,8 @@ int account_journal_test(char const* fn){
       ok = 0;
       journal = ledger_book_get_journal(book,1);
       if (journal == NULL) break;
-      ledger_ok = ledger_journal_set_name(journal, "food");
+      ledger_ok = ledger_journal_set_name
+        (journal, (unsigned char const*)"food");
       if (!ledger_ok) break;
       ledger_ok = ledger_journal_set_description(journal, text);
       if (!ledger_ok) break;
@@ -318,7 +328,8 @@ int account_journal_test(char const* fn){
       ok = 0;
       ledger = ledger_book_get_ledger(book,1);
       if (ledger == NULL) break;
-      ledger_ok = ledger_ledger_set_name(ledger, "food");
+      ledger_ok = ledger_ledger_set_name
+        (ledger, (unsigned char const*)"food");
       if (!ledger_ok) break;
       ledger_ok = ledger_ledger_set_description(ledger, text);
       if (!ledger_ok) break;
@@ -330,7 +341,8 @@ int account_journal_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,0);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "pasta");
+        account_ok = ledger_account_set_name
+          (account, (unsigned char const*)"pasta");
         if (!account_ok) break;
         ledger_ok = 1;
       }
@@ -341,9 +353,11 @@ int account_journal_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,2);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "tofu");
+        account_ok = ledger_account_set_name
+          (account, (unsigned char const*)"tofu");
         if (!account_ok) break;
-        account_ok = ledger_account_set_description(account, "yummy!");
+        account_ok = ledger_account_set_description
+          (account, (unsigned char const*)"yummy!");
         if (!account_ok) break;
         ledger_ok = 1;
       }
@@ -364,7 +378,8 @@ int account_journal_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,1);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "cash");
+        account_ok = ledger_account_set_name
+          (account, (unsigned char const*)"cash");
         if (!account_ok) break;
         ledger_ok = 1;
       }
@@ -375,9 +390,11 @@ int account_journal_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,0);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "receivables");
+        account_ok = ledger_account_set_name
+          (account, (unsigned char const*)"receivables");
         if (!account_ok) break;
-        account_ok = ledger_account_set_description(account, "waiting...");
+        account_ok = ledger_account_set_description
+          (account, (unsigned char const*)"waiting...");
         if (!account_ok) break;
         ledger_ok = 1;
       }
@@ -424,7 +441,8 @@ int account_journal_entry_test(char const* fn){
       ok = 0;
       journal = ledger_book_get_journal(book,1);
       if (journal == NULL) break;
-      ledger_ok = ledger_journal_set_name(journal, "recipe");
+      ledger_ok = ledger_journal_set_name
+        (journal, (unsigned char const*)"recipe");
       if (!ledger_ok) break;
       ledger_ok = ledger_journal_set_description(journal, text);
       if (!ledger_ok) break;
@@ -436,7 +454,8 @@ int account_journal_entry_test(char const* fn){
         ledger_ok = 0;
         entry = ledger_journal_get_entry(journal,2);
         if (entry == NULL) break;
-        entry_ok = ledger_entry_set_name(entry, "add rice");
+        entry_ok = ledger_entry_set_name
+          (entry, (unsigned char const*)"add rice");
         if (!entry_ok) break;
         ledger_ok = 1;
       }
@@ -452,7 +471,8 @@ int account_journal_entry_test(char const* fn){
       ok = 0;
       ledger = ledger_book_get_ledger(book,1);
       if (ledger == NULL) break;
-      ledger_ok = ledger_ledger_set_name(ledger, "food");
+      ledger_ok = ledger_ledger_set_name
+        (ledger, (unsigned char const*)"food");
       if (!ledger_ok) break;
       ledger_ok = ledger_ledger_set_description(ledger, text);
       if (!ledger_ok) break;
@@ -464,7 +484,8 @@ int account_journal_entry_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,0);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "pasta");
+        account_ok = ledger_account_set_name
+          (account, (unsigned char const*)"pasta");
         if (!account_ok) break;
         ledger_ok = 1;
       }
@@ -475,9 +496,11 @@ int account_journal_entry_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,2);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "tofu");
+        account_ok = ledger_account_set_name
+          (account, (unsigned char const*)"tofu");
         if (!account_ok) break;
-        account_ok = ledger_account_set_description(account, "yummy!");
+        account_ok = ledger_account_set_description
+          (account, (unsigned char const*)"yummy!");
         if (!account_ok) break;
         ledger_ok = 1;
       }
@@ -498,7 +521,8 @@ int account_journal_entry_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,1);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "cash");
+        account_ok = ledger_account_set_name
+          (account, (unsigned char const*)"cash");
         if (!account_ok) break;
         ledger_ok = 1;
       }
@@ -509,9 +533,11 @@ int account_journal_entry_test(char const* fn){
         ledger_ok = 0;
         account = ledger_ledger_get_account(ledger,0);
         if (account == NULL) break;
-        account_ok = ledger_account_set_name(account, "receivables");
+        account_ok = ledger_account_set_name
+          (account, (unsigned char const*)"receivables");
         if (!account_ok) break;
-        account_ok = ledger_account_set_description(account, "waiting...");
+        account_ok = ledger_account_set_description
+          (account, (unsigned char const*)"waiting...");
         if (!account_ok) break;
         ledger_ok = 1;
       }
