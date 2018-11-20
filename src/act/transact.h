@@ -108,16 +108,16 @@ struct ledger_table const* ledger_transaction_get_table_c
 
 
 /*
- * Query the identifier of a journal.
+ * Query the array index of a journal.
  * - a transaction to query
- * @return the identifier if available, otherwise -1
+ * @return the array index if available, otherwise -1
  */
 int ledger_transaction_get_journal(struct ledger_transaction const* a);
 
 /*
- * Modify the identifier of a journal.
+ * Modify the journal array index of a transaction.
  * - a transaction to query
- * - item_id new identifier (non-negative)
+ * - item_id new array index (non-negative)
  */
 void ledger_transaction_set_journal
   (struct ledger_transaction* a, int journal_id);
