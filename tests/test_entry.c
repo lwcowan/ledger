@@ -13,6 +13,9 @@ static int id_test(void);
 static int null_name_test(void);
 static int equal_test(void);
 static int trivial_equal_test(void);
+static int date_test(void);
+static int null_date_test(void);
+static int date_equal_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -27,7 +30,10 @@ struct test_struct test_array[] = {
   { null_name_test, "null_name" },
   { id_test, "id" },
   { equal_test, "equal" },
-  { trivial_equal_test, "trivial_equal" }
+  { trivial_equal_test, "trivial_equal" },
+  { date_test, "date" },
+  { null_date_test, "null_date" },
+  { date_equal_test, "date_equal" }
 };
 
 
@@ -208,6 +214,105 @@ int null_name_test(void){
   ledger_entry_free(ptr);
   return result;
 }
+
+int date_test(void){
+  int result = 0;
+  struct ledger_entry* ptr;
+  ptr = ledger_entry_new();
+  if (ptr == NULL) return 0;
+  else do {
+    char const* date = "2018-11-15T23:18:40Z";
+    if (ledger_entry_get_name(ptr) != NULL) break;
+    if (ledger_entry_get_date(ptr) != NULL) break;
+    if (ledger_entry_set_date
+        (ptr, (unsigned char const*)date) == 0)
+      break;
+    if (ledger_entry_get_description(ptr) != NULL) break;
+    if (ledger_entry_get_name(ptr) != NULL) break;
+    if (ledger_entry_get_date(ptr) == NULL) break;
+    if (strcmp((char const*)ledger_entry_get_date(ptr),
+        date) != 0)
+      break;
+    result = 1;
+  } while (0);
+  ledger_entry_free(ptr);
+  return result;
+}
+
+int null_date_test(void){
+  int result = 0;
+  struct ledger_entry* ptr;
+  ptr = ledger_entry_new();
+  if (ptr == NULL) return 0;
+  else do {
+    char const* date = NULL;
+    if (ledger_entry_get_name(ptr) != NULL) break;
+    if (ledger_entry_get_date(ptr) != NULL) break;
+    if (ledger_entry_set_date
+        (ptr, (unsigned char const*)date) == 0)
+      break;
+    if (ledger_entry_get_name(ptr) != NULL) break;
+    if (ledger_entry_get_date(ptr) != NULL) break;
+    result = 1;
+  } while (0);
+  ledger_entry_free(ptr);
+  return result;
+}
+
+int date_equal_test(void){
+  int result = 0;
+  struct ledger_entry* ptr, * other_ptr;
+  ptr = ledger_entry_new();
+  if (ptr == NULL) return 0;
+  other_ptr = ledger_entry_new();
+  if (other_ptr == NULL){
+    ledger_entry_free(ptr);
+    return 0;
+  } else do {
+    int ok;
+    unsigned char const* name =
+      (unsigned char const*)"new description";
+    unsigned char const* name2 =
+      (unsigned char const*)"other description";
+    char const* date = "2018-11-15T23:18:40Z";
+    char const* date2 = "2016-05-24T05:49:01Z";
+    /* different names */
+    ok = ledger_entry_set_name(ptr,name);
+    if (!ok) break;
+    ok = ledger_entry_set_name(other_ptr,name2);
+    if (!ok) break;
+    if (ledger_entry_is_equal(ptr,other_ptr)) break;
+    if (ledger_entry_is_equal(other_ptr,ptr)) break;
+    /* same names */
+    ok = ledger_entry_set_name(other_ptr,name);
+    if (!ok) break;
+    if (!ledger_entry_is_equal(ptr,other_ptr)) break;
+    if (!ledger_entry_is_equal(other_ptr,ptr)) break;
+    /* null date versus non-empty date */
+    ok = ledger_entry_set_date(other_ptr,(unsigned char const*)date);
+    if (!ok) break;
+    if (ledger_entry_is_equal(ptr,other_ptr)) break;
+    if (ledger_entry_is_equal(other_ptr,ptr)) break;
+    /* different date */
+    ok = ledger_entry_set_date(ptr,(unsigned char const*)date2);
+    if (!ok) break;
+    if (ledger_entry_is_equal(other_ptr,ptr)) break;
+    if (ledger_entry_is_equal(ptr,other_ptr)) break;
+    /* same date */
+    ok = ledger_entry_set_date(other_ptr,(unsigned char const*)date2);
+    if (!ok) break;
+    if (!ledger_entry_is_equal(other_ptr,ptr)) break;
+    if (!ledger_entry_is_equal(ptr,other_ptr)) break;
+    result = 1;
+  } while (0);
+  ledger_entry_free(ptr);
+  ledger_entry_free(other_ptr);
+  return result;
+}
+
+
+
+
 
 
 int main(int argc, char **argv){
