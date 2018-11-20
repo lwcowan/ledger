@@ -136,6 +136,15 @@ int ledger_bignum_assign
 int ledger_bignum_truncate
   (struct ledger_bignum* dst, struct ledger_bignum const* src);
 
+/*
+ * Negate a big numbers.
+ * - dst number to overwrite
+ * - src number to negate
+ * @return one on success, zero otherwise
+ */
+int ledger_bignum_negate
+  (struct ledger_bignum* dst, struct ledger_bignum const* src);
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/

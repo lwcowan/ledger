@@ -632,4 +632,23 @@ int ledger_bignum_truncate
   return 1;
 }
 
+int ledger_bignum_negate
+  (struct ledger_bignum* dst, struct ledger_bignum const* src)
+{
+  int ok = 0;
+  struct ledger_bignum tmp;
+  ledger_bignum_init(&tmp);
+  if (!ledger_bignum_copy(&tmp,src))
+    return 0;
+  do {
+    tmp.negative = !tmp.negative;
+    ok = 1;
+  } while (0);
+  if (ok){
+    ledger_bignum_swap(dst, &tmp);
+  }
+  ledger_bignum_clear(&tmp);
+  return ok;
+}
+
 /* END   implementation */
