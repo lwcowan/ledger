@@ -19,9 +19,9 @@ struct ledger_cli_token {
   char const* name;
 };
 static struct ledger_cli_token const ledger_cli_cb_list[] = {
-  { ledger_cli_test, "test" },
-  { ledger_cli_quit, "quit" },
-  { ledger_cli_read, "read" },
+  { ledger_cli_test,  "test" },
+  { ledger_cli_quit,  "quit" },
+  { ledger_cli_read,  "read" },
   { ledger_cli_write, "write" },
   { ledger_cli_list,  "list" },
   { ledger_cli_enter, "enter" }
