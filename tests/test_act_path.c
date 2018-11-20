@@ -429,6 +429,14 @@ int account_path_test(void){
     if (new_path.len != 2) break;
     if (new_path.typ != 3) break;
     new_path = ledger_act_path_compute
+      ( book, (unsigned char const*)"/ledger:food/account@1",
+        root_path, &ok);
+    if (!ok) break;
+    if (new_path.path[0] != 1) break;
+    if (new_path.path[1] != 1) break;
+    if (new_path.len != 2) break;
+    if (new_path.typ != 3) break;
+    new_path = ledger_act_path_compute
       ( book, (unsigned char const*)"/journal:recipe/entry:add rice/",
         root_path, &ok);
     if (!ok) break;
