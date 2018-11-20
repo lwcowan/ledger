@@ -464,6 +464,9 @@ int account_journal_entry_test(char const* fn){
         entry_ok = ledger_entry_set_name
           (entry, (unsigned char const*)"add rice");
         if (!entry_ok) break;
+        entry_ok = ledger_entry_set_date
+          (entry, (unsigned char const*)"2018-10-29T05:43:42Z");
+        if (!entry_ok) break;
         ledger_ok = 1;
       }
       if (!ledger_ok) break;
