@@ -10,6 +10,7 @@
 struct ledger_transaction {
   unsigned char *name;
   unsigned char *description;
+  unsigned char *date;
   struct ledger_table *table;
   int journal_id;
 };
@@ -19,8 +20,7 @@ static int ledger_transaction_schema[] =
     LEDGER_TABLE_ID /* account identifier */,
     LEDGER_TABLE_USTR /* account path */,
     LEDGER_TABLE_BIGNUM /* amount (+ debit, - credit) */,
-    LEDGER_TABLE_USTR /* check number */,
-    LEDGER_TABLE_USTR /* date */
+    LEDGER_TABLE_USTR /* check number */
   };
 
 /*
@@ -61,6 +61,7 @@ int ledger_transaction_init(struct ledger_transaction* a){
   }
   a->description = NULL;
   a->name = NULL;
+  a->date = NULL;
   a->journal_id = -1;
   return 1;
 }
@@ -72,6 +73,8 @@ void ledger_transaction_clear(struct ledger_transaction* a){
   a->description = NULL;
   ledger_util_free(a->name);
   a->name = NULL;
+  ledger_util_free(a->date);
+  a->date = NULL;
   a->journal_id = -1;
   return;
 }
@@ -135,6 +138,25 @@ int ledger_transaction_set_name
   } else return 0;
 }
 
+
+unsigned char const* ledger_transaction_get_date
+  (struct ledger_transaction const* a)
+{
+  return a->date;
+}
+
+int ledger_transaction_set_date
+  (struct ledger_transaction* a, unsigned char const* desc)
+{
+  int ok;
+  unsigned char* new_desc = ledger_util_ustrdup(desc,&ok);
+  if (ok){
+    ledger_util_free(a->date);
+    a->date = new_desc;
+    return 1;
+  } else return 0;
+}
+
 int ledger_transaction_get_journal(struct ledger_transaction const* a){
   return a->journal_id;
 }
@@ -158,6 +180,8 @@ int ledger_transaction_is_equal
     if (a->journal_id != b->journal_id)
       return 0;
     if (ledger_util_ustrcmp(a->name, b->name) != 0)
+      return 0;
+    if (ledger_util_ustrcmp(a->date, b->date) != 0)
       return 0;
     if (ledger_util_ustrcmp(a->description, b->description) != 0)
       return 0;

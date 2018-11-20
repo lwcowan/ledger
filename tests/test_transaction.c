@@ -17,6 +17,9 @@ static int id_test(void);
 static int null_name_test(void);
 static int equal_test(void);
 static int trivial_equal_test(void);
+static int date_test(void);
+static int null_date_test(void);
+static int date_equal_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -29,8 +32,11 @@ struct test_struct test_array[] = {
   { null_description_test, "null_description" },
   { name_test, "name" },
   { null_name_test, "null_name" },
+  { date_test, "date" },
+  { null_date_test, "null_date" },
   { id_test, "id" },
   { equal_test, "equal" },
+  { date_equal_test, "date_equal" },
   { trivial_equal_test, "trivial_equal" }
 };
 
@@ -52,13 +58,12 @@ int allocate_table_test(void){
     if (ledger_transaction_get_table_c(ptr) == NULL) break;
     /* check the table */{
       struct ledger_table const* table = ledger_transaction_get_table_c(ptr);
-      if (ledger_table_get_column_count(table) != 6) break;
+      if (ledger_table_get_column_count(table) != 5) break;
       if (ledger_table_get_column_type(table,0) != 1) break;
       if (ledger_table_get_column_type(table,1) != 1) break;
       if (ledger_table_get_column_type(table,2) != 3) break;
       if (ledger_table_get_column_type(table,3) != 2) break;
       if (ledger_table_get_column_type(table,4) != 3) break;
-      if (ledger_table_get_column_type(table,5) != 3) break;
     }
     result = 1;
   } while (0);
@@ -245,6 +250,102 @@ int null_name_test(void){
   ledger_transaction_free(ptr);
   return result;
 }
+
+int date_test(void){
+  int result = 0;
+  struct ledger_transaction* ptr;
+  ptr = ledger_transaction_new();
+  if (ptr == NULL) return 0;
+  else do {
+    char const* date = "2018-11-15T23:18:40Z";
+    if (ledger_transaction_get_description(ptr) != NULL) break;
+    if (ledger_transaction_get_date(ptr) != NULL) break;
+    if (ledger_transaction_set_date
+        (ptr, (unsigned char const*)date) == 0)
+      break;
+    if (ledger_transaction_get_description(ptr) != NULL) break;
+    if (ledger_transaction_get_name(ptr) != NULL) break;
+    if (ledger_transaction_get_date(ptr) == NULL) break;
+    if (strcmp((char const*)ledger_transaction_get_date(ptr),
+        date) != 0)
+      break;
+    result = 1;
+  } while (0);
+  ledger_transaction_free(ptr);
+  return result;
+}
+
+int null_date_test(void){
+  int result = 0;
+  struct ledger_transaction* ptr;
+  ptr = ledger_transaction_new();
+  if (ptr == NULL) return 0;
+  else do {
+    char const* date = NULL;
+    if (ledger_transaction_get_description(ptr) != NULL) break;
+    if (ledger_transaction_get_date(ptr) != NULL) break;
+    if (ledger_transaction_set_date
+        (ptr, (unsigned char const*)date) == 0)
+      break;
+    if (ledger_transaction_get_description(ptr) != NULL) break;
+    if (ledger_transaction_get_date(ptr) != NULL) break;
+    result = 1;
+  } while (0);
+  ledger_transaction_free(ptr);
+  return result;
+}
+
+int date_equal_test(void){
+  int result = 0;
+  struct ledger_transaction* ptr, * other_ptr;
+  ptr = ledger_transaction_new();
+  if (ptr == NULL) return 0;
+  other_ptr = ledger_transaction_new();
+  if (other_ptr == NULL){
+    ledger_transaction_free(ptr);
+    return 0;
+  } else do {
+    int ok;
+    unsigned char const* description =
+      (unsigned char const*)"new description";
+    unsigned char const* description2 =
+      (unsigned char const*)"other description";
+    char const* date = "2018-11-15T23:18:40Z";
+    char const* date2 = "2016-05-24T05:49:01Z";
+    /* different descriptions */
+    ok = ledger_transaction_set_description(ptr,description);
+    if (!ok) break;
+    ok = ledger_transaction_set_description(other_ptr,description2);
+    if (!ok) break;
+    if (ledger_transaction_is_equal(ptr,other_ptr)) break;
+    if (ledger_transaction_is_equal(other_ptr,ptr)) break;
+    /* same descriptions */
+    ok = ledger_transaction_set_description(other_ptr,description);
+    if (!ok) break;
+    if (!ledger_transaction_is_equal(ptr,other_ptr)) break;
+    if (!ledger_transaction_is_equal(other_ptr,ptr)) break;
+    /* null date versus non-empty date */
+    ok = ledger_transaction_set_date(other_ptr,date);
+    if (!ok) break;
+    if (ledger_transaction_is_equal(ptr,other_ptr)) break;
+    if (ledger_transaction_is_equal(other_ptr,ptr)) break;
+    /* different date */
+    ok = ledger_transaction_set_date(ptr,date2);
+    if (!ok) break;
+    if (ledger_transaction_is_equal(other_ptr,ptr)) break;
+    if (ledger_transaction_is_equal(ptr,other_ptr)) break;
+    /* same date */
+    ok = ledger_transaction_set_date(other_ptr,date2);
+    if (!ok) break;
+    if (!ledger_transaction_is_equal(other_ptr,ptr)) break;
+    if (!ledger_transaction_is_equal(ptr,other_ptr)) break;
+    result = 1;
+  } while (0);
+  ledger_transaction_free(ptr);
+  ledger_transaction_free(other_ptr);
+  return result;
+}
+
 
 
 int main(int argc, char **argv){

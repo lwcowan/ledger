@@ -62,6 +62,23 @@ unsigned char const* ledger_transaction_get_name
 int ledger_transaction_set_name
   (struct ledger_transaction* a, unsigned char const* name);
 
+/*
+ * Query the date of a transaction.
+ * - a transaction to query
+ * @return the date if available, otherwise NULL
+ */
+unsigned char const* ledger_transaction_get_date
+  (struct ledger_transaction const* a);
+
+/*
+ * Modify the date of a transaction.
+ * - a transaction to query
+ * - date new date
+ * @return one on success, zero otherwise
+ */
+int ledger_transaction_set_date
+  (struct ledger_transaction* a, unsigned char const* date);
+
 
 /*
  * Compare two transactions for equality.
