@@ -36,6 +36,7 @@ set(ledger_act_SOURCES
   act/transact.h       act/transact.c
   act/path.h           act/path.c
   act/arg.h            act/arg.c
+  act/commit.h         act/commit.c
   )
 
 add_library(ledger_act ${ledger_act_SOURCES})

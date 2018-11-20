@@ -50,9 +50,12 @@ target_link_libraries("ledger_test_io_util" ledger_io ledger_base cjson)
 add_executable("ledger_test_transaction" "test_transaction.c")
 #action path test
 add_executable("ledger_test_act_path" "test_act_path.c")
+#action path test
+add_executable("ledger_test_commit" "test_commit.c")
 
 target_link_libraries("ledger_test_transaction" ledger_act ledger_base)
 target_link_libraries("ledger_test_act_path" ledger_act ledger_base)
+target_link_libraries("ledger_test_commit" ledger_act ledger_base)
 
 #argument list test
 add_executable("ledger_test_arg_list" "test_arg_list.c")
