@@ -52,12 +52,13 @@ int allocate_table_test(void){
     if (ledger_transaction_get_table_c(ptr) == NULL) break;
     /* check the table */{
       struct ledger_table const* table = ledger_transaction_get_table_c(ptr);
-      if (ledger_table_get_column_count(table) != 5) break;
+      if (ledger_table_get_column_count(table) != 6) break;
       if (ledger_table_get_column_type(table,0) != 1) break;
       if (ledger_table_get_column_type(table,1) != 1) break;
-      if (ledger_table_get_column_type(table,2) != 2) break;
-      if (ledger_table_get_column_type(table,3) != 3) break;
+      if (ledger_table_get_column_type(table,2) != 3) break;
+      if (ledger_table_get_column_type(table,3) != 2) break;
       if (ledger_table_get_column_type(table,4) != 3) break;
+      if (ledger_table_get_column_type(table,5) != 3) break;
     }
     result = 1;
   } while (0);

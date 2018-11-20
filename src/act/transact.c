@@ -15,8 +15,9 @@ struct ledger_transaction {
 };
 
 static int ledger_transaction_schema[] =
-  { LEDGER_TABLE_ID /* ledger ID */,
-    LEDGER_TABLE_ID /* account ID */,
+  { LEDGER_TABLE_ID /* ledger identifier */,
+    LEDGER_TABLE_ID /* account identifier */,
+    LEDGER_TABLE_USTR /* account path */,
     LEDGER_TABLE_BIGNUM /* amount (+ debit, - credit) */,
     LEDGER_TABLE_USTR /* check number */,
     LEDGER_TABLE_USTR /* date */
