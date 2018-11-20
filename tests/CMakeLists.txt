@@ -53,3 +53,8 @@ add_executable("ledger_test_act_path" "test_act_path.c")
 
 target_link_libraries("ledger_test_transaction" ledger_act ledger_base)
 target_link_libraries("ledger_test_act_path" ledger_act ledger_base)
+
+#argument list test
+add_executable("ledger_test_arg_list" "test_arg_list.c")
+
+target_link_libraries("ledger_test_arg_list" ledger_act)
