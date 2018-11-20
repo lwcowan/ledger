@@ -61,6 +61,24 @@ unsigned char const* ledger_entry_get_name
 int ledger_entry_set_name
   (struct ledger_entry* a, unsigned char const* name);
 
+
+/*
+ * Query the date of an entry.
+ * - a entry to query
+ * @return the date if available, otherwise NULL
+ */
+unsigned char const* ledger_entry_get_date
+  (struct ledger_entry const* a);
+
+/*
+ * Modify the date of an entry.
+ * - a entry to query
+ * - date new date
+ * @return one on success, zero otherwise
+ */
+int ledger_entry_set_date
+  (struct ledger_entry* a, unsigned char const* date);
+
 /*
  * Query the identifier of an entry.
  * - a entry to query

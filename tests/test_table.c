@@ -16,6 +16,7 @@ static int switch_schema_test(void);
 static int set_row_bignum_test(void);
 static int move_mark_test(void);
 static int nonzero_equal_test(void);
+static int set_row_id_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -31,6 +32,7 @@ struct test_struct test_array[] = {
   { switch_schema_test, "switch schema" },
   { set_row_string_test, "set row string" },
   { set_row_bignum_test, "set row bignum" },
+  { set_row_id_test, "set row id" },
   { move_mark_test, "mark move" },
   { nonzero_equal_test, "nonzero equal" }
 };
@@ -210,6 +212,56 @@ int set_row_string_test(void){
           break;
         if (ledger_util_ustrcmp(buf,
             (unsigned char const*)"34") != 0)
+          break;
+      }
+      ok = ledger_table_drop_row(mark);
+      if (!ok) break;
+      if (ledger_table_count_rows(ptr) != 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_table_mark_free(mark);
+  ledger_table_free(ptr);
+  return result;
+}
+
+int set_row_id_test(void){
+  int result = 0;
+  struct ledger_table* ptr;
+  struct ledger_table_mark* mark = NULL;
+  ptr = ledger_table_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int ok;
+    int column_types[3] =
+      { LEDGER_TABLE_BIGNUM, LEDGER_TABLE_USTR, LEDGER_TABLE_ID };
+    ok = ledger_table_set_column_types(ptr,3,column_types);
+    if (!ok) break;
+    /* iterate from the start */{
+      int numeric = 3456;
+      mark = ledger_table_begin(ptr);
+      if (mark == NULL) break;
+      ok = ledger_table_add_row(mark);
+      if (!ok) break;
+      if (ledger_table_count_rows(ptr) != 1) break;
+      /* set the row */{
+        if (!ledger_table_put_id(mark, 0, numeric)) break;
+        if (!ledger_table_put_id(mark, 1, numeric)) break;
+        if (!ledger_table_put_id(mark, 2, numeric)) break;
+      }
+      /* check the row */{
+        int reverse_number;
+        if (ledger_table_fetch_id(mark, 0, &reverse_number) == 0)
+          break;
+        if (reverse_number != 3456)
+          break;
+        if (ledger_table_fetch_id(mark, 1, &reverse_number) == 0)
+          break;
+        if (reverse_number != 3456)
+          break;
+        if (ledger_table_fetch_id(mark, 2, &reverse_number) == 0)
+          break;
+        if (reverse_number != 3456)
           break;
       }
       ok = ledger_table_drop_row(mark);
