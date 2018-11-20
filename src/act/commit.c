@@ -307,8 +307,8 @@ int ledger_commit_acquire_lines
             break;
           } else do {
             /* push the information */
-            /* journal identifier */{
-              ok = ledger_table_put_id(next_mark, 0, journal_id);
+            /* entry identifier */{
+              ok = ledger_table_put_id(next_mark, 0, commit->entry_id);
               if (!ok) break;
             }
             /* ledger identifier */{
