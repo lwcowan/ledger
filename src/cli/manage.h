@@ -25,6 +25,12 @@ int ledger_cli_make_ledger
 int ledger_cli_make_journal
   (struct ledger_cli_line *tracking, int argc, char **argv);
 
+/*
+ * Make an account.
+ */
+int ledger_cli_make_account
+  (struct ledger_cli_line *tracking, int argc, char **argv);
+
 
 #ifdef __cplusplus
 };
