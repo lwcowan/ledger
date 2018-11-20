@@ -14,11 +14,15 @@ static int trivial_string_cmp_test(void);
 static int zero_check_test(void);
 static int itoa_test(void);
 static int atoi_test(void);
+static int string_ndup_test(void);
+static int string_ncmp_test(void);
+static int trivial_string_ncmp_test(void);
 
 struct test_struct {
   int (*fn)(void);
   char const* name;
 };
+
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
   { allocate_zero_test, "allocate_zero" },
@@ -29,8 +33,12 @@ struct test_struct test_array[] = {
   { trivial_string_cmp_test, "trivial string compare" },
   { zero_check_test, "zero check" },
   { itoa_test, "integer to string" },
-  { atoi_test, "string to integer" }
+  { atoi_test, "string to integer" },
+  { string_ndup_test, "string length-restricted duplicate" },
+  { string_ncmp_test, "string length-restricted compare" },
+  { trivial_string_ncmp_test, "trivial string length-restricted compare" }
 };
+
 
 int allocate_test(void){
   void* ptr;
@@ -39,6 +47,7 @@ int allocate_test(void){
   ledger_util_free(ptr);
   return 1;
 }
+
 int allocate_zero_test(void){
   void* ptr;
   ptr = ledger_util_malloc(0);
@@ -48,6 +57,7 @@ int allocate_zero_test(void){
   }
   return 1;
 }
+
 int string_test(void){
   int result = 0;
   char const* text = "text text text";
@@ -64,12 +74,14 @@ int string_test(void){
   ledger_util_free(new_text);
   return result;
 }
+
 int string_length_test(void){
   unsigned char buffer[] = { 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x00,
       0x77, 0x6f, 0x72, 0x6c, 0x64, 0x2e, 0x00 };
   if (ledger_util_ustrlen(buffer) != 6) return 0;
   return 1;
 }
+
 int trivial_string_cmp_test(void){
   unsigned char const static empty[1] = {0};
   unsigned char buffer[] = { 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x00,
@@ -91,6 +103,7 @@ int trivial_string_cmp_test(void){
   if (ledger_util_ustrcmp(empty, empty) != 0) return 0;
   return 1;
 }
+
 int string_cmp_test(void){
   unsigned char buffer[] = { 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x00,
       0x77, 0x6f, 0x72, 0x6c, 0x64, 0x2e, 0x00 };
@@ -173,6 +186,108 @@ int atoi_test(void){
   if (ledger_util_atoi((unsigned char const*)"-5362") != -5362) return 0;
   return 1;
 }
+
+int string_ndup_test(void){
+  int result = 0;
+  char const* text = "text text text";
+  unsigned char* new_text;
+  /* string duplication */do {
+    int ok;
+    new_text = ledger_util_ustrndup((unsigned char const*)text,7u,&ok);
+    if (!ok) break;
+    if (new_text == NULL) break;
+    if (strcmp((char const*)new_text, "text te")) break;
+    if (strlen(text) == strlen((char const*)new_text)) break;
+    if (7u != strlen((char const*)new_text)) break;
+    result = 1;
+  } while (0);
+  ledger_util_free(new_text);
+  return result;
+}
+
+int trivial_string_ncmp_test(void){
+  unsigned char const static empty[1] = {0};
+  unsigned char buffer[] = { 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x00,
+      0x77, 0x6f, 0x72, 0x6c, 0x64, 0x2e, 0x00 };
+  /* null vs. null */
+  if (ledger_util_ustrncmp(NULL, NULL, 4) != 0) return 0;
+  /* empty vs. null */
+  if (ledger_util_ustrncmp(empty, NULL, 4) == 0) return 0;
+  if (ledger_util_ustrncmp(NULL, empty, 4) == 0) return 0;
+  if (ledger_util_ustrncmp(empty, NULL, 0) == 0) return 0;
+  if (ledger_util_ustrncmp(NULL, empty, 0) == 0) return 0;
+  /* buffer vs. null */
+  if (ledger_util_ustrncmp(buffer, NULL, 4) == 0) return 0;
+  if (ledger_util_ustrncmp(NULL, buffer, 4) == 0) return 0;
+  if (ledger_util_ustrncmp(buffer, NULL, 0) == 0) return 0;
+  if (ledger_util_ustrncmp(NULL, buffer, 0) == 0) return 0;
+  /* buffer vs. empty */
+  if (ledger_util_ustrncmp(empty, buffer, 44) == 0) return 0;
+  if (ledger_util_ustrncmp(buffer, empty, 44) == 0) return 0;
+  if (ledger_util_ustrncmp(empty, buffer, 4) == 0) return 0;
+  if (ledger_util_ustrncmp(buffer, empty, 4) == 0) return 0;
+  if (ledger_util_ustrncmp(empty, buffer, 0) != 0) return 0;
+  if (ledger_util_ustrncmp(buffer, empty, 0) != 0) return 0;
+  /* buffer vs. buffer */
+  if (ledger_util_ustrncmp(buffer, buffer, 44) != 0) return 0;
+  if (ledger_util_ustrncmp(buffer, buffer, 4) != 0) return 0;
+  if (ledger_util_ustrncmp(buffer, buffer, 0) != 0) return 0;
+  /* empty vs. empty */
+  if (ledger_util_ustrncmp(empty, empty, 44) != 0) return 0;
+  if (ledger_util_ustrncmp(empty, empty, 4) != 0) return 0;
+  if (ledger_util_ustrncmp(empty, empty, 0) != 0) return 0;
+  return 1;
+}
+
+int string_ncmp_test(void){
+  unsigned char buffer[] = { 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x00,
+      0x77, 0x6f, 0x72, 0x6c, 0x64, 0x2e, 0x00 };
+  unsigned char other_buffer[] = { 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x21, 0x00,
+      0x77, 0x6f, 0x72, 0x6c, 0x64, 0x2e, 0x00 };
+  /* equal strings */
+  if (ledger_util_ustrncmp(buffer, other_buffer, 44) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 44) != 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 0) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 4) != 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 4) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 0) != 0) return 0;
+  buffer[3] = 0x6f;
+  /* unequal strings */
+  if (ledger_util_ustrncmp(buffer, other_buffer, 44) <= 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 44) >= 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 4) <= 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 4) >= 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 3) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 3) != 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 0) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 0) != 0) return 0;
+  other_buffer[3] = 0x6f;
+  /* equal strings */
+  if (ledger_util_ustrncmp(buffer, other_buffer, 44) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 44) != 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 4) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 4) != 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 3) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 3) != 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 0) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 0) != 0) return 0;
+  /* uneven strings */
+  other_buffer[6] = 0x20;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 44) >= 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 44) <= 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 7) >= 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 7) <= 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 6) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 6) != 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 2) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 2) != 0) return 0;
+  if (ledger_util_ustrncmp(buffer, other_buffer, 0) != 0) return 0;
+  if (ledger_util_ustrncmp(other_buffer, buffer, 0) != 0) return 0;
+  return 1;
+}
+
+
+
 
 int main(int argc, char **argv){
   int pass_count = 0;

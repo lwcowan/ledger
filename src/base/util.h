@@ -34,6 +34,16 @@ void ledger_util_free(void* ptr);
 unsigned char* ledger_util_ustrdup(unsigned char const* str, int* ok);
 
 /*
+ * Duplicate a UTF-8 string.
+ * - str string to duplicate
+ * - sz length
+ * - ok (optional) success flag
+ * @return the cloned string on success, otherwise NULL
+ */
+unsigned char* ledger_util_ustrndup
+  (unsigned char const* str, size_t sz, int* ok);
+
+/*
  * Compute the length of a UTF-8 string.
  * - str string to test
  * @return the length of the string
@@ -48,6 +58,17 @@ size_t ledger_util_ustrlen(unsigned char const* str);
  *   positive if `a` is greater than `b`
  */
 int ledger_util_ustrcmp(unsigned char const* a, unsigned char const* b);
+
+/*
+ * Compare two strings.
+ * - a first string to compare
+ * - b second string to compare
+ * - sz maximum length to compare
+ * @return zero if equal, negative if `a` is less than `b`,
+ *   positive if `a` is greater than `b`
+ */
+int ledger_util_ustrncmp
+  (unsigned char const* a, unsigned char const* b, size_t sz);
 
 /*
  * Compare a string of bytes to zero.

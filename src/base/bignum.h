@@ -6,6 +6,10 @@
 #ifndef __Ledger_base_bigNum_H__
 #define __Ledger_base_bigNum_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /*__cplusplus*/
+
 /*
  * Big number, with movable centesimal point
  */
@@ -131,5 +135,9 @@ int ledger_bignum_assign
  */
 int ledger_bignum_truncate
   (struct ledger_bignum* dst, struct ledger_bignum const* src);
+
+#ifdef __cplusplus
+};
+#endif /*__cplusplus*/
 
 #endif /*__Ledger_base_bigNum_H__*/

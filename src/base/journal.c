@@ -32,8 +32,7 @@ static int ledger_journal_schema[] =
     LEDGER_TABLE_ID /* ledger ID */,
     LEDGER_TABLE_ID /* account ID */,
     LEDGER_TABLE_BIGNUM /* amount (+ debit, - credit) */,
-    LEDGER_TABLE_USTR /* check number */,
-    LEDGER_TABLE_USTR /* date */
+    LEDGER_TABLE_USTR /* check number */
   };
 
 /*
@@ -88,7 +87,7 @@ void ledger_journal_clear(struct ledger_journal* a){
   ledger_util_free(a->description);
   a->description = NULL;
   ledger_util_free(a->name);
-  a->description = NULL;
+  a->name = NULL;
   a->item_id = -1;
   a->sequence_id = 0;
   return;
@@ -229,6 +228,7 @@ int ledger_journal_alloc_id(struct ledger_journal* a){
 int ledger_journal_get_entry_count(struct ledger_journal const* a){
   return a->entry_count;
 }
+
 struct ledger_entry* ledger_journal_get_entry
   (struct ledger_journal* a, int i)
 {
@@ -238,6 +238,7 @@ struct ledger_entry* ledger_journal_get_entry
     return a->entries[i];
   }
 }
+
 struct ledger_entry const* ledger_journal_get_entry_c
   (struct ledger_journal const* a, int i)
 {
@@ -247,6 +248,7 @@ struct ledger_entry const* ledger_journal_get_entry_c
     return a->entries[i];
   }
 }
+
 int ledger_journal_set_entry_count(struct ledger_journal* a, int n){
   if (n >= INT_MAX/sizeof(struct ledger_entry*)){
     return 0;

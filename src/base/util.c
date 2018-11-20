@@ -50,6 +50,34 @@ unsigned char* ledger_util_ustrdup(unsigned char const* str, int* ok){
   }
 }
 
+unsigned char* ledger_util_ustrndup
+  (unsigned char const* str, size_t sz, int* ok)
+{
+  if (str != NULL){
+    size_t len = sz;
+    unsigned char* ptr;
+    if (len >= 65534){
+      /* string too long */
+      if (ok) *ok = 0;
+      return NULL;
+    } else {
+      ptr = ledger_util_malloc(len+1);
+      if (ptr != NULL){
+        memcpy(ptr,str,len);
+        ptr[len] = 0;
+        if (ok) *ok = 1;
+      } else {
+        if (ok) *ok = 0;
+      }
+      return ptr;
+    }
+  } else {
+    if (ok) *ok = 1;
+    return NULL;
+  }
+}
+
+
 int ledger_util_ustrcmp(unsigned char const* a, unsigned char const* b){
   /* trivial comparisons */
   if (a == NULL && b == NULL) return 0;
@@ -106,6 +134,27 @@ size_t ledger_util_itoa(int n, unsigned char* buf, size_t siz, int want_plus){
 
 int ledger_util_atoi(unsigned char const* str){
   return atoi((char const*)str);
+}
+
+int ledger_util_ustrncmp
+  (unsigned char const* a, unsigned char const* b, size_t sz)
+{
+  size_t i = 0;
+  /* trivial comparisons */
+  if (a == NULL && b == NULL) return 0;
+  else if (a == NULL) return -1;
+  else if (b == NULL) return +1;
+  /* bytewise comparisons */
+  while ((i < sz) && (*a != 0) && (*b != 0)){
+    if (*a != *b) break;
+    ++a;
+    ++b;
+    ++i;
+  }
+  if (i == sz) return 0;
+  else if (*a == *b) return 0;
+  else if (*a < *b) return -1;
+  else return +1;
 }
 
 /* END   implementation */

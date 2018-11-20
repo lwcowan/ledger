@@ -23,10 +23,12 @@ enum ledger_table_type {
   /* unsigned character string */
   LEDGER_TABLE_USTR = 3
 };
+
 /*
  * brief: Table
  */
 struct ledger_table;
+
 /*
  * brief: Table row iterator
  */
@@ -194,6 +196,26 @@ int ledger_table_fetch_bignum
 int ledger_table_put_bignum
   ( struct ledger_table_mark const* mark, int i,
     struct ledger_bignum const* value);
+
+/*
+ * Fetch a row item as an identifier.
+ * - mark any mark
+ * - i column index
+ * - n integer to hold the identifier
+ * @return one on success, zero otherwise
+ */
+int ledger_table_fetch_id
+  (struct ledger_table_mark const* mark, int i, int* n);
+
+/*
+ * Put an identifier to a row item.
+ * - mark any mark
+ * - i column index
+ * - value identifier integer
+ * @return one on success, zero otherwise
+ */
+int ledger_table_put_id
+  ( struct ledger_table_mark const* mark, int i, int value);
 
 #ifdef __cplusplus
 };
