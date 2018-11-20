@@ -4,14 +4,54 @@
 #include "../base/journal.h"
 #include "../base/ledger.h"
 #include "../base/account.h"
-#include "../base/entry.h"
 #include "../base/table.h"
+#include "../base/bignum.h"
 #include "../base/find.h"
+#include "../act/arg.h"
+#include "../act/transact.h"
+#include "../act/commit.h"
+#include <stddef.h>
+#include "../../deps/linenoise/linenoise.h"
 #include "line.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
+
+int ledger_cli_manage_entry
+  ( struct ledger_table_mark* const table_mark, char const* account_path,
+    struct ledger_bignum const* next_amount, char const* check_value);
+
+/* BEGIN static implementation */
+
+
+int ledger_cli_manage_entry
+  ( struct ledger_table_mark* const mark, char const* path,
+    struct ledger_bignum const* amount, char const* check_value)
+{
+  int ok = 0;
+  do {
+    ok = ledger_table_add_row(mark);
+    if (!ok) break;
+    /* set target account */
+    ok = ledger_table_put_string(mark, 2, (unsigned char const*)path);
+    if (!ok) break;
+    /* set amount */
+    ok = ledger_table_put_bignum(mark, 3, amount);
+    if (!ok) break;
+    /* set check */
+    ok = ledger_table_put_string(mark, 4, (unsigned char const*)check_value);
+    if (!ok) break;
+    ledger_table_mark_move(mark, +1);
+  } while (0);
+  return ok;
+}
+
+
+/* END   static implementation */
+
+
+/* BEGIN implementation */
 
 int ledger_cli_make_ledger
   (struct ledger_cli_line *tracking, int argc, char **argv)
@@ -325,3 +365,199 @@ int ledger_cli_make_account
   fprintf(stderr, "make_account: Created account@%i\n", account_index);
   return 0;
 }
+
+
+
+int ledger_cli_make_entry
+  (struct ledger_cli_line *tracking, int argc, char **argv)
+{
+  int argi;
+  int help_requested = 0;
+  char const* name_string = NULL;
+  char const* description_string = NULL;
+  char const* time_string = NULL;
+  char const* pick_journal_string = NULL;
+  int id_note = -1;
+  int account_index;
+  int journal_index;
+  struct ledger_journal *pick_journal;
+  if (tracking->object_path.len >= 1
+  &&  tracking->object_path.typ == LEDGER_ACT_PATH_LEDGER)
+  {
+    journal_index = tracking->object_path.path[0];
+  } else journal_index = -1;
+  /* scan arguments */
+  for (argi = 1; argi < argc; ++argi){
+    if (strcmp(argv[argi],"-d") == 0){
+      if (++argi < argc){
+        description_string = argv[argi];
+      }
+    } else if (strcmp(argv[argi],"-t") == 0){
+      if (++argi < argc){
+        time_string = argv[argi];
+      }
+    } else if (strcmp(argv[argi],"-j") == 0){
+      if (++argi < argc){
+        pick_journal_string = argv[argi];
+      }
+    } else if (strcmp(argv[argi],"-?") == 0){
+      help_requested = 1;
+    } else {
+      name_string = argv[argi];
+    }
+  }
+  if (help_requested || name_string == NULL){
+    fputs("make_entry: Make a journal entry.\n"
+      "usage: make_entry [options] (name)\n"
+      "options:\n"
+      "  (name)           set name for new entry\n"
+      "  -d (string)      set description for new entry\n"
+      "  -t (date)        set date and time for new entry\n"
+      "  -j (path)        path to desired container journal\n"
+      "  -?               help text\n"
+      ,stderr);
+    return 2;
+  }
+  /* resolve journal path */if (pick_journal_string != NULL){
+    int ok;
+    struct ledger_act_path new_path =
+      ledger_act_path_compute(tracking->book, pick_journal_string,
+      tracking->object_path, &ok);
+    if (!ok){
+      fputs("make_entry: Error processing path to journal\n", stderr);
+      return 1;
+    } else if (new_path.typ != LEDGER_ACT_PATH_JOURNAL){
+      fputs("make_entry: Path does not point to a journal\n", stderr);
+      return 1;
+    } else {
+      journal_index = new_path.path[0];
+    }
+  }
+  if (journal_index < 0){
+    fputs("make_entry: Choose a journal before making an account\n", stderr);
+    return 1;
+  }
+  pick_journal = ledger_book_get_journal(tracking->book, journal_index);
+  if (pick_journal == NULL){
+    fputs("make_entry: Chosen journal is unavailable\n", stderr);
+    return 1;
+  }
+  /* prepare the transaction */{
+    int ok;
+    struct ledger_bignum* next_amount;
+    struct ledger_arg_list* list_pull;
+    struct ledger_transaction* next_transaction;
+    struct ledger_table_mark* table_mark = NULL;
+    list_pull = ledger_arg_list_new();
+    if (list_pull == NULL){
+      fputs("make_entry: Error when making argument capture"
+        " structure\n", stderr);
+      return 0;
+    }
+    next_amount = ledger_bignum_new();
+    if (next_amount == NULL){
+      fputs("make_entry: Error when making numeric capture"
+        " structure\n", stderr);
+      ledger_arg_list_free(list_pull);
+      return 0;
+    }
+    next_transaction = ledger_transaction_new();
+    if (next_transaction == NULL){
+      fputs("make_entry: Error when making transaction"
+        " structure\n", stderr);
+      ok = 0;
+    } else do {
+      int done = 0;
+      ok = 0;
+      ledger_transaction_set_journal(next_transaction, journal_index);
+      ok = ledger_transaction_set_date(next_transaction, time_string);
+      if (!ok) {
+        fputs("make_entry: Error when setting transaction date\n",
+            stderr);
+        break;
+      }
+      ok = ledger_transaction_set_name(next_transaction, name_string);
+      if (!ok) {
+        fputs("make_entry: Error when setting transaction name\n",
+            stderr);
+        break;
+      }
+      /* acquire mark */{
+        struct ledger_table* const table =
+          ledger_transaction_get_table(next_transaction);
+        table_mark = ledger_table_end(table);
+        if (table_mark == NULL){
+          fputs("make_entry: Error when accessing transaction"
+            " structure\n", stderr);
+          break;
+        }
+      }
+      /* transaction line loop */
+      while (!done){
+        char* next_line = ledger_cli_get_sub_line(tracking, "> ");
+        if (next_line == NULL) {
+          done = 1;
+        } else if (*next_line == 0) {
+          ledger_cli_free_line(tracking, next_line);
+          done = 1;
+        } else {
+          char const* first;
+          ok = ledger_arg_list_parse(list_pull, next_line);
+          ledger_cli_free_line(tracking, next_line);
+          if (!ok) {
+            fputs("make_entry: Error when parsing "
+              "transaction line\n", stderr);
+            break;
+          }
+          first = ledger_arg_list_get(list_pull, 0);
+          if (first == NULL) break;
+          else if (strcmp(first,"debit") == 0){
+            char const* account_path;
+            char const* check_value = NULL;
+            int const arg_count = ledger_arg_list_get_count(list_pull);
+            if (arg_count >= 3){
+              /* get amount */
+              ok = ledger_bignum_set_text
+                ( next_amount, ledger_arg_list_get(list_pull, 1), NULL);
+              if (!ok) {
+                fputs("make_entry: Error when parsing "
+                  "line amount\n", stderr);
+                break;
+              }
+              /* get account path */
+              account_path = ledger_arg_list_get(list_pull, 2);
+              /* get check value */if (arg_count > 3){
+                check_value = ledger_arg_list_get(list_pull, 3);
+              }
+            } else break;
+            /* compose the entry */
+            ok = ledger_cli_manage_entry
+              (table_mark, account_path, next_amount, check_value);
+            if (!ok) {
+              fputs("make_entry: Error encountered when crafting "
+                "transaction line\n", stderr);
+              break;
+            }
+          }
+        }
+      }
+      if (ok){
+        /* submit transaction */
+        ok = ledger_commit_transaction(tracking->book, next_transaction);
+      } else break;
+    } while (0);
+    ledger_table_mark_free(table_mark);
+    ledger_transaction_free(next_transaction);
+    ledger_arg_list_free(list_pull);
+    ledger_bignum_free(next_amount);
+    if (!ok) {
+      fputs("make_entry: Error when executing transaction\n", stderr);
+    } else {
+      fputs("make_entry: Transaction execution complete\n", stderr);
+    }
+  }
+  return 0;
+}
+
+
+/* END   implementation */
