@@ -25,6 +25,7 @@ struct test_struct {
   int (*fn)(void);
   char const* name;
 };
+
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
   { allocate_table_test, "table pre-allocation" },
@@ -39,6 +40,7 @@ struct test_struct test_array[] = {
   { date_equal_test, "date_equal" },
   { trivial_equal_test, "trivial_equal" }
 };
+
 
 int allocate_test(void){
   struct ledger_transaction* ptr;
@@ -93,6 +95,7 @@ int description_test(void){
   ledger_transaction_free(ptr);
   return result;
 }
+
 int equal_test(void){
   int result = 0;
   struct ledger_transaction* ptr, * other_ptr;
@@ -157,6 +160,7 @@ int equal_test(void){
   ledger_transaction_free(other_ptr);
   return result;
 }
+
 int trivial_equal_test(void){
   int result = 0;
   struct ledger_transaction* ptr;
@@ -172,6 +176,7 @@ int trivial_equal_test(void){
   ledger_transaction_free(ptr);
   return result;
 }
+
 int null_description_test(void){
   int result = 0;
   struct ledger_transaction* ptr;
@@ -191,6 +196,7 @@ int null_description_test(void){
   ledger_transaction_free(ptr);
   return result;
 }
+
 int name_test(void){
   int result = 0;
   struct ledger_transaction* ptr;
@@ -213,6 +219,7 @@ int name_test(void){
   ledger_transaction_free(ptr);
   return result;
 }
+
 int id_test(void){
   int result = 0;
   struct ledger_transaction* ptr;
@@ -231,6 +238,7 @@ int id_test(void){
   ledger_transaction_free(ptr);
   return result;
 }
+
 int null_name_test(void){
   int result = 0;
   struct ledger_transaction* ptr;
