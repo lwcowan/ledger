@@ -61,6 +61,17 @@ int ledger_io_journal_write_items
           break;
       }
     }
+    /* write the sequence number */{
+      int const sequence_number = ledger_journal_get_sequence(journal);
+      if (sequence_number >= 0){
+        int ok;
+        ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
+              tmp_num, "journal-%i/seq.txt", journal_id);
+        if (ok < 0) break;
+        if (!ledger_io_util_archive_int(zip, name_buffer, sequence_number))
+          break;
+      }
+    }
     /* write transaction lines */{
       struct ledger_table const* table = ledger_journal_get_table_c(journal);
       if (table != NULL){
@@ -207,6 +218,17 @@ int ledger_io_journal_read_items
           cJSON_Delete(array_json);
         } else ok = 0;
         if (!ok) break;
+      } else break;
+    }
+    /* read the sequence number */{
+      int ok;
+      ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
+            tmp_num, "journal-%i/seq.txt", journal_id);
+      if (ok > 0){
+        int value = ledger_io_util_extract_int(zip, name_buffer, &ok);
+        if (value >= 0){
+          ledger_journal_set_sequence(journal, value);
+        }
       } else break;
     }
     result = 1;

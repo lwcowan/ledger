@@ -125,6 +125,14 @@ int ledger_io_book_read(char const* filename, struct ledger_book* book){
           }
           if (i < count) break;
         }
+        /* read the sequence number */{
+          int ok;
+          int value =
+            ledger_io_util_extract_int(active_zip, "seq.txt", &ok);
+          if (value >= 0){
+            ledger_book_set_sequence(book, value);
+          }
+        }
       }
       result = 1;
     } while (0);
@@ -174,6 +182,14 @@ int ledger_io_book_write
           unsigned char const* notes = ledger_book_get_notes(book);
           if (notes != NULL){
             ledger_io_util_archive_text(active_zip, "notes.txt", notes);
+          }
+        }
+        /* put the sequence number */{
+          int const sequence_number = ledger_book_get_sequence(book);
+          if (sequence_number >= 0){
+            ok = ledger_io_util_archive_int
+                (active_zip, "seq.txt", sequence_number);
+            if (!ok) break;
           }
         }
       }
