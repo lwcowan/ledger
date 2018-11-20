@@ -32,7 +32,7 @@ int ledger_io_entry_parse_json
         int ok = 1;
         cJSON_ArrayForEach(entry_item, json){
           if (strcmp(entry_item->string, "desc") == 0){
-            /* description flag */
+            /* description */
             if (cJSON_IsString(entry_item)){
               ok = ledger_entry_set_description
                 (entry, (unsigned char*)cJSON_GetStringValue(entry_item));
@@ -41,6 +41,12 @@ int ledger_io_entry_parse_json
             /* name */
             if (cJSON_IsString(entry_item)){
               ok = ledger_entry_set_name
+                (entry, (unsigned char*)cJSON_GetStringValue(entry_item));
+            } else ok = 0;
+          } else if (strcmp(entry_item->string, "date") == 0){
+            /* date */
+            if (cJSON_IsString(entry_item)){
+              ok = ledger_entry_set_date
                 (entry, (unsigned char*)cJSON_GetStringValue(entry_item));
             } else ok = 0;
           } else if (strcmp(entry_item->string, "entry_id") == 0){
@@ -81,6 +87,14 @@ struct cJSON* ledger_io_entry_print_json(struct ledger_entry const* entry){
       if (desc != NULL){
         sub_json = cJSON_AddStringToObject
           (json, "desc", (char const*)desc);
+        if (sub_json == NULL) break;
+      }
+    }
+    /* put entry date */{
+      unsigned char const* date = ledger_entry_get_date(entry);
+      if (date != NULL){
+        sub_json = cJSON_AddStringToObject
+          (json, "date", (char const*)date);
         if (sub_json == NULL) break;
       }
     }
