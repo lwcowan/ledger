@@ -49,6 +49,7 @@ set(ledger_cli_SOURCES
   cli/quit.h           cli/quit.c
   cli/iocmd.h          cli/iocmd.c
   cli/navigate.h       cli/navigate.c
+  cli/manage.h         cli/manage.c
   cli/cli.c
   )
 
