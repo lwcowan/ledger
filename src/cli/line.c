@@ -29,7 +29,8 @@ static struct ledger_cli_token const ledger_cli_cb_list[] = {
   { ledger_cli_enter, "enter" },
   { ledger_cli_make_ledger, "make_ledger" },
   { ledger_cli_make_journal, "make_journal" },
-  { ledger_cli_make_account, "make_account" }
+  { ledger_cli_make_account, "make_account" },
+  { ledger_cli_make_entry, "make_entry" }
 };
 
 
@@ -48,7 +49,23 @@ void ledger_cli_line_clear(struct ledger_cli_line *tracking){
 }
 
 char* ledger_cli_get_line(struct ledger_cli_line *tracking){
-  return linenoise("ledger-cli> ");
+  if (tracking->done) return NULL;
+  else {
+    char* text = linenoise("ledger-cli> ");
+    if (text == NULL) tracking->done = 1;
+    return text;
+  }
+}
+
+char* ledger_cli_get_sub_line
+  (struct ledger_cli_line *tracking, char const* prompt)
+{
+  if (tracking->done) return NULL;
+  else {
+    char* text = linenoise(prompt);
+    if (text == NULL) tracking->done = 1;
+    return text;
+  }
 }
 
 void ledger_cli_set_history_len(struct ledger_cli_line *tracking, int len){

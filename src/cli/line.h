@@ -57,6 +57,14 @@ void ledger_cli_line_clear(struct ledger_cli_line *tracking);
 char* ledger_cli_get_line(struct ledger_cli_line *tracking);
 
 /*
+ * Get a line of text from the input stream.
+ * - tracking line tracking structure
+ * @return the text, or NULL at end of stream
+ */
+char* ledger_cli_get_sub_line
+  (struct ledger_cli_line *tracking, char const* prompt);
+
+/*
  * Set a length for the history.
  * - tracking line tracking structure
  * - len new history length
