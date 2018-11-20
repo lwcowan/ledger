@@ -70,6 +70,12 @@ int ledger_cli_make_ledger
         fputs("make_ledger: Ledger by ID already exists\n", stderr);
         return 1;
       }
+      corresponding_index =
+        ledger_find_journal_by_id(tracking->book, id_note);
+      if (corresponding_index >= 0){
+        fputs("make_ledger: Journal by ID already exists\n", stderr);
+        return 1;
+      }
     }
   }
   /* make the ledger */{
@@ -156,6 +162,12 @@ int ledger_cli_make_journal
         ledger_find_journal_by_id(tracking->book, id_note);
       if (corresponding_index >= 0){
         fputs("make_journal: Journal by ID already exists\n", stderr);
+        return 1;
+      }
+      corresponding_index =
+        ledger_find_ledger_by_id(tracking->book, id_note);
+      if (corresponding_index >= 0){
+        fputs("make_journal: Ledger by ID already exists\n", stderr);
         return 1;
       }
     }
