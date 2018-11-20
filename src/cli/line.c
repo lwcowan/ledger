@@ -7,6 +7,7 @@
 #include "../base/util.h"
 #include "../base/book.h"
 #include <stdlib.h>
+#include "../act/arg.h"
 
 #include "test.h"
 #include "quit.h"
@@ -56,89 +57,27 @@ int ledger_cli_do_line
 {
   int result = 0;
   int token_count;
+  struct ledger_arg_list *pieces;
   char** total_pieces;
   /* pass zero: comment */
   if (command[0] == '#') return 0;
-  /* first pass: count the tokens */{
-    char const* p;
-    int quote = 0;
-    int alpha_count = 0;
-    for (p = command; *p; ++p){
-      if (quote){
-        if (*p == '"')
-          quote = 0;
-          alpha_count += 1;
-      } else {
-        if (*p == '"'){
-          alpha_count += 1;
-          quote = 1;
-        } else if (*p == ' ') {
-          if (alpha_count > 0){
-            token_count += 1;
-            alpha_count = 0;
-          }
-        } else {
-          alpha_count += 1;
-        }
-      }
-    }
-    if (alpha_count > 0){
-      token_count += 1;
-    }
-    total_pieces = ledger_util_malloc(sizeof(char*)*(token_count+1));
-    if (total_pieces == NULL){
-      fprintf(stderr, "Failed to allocate token piece array.\n");
-    } else total_pieces[token_count] = NULL;
+  pieces = ledger_arg_list_new();
+  if (pieces == NULL){
+    fprintf(stderr, "Error encountered with allocating argument list.\n");
+    ledger_arg_list_free(pieces);
+    return EXIT_FAILURE;
   }
-  /* second pass: extract the tokens */{
-    char const* p;
-    char const* token_start = command;
-    int quote = 0;
-    int ok = 1;
-    int micro_token_count = 0;
-    int alpha_count = 0;
-    for (p = command; *p; ++p){
-      if (quote){
-        if (*p == '"') {
-          quote = 0;
-          alpha_count += 1;
-        } else {
-          alpha_count += 1;
-        }
-      } else {
-        if (*p == '"'){
-          alpha_count += 1;
-          quote = 1;
-        } else if (*p == ' ') {
-          if (alpha_count > 0){
-            total_pieces[micro_token_count] =
-              ledger_util_ustrndup(token_start, alpha_count, &ok);
-            if (!ok) break;
-            micro_token_count += 1;
-            alpha_count = 0;
-          }
-          token_start = p+1;
-          if (micro_token_count >= token_count) break;
-        } else {
-          alpha_count += 1;
-        }
-      }
-    }
-    if (ok && alpha_count > 0 && micro_token_count < token_count){
-      total_pieces[micro_token_count] =
-        ledger_util_ustrndup(token_start, alpha_count, &ok);
-      if (ok) micro_token_count += 1;
-    }
-    if (!ok){
-      int i;
-      for (i = 0; i < micro_token_count; ++i){
-        ledger_util_free(total_pieces[i]);
-      }
-      fprintf(stderr, "Failed to allocate token pieces.\n");
-      return 0;
-    } else token_count = micro_token_count;
+  result = ledger_arg_list_parse(pieces, command);
+  if (result == 0){
+    fprintf(stderr, "Error encountered with parsing command line.\n");
+    ledger_arg_list_free(pieces);
+    return 0;
   }
-  /* third pass: process the arguments */if (total_pieces[0] != NULL){
+  total_pieces = (char**)ledger_arg_list_fetch(pieces);
+  token_count = ledger_arg_list_get_count(pieces)-1;
+  /* third pass: process the arguments */if (token_count > 0
+      && total_pieces[0] != NULL)
+  {
     int i;
     int const cb_length = sizeof(ledger_cli_cb_list)/
       sizeof(ledger_cli_cb_list[0]);
@@ -157,10 +96,7 @@ int ledger_cli_do_line
     }
   }
   /* fourth pass: free up the arguments */{
-    int i;
-    for (i = 0; i < token_count; ++i){
-      ledger_util_free(total_pieces[i]);
-    }
+    ledger_arg_list_free(pieces);
   }
   return 0;
 }
