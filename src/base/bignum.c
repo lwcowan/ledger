@@ -224,7 +224,9 @@ int ledger_bignum_gp_add
     if (ok){
       memcpy(tmp.digits, dst->digits, sizeof(unsigned char)*digit_count);
       tmp.digits[digit_count] = carry;
+      ledger_bignum_swap(&tmp, dst);
     }
+    ledger_bignum_clear(&tmp);
   }
   return ok;
 }

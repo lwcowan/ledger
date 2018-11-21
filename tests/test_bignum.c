@@ -22,6 +22,7 @@ static int number_unprimed_copy_test(void);
 static int negate_test(void);
 static int add_test(void);
 static int add_inverted_test(void);
+static int add_carry_test(void);
 static int subtract_test(void);
 static int subtract_inverted_test(void);
 
@@ -46,6 +47,7 @@ struct test_struct test_array[] = {
   { nonzero_compare_test, "nonzero compare" },
   { negate_test, "negate" },
   { add_test, "add" },
+  { add_carry_test, "add with carry" },
   { add_inverted_test, "add inverted" },
   { subtract_test, "subtract" },
   { subtract_inverted_test, "subtract inverted" }
@@ -661,6 +663,43 @@ int subtract_inverted_test(void){
     if (ledger_bignum_get_text(c,buf,sizeof(buf),0) != 9) break;
     if (ledger_util_ustrcmp(buf,
         (unsigned char const*)"-214.2310") != 0)
+      break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(c);
+  ledger_bignum_free(b);
+  ledger_bignum_free(a);
+  return result;
+}
+
+int add_carry_test(void){
+  int result = 0;
+  struct ledger_bignum* a, * b, * c;
+  a = ledger_bignum_new();
+  if (a == NULL) return 0;
+  b = ledger_bignum_new();
+  if (b == NULL){
+    ledger_bignum_free(a);
+    return 0;
+  }
+  c = ledger_bignum_new();
+  if (c == NULL){
+    ledger_bignum_free(a);
+    ledger_bignum_free(b);
+    return 0;
+  }
+  do {
+    unsigned char buf[16];
+    if (!ledger_bignum_set_text
+        (a,(unsigned char const*)"93.45",NULL))
+      break;
+    if (!ledger_bignum_set_text
+        (b,(unsigned char const*)"20.78",NULL))
+      break;
+    if (!ledger_bignum_add(c,a,b)) break;
+    if (ledger_bignum_get_text(c,buf,sizeof(buf),0) != 6) break;
+    if (ledger_util_ustrcmp(buf,
+        (unsigned char const*)"114.23") != 0)
       break;
     result = 1;
   } while (0);
