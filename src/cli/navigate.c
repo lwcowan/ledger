@@ -177,7 +177,7 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
         else
           fprintf(stdout, "balance unavailable\n");
       }
-      fprintf(stderr, "transaction lines: %i\n",
+      fprintf(stdout, "transaction lines: %i\n",
           ledger_table_count_rows(ledger_account_get_table_c(account)));
       result = 1;
     }break;
