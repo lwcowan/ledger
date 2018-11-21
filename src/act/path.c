@@ -6,11 +6,119 @@
 #include "../base/find.h"
 #include "../base/ledger.h"
 #include "../base/journal.h"
+#include "../base/account.h"
+#include "../base/entry.h"
+#include <limits.h>
 
+/*
+ * Push a string into a buffer.
+ * - buf buffer targeted
+ * - len length of buffer
+ * - string string to push
+ * @return the length of the string
+ */
+int ledger_act_path_push_string
+  (unsigned char* buf, int len, char const* string);
+
+/*
+ * Push an integer into a buffer.
+ * - buf buffer targeted
+ * - len length of buffer
+ * - n integer to push
+ * @return the length of the string representing the integer
+ */
+int ledger_act_path_push_int
+  (unsigned char* buf, int len, int n);
+
+/*
+ * Push an object token into a buffer.
+ * - buf buffer targeted
+ * - len length of buffer
+ * - type type of object
+ * - name name of object
+ * - item_id identifier of object
+ * - i object index
+ * @return the length of the token
+ */
+int ledger_act_path_push_token
+  ( unsigned char* buf, int len, int typ,
+    unsigned char const* name, int item_id, int i);
 
 /* BEGIN static implementation */
 
+int ledger_act_path_push_string
+  (unsigned char* buf, int len, char const* string)
+{
+  int i;
+  int string_length = 0;
+  for (i = 0; i < len; ++i){
+    if (string[i] == 0) break;
+    buf[i] = string[i];
+    string_length += 1;
+  }
+  for (; string[i] != 0; ++i){
+    string_length += 1;
+  }
+  return string_length;
+}
 
+int ledger_act_path_push_int
+  (unsigned char* buf, int len, int n)
+{
+  int i;
+  unsigned char number_text[sizeof(int)*CHAR_BIT/2+1];
+  ledger_util_itoa(n, number_text, sizeof(number_text), 0);
+  return ledger_act_path_push_string(buf, len, number_text);
+}
+
+int ledger_act_path_push_token
+  ( unsigned char* buf, int len, int typ,
+    unsigned char const* name, int item_id, int i)
+{
+  int out = 0;
+  switch (typ){
+  case LEDGER_ACT_PATH_LEDGER:
+    if (out < len) out += ledger_act_path_push_string
+        (buf+out,len-out,(unsigned char const*)"ledger");
+    else out += 6;
+    break;
+  case LEDGER_ACT_PATH_JOURNAL:
+    if (out < len) out += ledger_act_path_push_string
+        (buf+out,len-out,(unsigned char const*)"journal");
+    else out += 7;
+    break;
+  case LEDGER_ACT_PATH_ACCOUNT:
+    if (out < len) out += ledger_act_path_push_string
+        (buf+out,len-out,(unsigned char const*)"account");
+    else out += 7;
+    break;
+  case LEDGER_ACT_PATH_ENTRY:
+    if (out < len) out += ledger_act_path_push_string
+        (buf+out,len-out,(unsigned char const*)"entry");
+    else out += 5;
+    break;
+  }
+  if (name != NULL){
+    if (out < len) buf[out] = ':';
+    out += 1;
+    if (out < len) out += ledger_act_path_push_string
+        (buf+out, len-out, name);
+    else out += ledger_util_ustrlen(name);
+  } else if (item_id >= 0){
+    if (out < len) buf[out] = '#';
+    out += 1;
+    if (out < len) out += ledger_act_path_push_int
+        (buf+out, len-out, item_id);
+    else out += ledger_util_itoa(item_id, NULL, 0, 0);
+  } else {
+    if (out < len) buf[out] = '@';
+    out += 1;
+    if (out < len) out += ledger_act_path_push_int
+        (buf+out, len-out, i);
+    else out += ledger_util_itoa(i, NULL, 0, 0);
+  }
+  return out;
+}
 
 /* END   static implementation */
 
@@ -25,6 +133,133 @@ struct ledger_act_path ledger_act_path_root(void){
   return out;
 }
 
+int ledger_act_path_render
+  ( unsigned char* buf, int len, struct ledger_act_path path,
+    struct ledger_book const* book)
+{
+  int out = 0;
+  switch (path.typ){
+  case LEDGER_ACT_PATH_BOOK:
+    {
+      if (out < len){
+        buf[out] = '/';
+      }
+      out += 1;
+    }break;
+  case LEDGER_ACT_PATH_LEDGER:
+    {
+      struct ledger_ledger const* ledger;
+      unsigned char const* name_ledger = NULL;
+      int item_id_ledger = -1;
+      ledger = ledger_book_get_ledger_c(book, path.path[0]);
+      if (ledger != NULL){
+        name_ledger = ledger_ledger_get_name(ledger);
+        item_id_ledger = ledger_ledger_get_id(ledger);
+      }
+      if (out < len) buf[out] = '/';
+      out += 1;
+      if (out < len) out += ledger_act_path_push_token
+          ( buf+out, len-out, LEDGER_ACT_PATH_LEDGER,
+            name_ledger, item_id_ledger, path.path[0]);
+      else out += ledger_act_path_push_token
+          ( NULL, 0, LEDGER_ACT_PATH_LEDGER,
+            name_ledger, item_id_ledger, path.path[0]);
+    }break;
+  case LEDGER_ACT_PATH_JOURNAL:
+    {
+      struct ledger_journal const* ledger;
+      unsigned char const* name_journal = NULL;
+      int item_id_journal = -1;
+      ledger = ledger_book_get_journal_c(book, path.path[0]);
+      if (ledger != NULL){
+        name_journal = ledger_journal_get_name(ledger);
+        item_id_journal = ledger_journal_get_id(ledger);
+      }
+      if (out < len) buf[out] = '/';
+      out += 1;
+      if (out < len) out += ledger_act_path_push_token
+          ( buf+out, len-out, LEDGER_ACT_PATH_JOURNAL,
+            name_journal, item_id_journal, path.path[0]);
+      else out += ledger_act_path_push_token
+          ( NULL, 0, LEDGER_ACT_PATH_JOURNAL,
+            name_journal, item_id_journal, path.path[0]);
+    }break;
+  case LEDGER_ACT_PATH_ACCOUNT:
+    {
+      struct ledger_ledger const* ledger;
+      unsigned char const* name_ledger = NULL;
+      int item_id_ledger = -1;
+      struct ledger_account const* account;
+      unsigned char const* name_account = NULL;
+      int item_id_account = -1;
+      ledger = ledger_book_get_ledger_c(book, path.path[0]);
+      if (ledger != NULL){
+        name_ledger = ledger_ledger_get_name(ledger);
+        item_id_ledger = ledger_ledger_get_id(ledger);
+        account = ledger_ledger_get_account_c(ledger, path.path[1]);
+      } else account = NULL;
+      if (account != NULL){
+        name_account = ledger_account_get_name(account);
+        item_id_account = ledger_account_get_id(account);
+      }
+      if (out < len) buf[out] = '/';
+      out += 1;
+      if (out < len) out += ledger_act_path_push_token
+          ( buf+out, len-out, LEDGER_ACT_PATH_LEDGER,
+            name_ledger, item_id_ledger, path.path[0]);
+      else out += ledger_act_path_push_token
+          ( NULL, 0, LEDGER_ACT_PATH_LEDGER,
+            name_ledger, item_id_ledger, path.path[0]);
+      if (out < len) buf[out] = '/';
+      out += 1;
+      if (out < len) out += ledger_act_path_push_token
+          ( buf+out, len-out, LEDGER_ACT_PATH_ACCOUNT,
+            name_account, item_id_account, path.path[1]);
+      else out += ledger_act_path_push_token
+          ( NULL, 0, LEDGER_ACT_PATH_ACCOUNT,
+            name_account, item_id_account, path.path[1]);
+    }break;
+  case LEDGER_ACT_PATH_ENTRY:
+    {
+      struct ledger_journal const* journal;
+      unsigned char const* name_journal = NULL;
+      int item_id_journal = -1;
+      struct ledger_entry const* entry;
+      unsigned char const* name_entry = NULL;
+      int item_id_entry = -1;
+      journal = ledger_book_get_journal_c(book, path.path[0]);
+      if (journal != NULL){
+        name_journal = ledger_journal_get_name(journal);
+        item_id_journal = ledger_journal_get_id(journal);
+        entry = ledger_journal_get_entry_c(journal, path.path[1]);
+      } else entry = NULL;
+      if (entry != NULL){
+        name_entry = ledger_entry_get_name(entry);
+        item_id_entry = ledger_entry_get_id(entry);
+      }
+      if (out < len) buf[out] = '/';
+      out += 1;
+      if (out < len) out += ledger_act_path_push_token
+          ( buf+out, len-out, LEDGER_ACT_PATH_JOURNAL,
+            name_journal, item_id_journal, path.path[0]);
+      else out += ledger_act_path_push_token
+          ( NULL, 0, LEDGER_ACT_PATH_JOURNAL,
+            name_journal, item_id_journal, path.path[0]);
+      if (out < len) buf[out] = '/';
+      out += 1;
+      if (out < len) out += ledger_act_path_push_token
+          ( buf+out, len-out, LEDGER_ACT_PATH_ENTRY,
+            name_entry, item_id_entry, path.path[1]);
+      else out += ledger_act_path_push_token
+          ( NULL, 0, LEDGER_ACT_PATH_ENTRY,
+            name_entry, item_id_entry, path.path[1]);
+    }break;
+  }
+  /* terminate the string */
+  if (out < len) buf[out] = 0;
+  else if (len > 0) buf[len-1] = 0;
+  return out;
+}
 
 
 struct ledger_act_path ledger_act_path_compute
