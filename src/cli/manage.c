@@ -7,6 +7,7 @@
 #include "../base/table.h"
 #include "../base/bignum.h"
 #include "../base/find.h"
+#include "../base/sum.h"
 #include "../act/arg.h"
 #include "../act/transact.h"
 #include "../act/commit.h"
@@ -514,6 +515,24 @@ int ledger_cli_make_entry
           if (first == NULL) break;
           else if (strcmp(first,"cancel") == 0){
             /* signal request to cancel by setting */done = -1;
+          } else if (strcmp(first,"balance") == 0){
+            struct ledger_table const* act_table =
+              ledger_transaction_get_table_c(next_transaction);
+            int short_ok = ledger_sum_table_column(next_amount, act_table, 3);
+            if (!short_ok){
+              ok = 0;
+              break;
+            } else {
+              unsigned char short_buffer[64];
+              ok = ledger_bignum_get_text(next_amount,short_buffer,
+                      sizeof(short_buffer), 1);
+              ok = (ok >= 0 && ok < 64);
+              if (!ok){
+                fputs("make_entry: Balance unavailable\n", stderr);
+              } else {
+                fprintf(stderr, "%s\n", short_buffer);
+              }
+            }
           } else if (strcmp(first,"debit") == 0){
             char const* account_path;
             char const* check_value = NULL;
