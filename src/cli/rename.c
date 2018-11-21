@@ -31,6 +31,10 @@ int ledger_cli_rename
   }
   new_path = ledger_act_path_compute
     (book, argv[1], tracking->object_path, &result);
+  if (result == 0){
+    fprintf(stderr,"rename: Error encountered in processing path\n");
+    return 2;
+  }
   switch (new_path.typ){
   case LEDGER_ACT_PATH_BOOK:
     {

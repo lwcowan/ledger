@@ -21,7 +21,7 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
     new_path = ledger_act_path_compute
       (book, argv[1], tracking->object_path, &result);
     if (result == 0){
-      fprintf(stderr,"info: Error encountered in processing path\n");
+      fprintf(stderr,"list: Error encountered in processing path\n");
       return 2;
     }
   } else new_path = tracking->object_path;
