@@ -8,10 +8,20 @@
 #include "../base/table.h"
 #include "../base/sum.h"
 #include "../base/bignum.h"
+#include "../base/find.h"
 #include "line.h"
 #include <stdio.h>
 
 
+
+
+/* BEGIN static implementation */
+
+
+/* END   static implementation */
+
+
+/* BEGIN implementation */
 
 int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
   int result;
@@ -138,15 +148,84 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
         result = 0;
         break;
       }
-      unsigned char const* name = ledger_entry_get_name(entry);
-      int const item_id = ledger_entry_get_id(entry);
-      if (name != NULL)
-        fprintf(stdout,"entry:%s\n", name);
-      else if (item_id >= 0)
-        fprintf(stdout,"entry#%i\n", item_id);
-      else
-        fprintf(stdout,"entry@%i\n", new_path.path[1]);
-      result = 1;
+      /* list transaction lines */{
+        int const item_id_entry = ledger_entry_get_id(entry);
+        struct ledger_table_mark *mark, *end;
+        unsigned char path_text[60];
+        unsigned char amount_text[16];
+        unsigned char check_text[16];
+        int line_count = 0;
+        /* get table */{
+          struct ledger_table const *table =
+            ledger_journal_get_table_c(journal);
+          mark = ledger_table_begin_c(table);
+          end = ledger_table_end_c(table);
+        }
+        if (mark != NULL && end != NULL){
+          result = 1;
+          while (!ledger_table_mark_is_equal(mark,end)){
+            int row_entry_id;
+            int row_ledger_id, row_account_id;
+            if (!ledger_table_fetch_id(mark,0,&row_entry_id)){
+              result = 0;
+              break;
+            }
+            if (row_entry_id == item_id_entry){
+              struct ledger_act_path display_path;
+              line_count += 1;
+              if (!ledger_table_fetch_id(mark,1,&row_ledger_id)){
+                result = 0;
+                break;
+              }
+              if (!ledger_table_fetch_id(mark,2,&row_account_id)){
+                result = 0;
+                break;
+              }
+              display_path.path[0] =
+                ledger_find_ledger_by_id(tracking->book, row_ledger_id);
+              if (display_path.path[0] >= 0){
+                struct ledger_ledger const* row_ledger =
+                  ledger_book_get_ledger
+                      (tracking->book, display_path.path[0]);
+                display_path.path[1] =
+                  ledger_find_account_by_id(row_ledger, row_account_id);
+              } else display_path.path[1] = -1;
+              display_path.typ = LEDGER_ACT_PATH_ACCOUNT;
+              display_path.len = 2;
+              if (ledger_act_path_render
+                  ( path_text, sizeof(path_text), display_path, tracking->book)
+                  < 0)
+                break;
+              if (ledger_table_fetch_string
+                  (mark,3,amount_text,sizeof(amount_text)) < 0)
+              {
+                result = 0;
+                break;
+              }
+              if (ledger_table_fetch_string
+                  (mark,4,check_text,sizeof(check_text)) < 0)
+              {
+                result = 0;
+                break;
+              }
+              fprintf(stderr,"  %-60s\n    %16s %16s\n",
+                  path_text, amount_text, check_text);
+            }
+            ledger_table_mark_move(mark, +1);
+          }
+          if (result == 0){
+            fprintf(stderr,"list: Transaction lines broken\n");
+          } else {
+            fprintf(stderr,"transaction lines: %i\n", line_count);
+          }
+        } else {
+          fprintf(stderr,"list: Transaction lines unavailable\n");
+          result = 0;
+          break;
+        }
+        ledger_table_mark_free(mark);
+        ledger_table_mark_free(end);
+      }
     }break;
   case LEDGER_ACT_PATH_ACCOUNT:
     {
@@ -188,7 +267,84 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
       }
       fprintf(stdout, "transaction lines: %i\n",
           ledger_table_count_rows(ledger_account_get_table_c(account)));
-      result = 1;
+      /* list transaction lines */{
+        struct ledger_table_mark *mark, *end;
+        unsigned char path_text[60];
+        unsigned char amount_text[16];
+        unsigned char check_text[16];
+        unsigned char date_text[24];
+        int line_count = 0;
+        /* get table */{
+          struct ledger_table const *table =
+            ledger_account_get_table_c(account);
+          mark = ledger_table_begin_c(table);
+          end = ledger_table_end_c(table);
+        }
+        if (mark != NULL && end != NULL){
+          result = 1;
+          while (!ledger_table_mark_is_equal(mark,end)){
+            int row_journal_id, row_entry_id;
+            if (!ledger_table_fetch_id(mark,0,&row_entry_id)){
+              result = 0;
+              break;
+            }
+            struct ledger_act_path display_path;
+            line_count += 1;
+            if (!ledger_table_fetch_id(mark,0,&row_journal_id)){
+              result = 0;
+              break;
+            }
+            if (!ledger_table_fetch_id(mark,1,&row_entry_id)){
+              result = 0;
+              break;
+            }
+            display_path.path[0] =
+              ledger_find_journal_by_id(tracking->book, row_journal_id);
+            if (display_path.path[0] >= 0){
+              struct ledger_journal const* row_journal =
+                ledger_book_get_journal(tracking->book, display_path.path[0]);
+              display_path.path[1] =
+                ledger_find_entry_by_id(row_journal, row_entry_id);
+            } else display_path.path[1] = -1;
+            display_path.typ = LEDGER_ACT_PATH_ENTRY;
+            display_path.len = 2;
+            if (ledger_act_path_render
+                ( path_text, sizeof(path_text), display_path, tracking->book)
+                < 0)
+              break;
+            if (ledger_table_fetch_string
+                (mark,2,amount_text,sizeof(amount_text)) < 0)
+            {
+              result = 0;
+              break;
+            }
+            if (ledger_table_fetch_string
+                (mark,3,check_text,sizeof(check_text)) < 0)
+            {
+              result = 0;
+              break;
+            }
+            if (ledger_table_fetch_string
+                (mark,4,date_text,sizeof(date_text)) < 0)
+            {
+              result = 0;
+              break;
+            }
+            fprintf(stderr,"  %-60s\n    %16s %24s %16s\n",
+                path_text, amount_text, date_text, check_text);
+            ledger_table_mark_move(mark, +1);
+          }
+          if (result == 0){
+            fprintf(stderr,"list: Transaction lines broken\n");
+          }
+        } else {
+          fprintf(stderr,"list: Transaction lines unavailable\n");
+          result = 0;
+          break;
+        }
+        ledger_table_mark_free(mark);
+        ledger_table_mark_free(end);
+      }
     }break;
   default:
     result = 0;
@@ -424,3 +580,5 @@ int ledger_cli_enter(struct ledger_cli_line *tracking, int argc, char **argv){
   }
   return result;
 }
+
+/* END   implementation */
