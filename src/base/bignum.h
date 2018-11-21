@@ -145,6 +145,28 @@ int ledger_bignum_truncate
 int ledger_bignum_negate
   (struct ledger_bignum* dst, struct ledger_bignum const* src);
 
+/*
+ * Add two big numbers together.
+ * - dst number to overwrite
+ * - left one addend
+ * - right another addend
+ * @return one on success, zero otherwise
+ */
+int ledger_bignum_add
+  ( struct ledger_bignum* dst,
+    struct ledger_bignum const* left, struct ledger_bignum const* right);
+
+/*
+ * Subtract one big number from another.
+ * - dst number to overwrite
+ * - left the minuend
+ * - right the subtrahend
+ * @return one on success, zero otherwise
+ */
+int ledger_bignum_subtract
+  ( struct ledger_bignum* dst,
+    struct ledger_bignum const* left, struct ledger_bignum const* right);
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/
