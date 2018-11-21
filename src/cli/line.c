@@ -14,6 +14,7 @@
 #include "iocmd.h"
 #include "navigate.h"
 #include "manage.h"
+#include "rename.h"
 
 
 struct ledger_cli_token {
@@ -28,6 +29,7 @@ static struct ledger_cli_token const ledger_cli_cb_list[] = {
   { ledger_cli_list,  "list" },
   { ledger_cli_enter, "enter" },
   { ledger_cli_info, "info" },
+  { ledger_cli_rename,  "rename" },
   { ledger_cli_make_ledger, "make_ledger" },
   { ledger_cli_make_journal, "make_journal" },
   { ledger_cli_make_account, "make_account" },
