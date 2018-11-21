@@ -19,6 +19,11 @@ static int number_overprimed_copy_test(void);
 static int number_primed_copy_test(void);
 static int number_copy_test(void);
 static int number_unprimed_copy_test(void);
+static int negate_test(void);
+static int add_test(void);
+static int add_inverted_test(void);
+static int subtract_test(void);
+static int subtract_inverted_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -38,7 +43,12 @@ struct test_struct test_array[] = {
   { number_primed_copy_test, "number copy: underprimed" },
   { number_copy_test, "number copy: primed" },
   { number_overprimed_copy_test, "number copy: overprimed" },
-  { nonzero_compare_test, "nonzero compare" }
+  { nonzero_compare_test, "nonzero compare" },
+  { negate_test, "negate" },
+  { add_test, "add" },
+  { add_inverted_test, "add inverted" },
+  { subtract_test, "subtract" },
+  { subtract_inverted_test, "subtract inverted" }
 };
 
 
@@ -471,6 +481,195 @@ int number_primed_copy_test(void){
   ledger_bignum_free(ptr);
   return result;
 }
+
+int negate_test(void){
+  int result = 0;
+  struct ledger_bignum* a, * b, * c;
+  a = ledger_bignum_new();
+  if (a == NULL) return 0;
+  b = ledger_bignum_new();
+  if (b == NULL){
+    ledger_bignum_free(a);
+    return 0;
+  }
+  c = ledger_bignum_new();
+  if (c == NULL){
+    ledger_bignum_free(a);
+    ledger_bignum_free(b);
+    return 0;
+  }
+  do {
+    unsigned char buf[16];
+    if (!ledger_bignum_set_text
+        (a,(unsigned char const*)"-99.45",NULL))
+      break;
+    if (!ledger_bignum_negate(b,a)) break;
+    if (ledger_bignum_get_text(b,buf,sizeof(buf),0) != 5) break;
+    if (ledger_util_ustrcmp(buf,
+        (unsigned char const*)"99.45") != 0)
+      break;
+    if (!ledger_bignum_negate(c,b)) break;
+    if (ledger_bignum_get_text(c,buf,sizeof(buf),0) != 6) break;
+    if (ledger_util_ustrcmp(buf,
+        (unsigned char const*)"-99.45") != 0)
+      break;
+    if (ledger_bignum_compare(a,c) != 0) break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(c);
+  ledger_bignum_free(b);
+  ledger_bignum_free(a);
+  return result;
+}
+
+int add_test(void){
+  int result = 0;
+  struct ledger_bignum* a, * b, * c;
+  a = ledger_bignum_new();
+  if (a == NULL) return 0;
+  b = ledger_bignum_new();
+  if (b == NULL){
+    ledger_bignum_free(a);
+    return 0;
+  }
+  c = ledger_bignum_new();
+  if (c == NULL){
+    ledger_bignum_free(a);
+    ledger_bignum_free(b);
+    return 0;
+  }
+  do {
+    unsigned char buf[16];
+    if (!ledger_bignum_set_text
+        (a,(unsigned char const*)"-93.45",NULL))
+      break;
+    if (!ledger_bignum_set_text
+        (b,(unsigned char const*)"-120.781",NULL))
+      break;
+    if (!ledger_bignum_add(c,a,b)) break;
+    if (ledger_bignum_get_text(c,buf,sizeof(buf),0) != 9) break;
+    if (ledger_util_ustrcmp(buf,
+        (unsigned char const*)"-214.2310") != 0)
+      break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(c);
+  ledger_bignum_free(b);
+  ledger_bignum_free(a);
+  return result;
+}
+
+int add_inverted_test(void){
+  int result = 0;
+  struct ledger_bignum* a, * b, * c;
+  a = ledger_bignum_new();
+  if (a == NULL) return 0;
+  b = ledger_bignum_new();
+  if (b == NULL){
+    ledger_bignum_free(a);
+    return 0;
+  }
+  c = ledger_bignum_new();
+  if (c == NULL){
+    ledger_bignum_free(a);
+    ledger_bignum_free(b);
+    return 0;
+  }
+  do {
+    unsigned char buf[16];
+    if (!ledger_bignum_set_text
+        (a,(unsigned char const*)"-93.45",NULL))
+      break;
+    if (!ledger_bignum_set_text
+        (b,(unsigned char const*)"+120.781",NULL))
+      break;
+    if (!ledger_bignum_add(c,a,b)) break;
+    if (ledger_bignum_get_text(c,buf,sizeof(buf),0) != 7) break;
+    if (ledger_util_ustrcmp(buf,
+        (unsigned char const*)"27.3310") != 0)
+      break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(c);
+  ledger_bignum_free(b);
+  ledger_bignum_free(a);
+  return result;
+}
+
+int subtract_test(void){
+  int result = 0;
+  struct ledger_bignum* a, * b, * c;
+  a = ledger_bignum_new();
+  if (a == NULL) return 0;
+  b = ledger_bignum_new();
+  if (b == NULL){
+    ledger_bignum_free(a);
+    return 0;
+  }
+  c = ledger_bignum_new();
+  if (c == NULL){
+    ledger_bignum_free(a);
+    ledger_bignum_free(b);
+    return 0;
+  }
+  do {
+    unsigned char buf[16];
+    if (!ledger_bignum_set_text
+        (a,(unsigned char const*)"-93.45",NULL))
+      break;
+    if (!ledger_bignum_set_text
+        (b,(unsigned char const*)"-120.781",NULL))
+      break;
+    if (!ledger_bignum_subtract(c,a,b)) break;
+    if (ledger_bignum_get_text(c,buf,sizeof(buf),0) != 7) break;
+    if (ledger_util_ustrcmp(buf,
+        (unsigned char const*)"27.3310") != 0)
+      break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(c);
+  ledger_bignum_free(b);
+  ledger_bignum_free(a);
+  return result;
+}
+
+int subtract_inverted_test(void){
+  int result = 0;
+  struct ledger_bignum* a, * b, * c;
+  a = ledger_bignum_new();
+  if (a == NULL) return 0;
+  b = ledger_bignum_new();
+  if (b == NULL){
+    ledger_bignum_free(a);
+    return 0;
+  }
+  c = ledger_bignum_new();
+  if (c == NULL){
+    ledger_bignum_free(a);
+    ledger_bignum_free(b);
+    return 0;
+  }
+  do {
+    unsigned char buf[16];
+    if (!ledger_bignum_set_text
+        (a,(unsigned char const*)"-93.45",NULL))
+      break;
+    if (!ledger_bignum_set_text
+        (b,(unsigned char const*)"+120.781",NULL))
+      break;
+    if (!ledger_bignum_subtract(c,a,b)) break;
+    if (ledger_bignum_get_text(c,buf,sizeof(buf),0) != 9) break;
+    if (ledger_util_ustrcmp(buf,
+        (unsigned char const*)"-214.2310") != 0)
+      break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(c);
+  ledger_bignum_free(b);
+  ledger_bignum_free(a);
+  return result;
+}
+
 
 
 int main(int argc, char **argv){

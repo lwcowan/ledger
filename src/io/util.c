@@ -73,6 +73,28 @@ struct cJSON* ledger_io_util_extract_json
   }
 }
 
+int ledger_io_util_extract_int
+  (struct zip_t *zip, char const* name, int *ok)
+{
+  /* start with text */
+  int intermediate_ok;
+  unsigned char* text =
+    ledger_io_util_extract_text(zip,name,&intermediate_ok);
+  /* fast quit */
+  if (intermediate_ok && text == NULL){
+    *ok = 1;
+    return 0;
+  } else if (!intermediate_ok) {
+    *ok = 0;
+    return -1;
+  } else {
+    int value = ledger_util_atoi(text);
+    ledger_util_free(text);
+    *ok = 1;
+    return value;
+  }
+}
+
 int ledger_io_util_archive_text
   (struct zip_t *zip, char const* name, unsigned char const* text)
 {
@@ -96,6 +118,16 @@ int ledger_io_util_archive_json
   if (printing == NULL) return 0;
   result = ledger_io_util_archive_text(zip,name,(unsigned char*)printing);
   cJSON_free(printing);
+  return result;
+}
+
+int ledger_io_util_archive_int
+  (struct zip_t *zip, char const* name, int value)
+{
+  int result;
+  unsigned char printing[1+sizeof(int)*CHAR_BIT/2];
+  ledger_util_itoa(value, printing, sizeof(printing), 0);
+  result = ledger_io_util_archive_text(zip,name,printing);
   return result;
 }
 

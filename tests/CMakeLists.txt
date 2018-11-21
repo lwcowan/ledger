@@ -16,6 +16,8 @@ add_executable("ledger_test_journal" "test_journal.c")
 add_executable("ledger_test_entry" "test_entry.c")
 #big number test
 add_executable("ledger_test_account" "test_account.c")
+#sum test
+add_executable("ledger_test_sum" "test_sum.c")
 #find test
 add_executable("ledger_test_find" "test_find.c")
 
@@ -27,6 +29,7 @@ target_link_libraries("ledger_test_table" ledger_base)
 target_link_libraries("ledger_test_journal" ledger_base)
 target_link_libraries("ledger_test_entry" ledger_base)
 target_link_libraries("ledger_test_account" ledger_base)
+target_link_libraries("ledger_test_sum" ledger_base)
 target_link_libraries("ledger_test_find" ledger_base)
 
 

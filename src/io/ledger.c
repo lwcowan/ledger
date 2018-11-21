@@ -57,6 +57,17 @@ int ledger_io_ledger_write_items
           break;
       }
     }
+    /* write the sequence number */{
+      int const sequence_number = ledger_ledger_get_sequence(ledger);
+      if (sequence_number >= 0){
+        int ok;
+        ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
+              tmp_num, "ledger-%i/seq.txt", ledger_id);
+        if (ok < 0) break;
+        if (!ledger_io_util_archive_int(zip, name_buffer, sequence_number))
+          break;
+      }
+    }
     /* write the sections */{
       int const count = ledger_io_manifest_get_count(manifest);
       int i;
@@ -165,6 +176,17 @@ int ledger_io_ledger_read_items
         if (!ok) break;
       }
       if (i < count) break;
+    }
+    /* read the sequence number */{
+      int ok;
+      ok = ledger_io_util_construct_name(name_buffer,sizeof(name_buffer),
+            tmp_num, "ledger-%i/seq.txt", ledger_id);
+      if (ok > 0){
+        int value = ledger_io_util_extract_int(zip, name_buffer, &ok);
+        if (value >= 0){
+          ledger_ledger_set_sequence(ledger, value);
+        }
+      } else break;
     }
     result = 1;
   } while (0);

@@ -12,6 +12,7 @@ set(ledger_base_SOURCES
   base/entry.h         base/entry.c
   base/find.h          base/find.c
   base/table.h         base/table.c
+  base/sum.h           base/sum.c
   )
 
 add_library(ledger_base ${ledger_base_SOURCES})

@@ -85,6 +85,23 @@ static int ledger_bignum_alloc_unchecked
  */
 static int ledger_bignum_fetch_zero(struct ledger_bignum const* n, int i);
 
+/*
+ * Add two magnitudes together, used for general purposes.
+ * - dst destination long register
+ * - right source of addend magnitude
+ * @return one on success, zero otherwise
+ */
+static int ledger_bignum_gp_add
+  ( struct ledger_bignum* dst, struct ledger_bignum const* right);
+
+/*
+ * Subtract one magnitude from another magnitude, used for general purposes.
+ * - dst destination long register
+ * - right source of subtrahend magnitude
+ * @return one on success, zero otherwise
+ */
+static int ledger_bignum_gp_subtract
+  ( struct ledger_bignum* dst, struct ledger_bignum const* right);
 
 /* BEGIN static implementation */
 
@@ -168,6 +185,104 @@ int ledger_bignum_alloc_unchecked
 int ledger_bignum_fetch_zero(struct ledger_bignum const* n, int i){
   if (i < 0 || i >= n->digit_count) return 0;
   else return n->digits[i];
+}
+
+int ledger_bignum_gp_add
+  ( struct ledger_bignum* dst, struct ledger_bignum const* right)
+{
+  unsigned int carry = 0;
+  int point_shift;
+  int dst_i, right_i;
+  int ok = 1;
+  /*
+   * right point_place will always be less or equal to dst point_place,
+   * since dst was extended to contain both left and right
+   */
+  point_shift = dst->point_place-right->point_place;
+  for (dst_i = point_shift, right_i = 0; right_i < right->digit_count;
+      ++dst_i, ++right_i)
+  {
+    carry += dst->digits[dst_i];
+    carry += right->digits[right_i];
+    dst->digits[dst_i] = carry%100;
+    carry /= 100;
+  }
+  /* carry forward */if (carry > 0 && dst_i < dst->digit_count){
+    for (; dst_i < dst->digit_count; ++dst_i){
+      carry += dst->digits[dst_i];
+      dst->digits[dst_i] = carry%100;
+      carry /= 100;
+    }
+  }
+  /* extend */if (carry /*still*/ > 0
+  &&  dst->digit_count < LEDGER_BIGNUM_DIGIT_MAX)
+  {
+    struct ledger_bignum tmp;
+    int const digit_count = dst->digit_count;
+    ledger_bignum_init(&tmp);
+    ok = ledger_bignum_alloc_unchecked(&tmp, digit_count+1, dst->point_place);
+    if (ok){
+      memcpy(tmp.digits, dst->digits, sizeof(unsigned char)*digit_count);
+      tmp.digits[digit_count] = carry;
+    }
+  }
+  return ok;
+}
+
+int ledger_bignum_gp_subtract
+  ( struct ledger_bignum* dst, struct ledger_bignum const* right)
+{
+  unsigned int debt = 0;
+  int point_shift;
+  int dst_i, right_i;
+  int ok = 1;
+  /*
+   * right point_place will always be less or equal to dst point_place,
+   * since dst was extended to contain both left and right
+   */
+  point_shift = dst->point_place-right->point_place;
+  for (dst_i = point_shift, right_i = 0; right_i < right->digit_count;
+      ++dst_i, ++right_i)
+  {
+    unsigned int place;
+    place = dst->digits[dst_i];
+    place -= debt;
+    place -= right->digits[right_i];
+    if (place >= 100){
+      /* wrap occurred; borrow */
+      debt = 1;
+      place += 100;
+    } else debt = 0;
+    dst->digits[dst_i] = place;
+  }
+  /* refinance the debt */if (debt == 1 && dst_i < dst->digit_count){
+    for (; dst_i < dst->digit_count; ++dst_i){
+      unsigned int place;
+      place = dst->digits[dst_i];
+      place -= debt;
+      if (place >= 100){
+        /* wrap occurred; borrow */
+        debt = 1;
+        place += 100;
+      } else debt = 0;
+      dst->digits[dst_i] = place;
+    }
+  }
+  /* execute 2's complement */if (debt /*still*/ == 1){
+    unsigned int carry = 1;
+    dst->negative = !dst->negative;
+    for (dst_i = 0; dst_i < dst->digit_count; ++dst_i){
+      carry += (99-dst->digits[dst_i]);
+      dst->digits[dst_i] = carry%100;
+      carry /= 100;
+    }
+    /*
+     * carry == 0 since the destination was already extended to
+     * fit the most negative possible subtrahend given the input
+     * size, which is 99...99
+     */
+  }
+  return ok;
 }
 
 /* END   static implementation */
@@ -630,6 +745,79 @@ int ledger_bignum_truncate
     memcpy(dst->digits+disparity, src->digits+initial_digit, digit_count);
   dst->negative = src->negative;
   return 1;
+}
+
+int ledger_bignum_negate
+  (struct ledger_bignum* dst, struct ledger_bignum const* src)
+{
+  int ok = 0;
+  struct ledger_bignum tmp;
+  ledger_bignum_init(&tmp);
+  if (!ledger_bignum_copy(&tmp,src))
+    return 0;
+  do {
+    tmp.negative = !tmp.negative;
+    ok = 1;
+  } while (0);
+  if (ok){
+    ledger_bignum_swap(dst, &tmp);
+  }
+  ledger_bignum_clear(&tmp);
+  return ok;
+}
+
+int ledger_bignum_add
+  ( struct ledger_bignum* dst,
+    struct ledger_bignum const* left, struct ledger_bignum const* right)
+{
+  int ok = 0;
+  struct ledger_bignum tmp;
+  ledger_bignum_init(&tmp);
+  if (!ledger_bignum_extend(&tmp, left->digit_count, left->point_place))
+    return 0;
+  if (!ledger_bignum_extend(&tmp, right->digit_count, right->point_place))
+    return 0;
+  do {
+    ledger_bignum_truncate(&tmp, left);
+    if (tmp.negative == right->negative)
+      ok = ledger_bignum_gp_add(&tmp, right);
+    else
+      ok = ledger_bignum_gp_subtract(&tmp, right);
+    if (!ok) break;
+    ok = 1;
+  } while (0);
+  if (ok){
+    ledger_bignum_swap(dst, &tmp);
+  }
+  ledger_bignum_clear(&tmp);
+  return ok;
+}
+
+int ledger_bignum_subtract
+  ( struct ledger_bignum* dst,
+    struct ledger_bignum const* left, struct ledger_bignum const* right)
+{
+  int ok = 0;
+  struct ledger_bignum tmp;
+  ledger_bignum_init(&tmp);
+  if (!ledger_bignum_extend(&tmp, left->digit_count, left->point_place))
+    return 0;
+  if (!ledger_bignum_extend(&tmp, right->digit_count, right->point_place))
+    return 0;
+  do {
+    ledger_bignum_truncate(&tmp, left);
+    if (tmp.negative == right->negative)
+      ok = ledger_bignum_gp_subtract(&tmp, right);
+    else
+      ok = ledger_bignum_gp_add(&tmp, right);
+    if (!ok) break;
+    ok = 1;
+  } while (0);
+  if (ok){
+    ledger_bignum_swap(dst, &tmp);
+  }
+  ledger_bignum_clear(&tmp);
+  return ok;
 }
 
 /* END   implementation */
