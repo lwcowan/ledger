@@ -538,6 +538,39 @@ int ledger_cli_make_entry
                 "transaction line\n", stderr);
               break;
             }
+          } else if (strcmp(first,"credit") == 0){
+            char const* account_path;
+            char const* check_value = NULL;
+            int const arg_count = ledger_arg_list_get_count(list_pull);
+            if (arg_count >= 3){
+              /* get amount */
+              ok = ledger_bignum_set_text
+                ( next_amount, ledger_arg_list_get(list_pull, 1), NULL);
+              if (!ok) {
+                fputs("make_entry: Error when parsing "
+                  "line amount\n", stderr);
+                break;
+              }
+              ok = ledger_bignum_negate(next_amount, next_amount);
+              if (!ok) {
+                fputs("make_entry: Error when preparing "
+                  "line amount as a credit\n", stderr);
+                break;
+              }
+              /* get account path */
+              account_path = ledger_arg_list_get(list_pull, 2);
+              /* get check value */if (arg_count > 3){
+                check_value = ledger_arg_list_get(list_pull, 3);
+              }
+            } else break;
+            /* compose the entry */
+            ok = ledger_cli_manage_entry
+              (table_mark, account_path, next_amount, check_value);
+            if (!ok) {
+              fputs("make_entry: Error encountered when crafting "
+                "transaction line\n", stderr);
+              break;
+            }
           }
         }
       }
