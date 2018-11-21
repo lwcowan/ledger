@@ -512,7 +512,9 @@ int ledger_cli_make_entry
           }
           first = ledger_arg_list_get(list_pull, 0);
           if (first == NULL) break;
-          else if (strcmp(first,"debit") == 0){
+          else if (strcmp(first,"cancel") == 0){
+            /* signal request to cancel by setting */done = -1;
+          } else if (strcmp(first,"debit") == 0){
             char const* account_path;
             char const* check_value = NULL;
             int const arg_count = ledger_arg_list_get_count(list_pull);
@@ -576,24 +578,31 @@ int ledger_cli_make_entry
         }
       }
       if (ok){
-        int balance;
-        /* check balance of transaction */
-        ok = ledger_commit_check_balance(next_transaction, &balance);
-        if (!ok) break;
-        if (!balance){
-          fputs("make_entry: Unbalanced transaction rejected\n", stderr);
-          ok = 0;
-          break;
+        if (done == 1){
+          int balance;
+          /* check balance of transaction */
+          ok = ledger_commit_check_balance(next_transaction, &balance);
+          if (!ok) break;
+          if (!balance){
+            fputs("make_entry: Unbalanced transaction rejected\n", stderr);
+            ok = 0;
+            break;
+          }
+          /* submit transaction */
+          ok = ledger_commit_transaction(tracking->book, next_transaction);
+        } else {
+          ok = -1;
         }
-        /* submit transaction */
-        ok = ledger_commit_transaction(tracking->book, next_transaction);
       } else break;
     } while (0);
     ledger_table_mark_free(table_mark);
     ledger_transaction_free(next_transaction);
     ledger_arg_list_free(list_pull);
     ledger_bignum_free(next_amount);
-    if (!ok) {
+    if (ok == -1){
+      fputs("make_entry: Transaction cancelled by user\n", stderr);
+      result = 0;
+    } else if (!ok) {
       fputs("make_entry: Error when executing transaction\n", stderr);
       result = 1;
     } else {
