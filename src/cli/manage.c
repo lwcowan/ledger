@@ -371,6 +371,7 @@ int ledger_cli_make_account
 int ledger_cli_make_entry
   (struct ledger_cli_line *tracking, int argc, char **argv)
 {
+  int result;
   int argi;
   int help_requested = 0;
   char const* name_string = NULL;
@@ -575,6 +576,15 @@ int ledger_cli_make_entry
         }
       }
       if (ok){
+        int balance;
+        /* check balance of transaction */
+        ok = ledger_commit_check_balance(next_transaction, &balance);
+        if (!ok) break;
+        if (!balance){
+          fputs("make_entry: Unbalanced transaction rejected\n", stderr);
+          ok = 0;
+          break;
+        }
         /* submit transaction */
         ok = ledger_commit_transaction(tracking->book, next_transaction);
       } else break;
@@ -585,11 +595,13 @@ int ledger_cli_make_entry
     ledger_bignum_free(next_amount);
     if (!ok) {
       fputs("make_entry: Error when executing transaction\n", stderr);
+      result = 1;
     } else {
       fputs("make_entry: Transaction execution complete\n", stderr);
+      result = 0;
     }
   }
-  return 0;
+  return result;
 }
 
 
