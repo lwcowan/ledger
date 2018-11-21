@@ -18,6 +18,11 @@ struct ledger_cli_line;
 int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv);
 
 /*
+ * Get information about the current object.
+ */
+int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv);
+
+/*
  * Enter a child object.
  */
 int ledger_cli_enter(struct ledger_cli_line *tracking, int argc, char **argv);
