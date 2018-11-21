@@ -16,7 +16,16 @@
 int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
   int result;
   struct ledger_book const* const book = tracking->book;
-  switch (tracking->object_path.typ){
+  struct ledger_act_path new_path;
+  if (argc > 1){
+    new_path = ledger_act_path_compute
+      (book, argv[1], tracking->object_path, &result);
+    if (result == 0){
+      fprintf(stderr,"info: Error encountered in processing path\n");
+      return 2;
+    }
+  } else new_path = tracking->object_path;
+  switch (new_path.typ){
   case LEDGER_ACT_PATH_BOOK:
     {
       /* read the book */
@@ -59,7 +68,7 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
   case LEDGER_ACT_PATH_LEDGER:
     {
       struct ledger_ledger const* const ledger =
-          ledger_book_get_ledger_c(book, tracking->object_path.path[0]);
+          ledger_book_get_ledger_c(book, new_path.path[0]);
       if (ledger == NULL){
         fprintf(stderr,"Ledger unavailable.\n");
         result = 0;
@@ -87,7 +96,7 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
   case LEDGER_ACT_PATH_JOURNAL:
     {
       struct ledger_journal const* const journal =
-          ledger_book_get_journal_c(book, tracking->object_path.path[0]);
+          ledger_book_get_journal_c(book, new_path.path[0]);
       if (journal == NULL){
         fprintf(stderr,"Journal unavailable.\n");
         result = 0;
@@ -115,7 +124,7 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
   case LEDGER_ACT_PATH_ENTRY:
     {
       struct ledger_journal const* const journal =
-          ledger_book_get_journal_c(book, tracking->object_path.path[0]);
+          ledger_book_get_journal_c(book, new_path.path[0]);
       struct ledger_entry const* entry;
       if (journal == NULL){
         fprintf(stderr,"Journal unavailable.\n");
@@ -123,7 +132,7 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
         break;
       }
       entry = ledger_journal_get_entry_c
-        (journal, tracking->object_path.path[1]);
+        (journal, new_path.path[1]);
       if (entry == NULL){
         fprintf(stderr,"Entry unavailable.\n");
         result = 0;
@@ -136,13 +145,13 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
       else if (item_id >= 0)
         fprintf(stdout,"entry#%i\n", item_id);
       else
-        fprintf(stdout,"entry@%i\n", tracking->object_path.path[1]);
+        fprintf(stdout,"entry@%i\n", new_path.path[1]);
       result = 1;
     }break;
   case LEDGER_ACT_PATH_ACCOUNT:
     {
       struct ledger_ledger const* const ledger =
-          ledger_book_get_ledger_c(book, tracking->object_path.path[0]);
+          ledger_book_get_ledger_c(book, new_path.path[0]);
       struct ledger_account const* account;
       if (ledger == NULL){
         fprintf(stderr,"Ledger unavailable.\n");
@@ -150,7 +159,7 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
         break;
       }
       account = ledger_ledger_get_account_c
-        (ledger, tracking->object_path.path[1]);
+        (ledger, new_path.path[1]);
       if (account == NULL){
         fprintf(stderr,"Account unavailable.\n");
         result = 0;
@@ -192,7 +201,16 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
 int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
   int result;
   struct ledger_book const* const book = tracking->book;
-  switch (tracking->object_path.typ){
+  struct ledger_act_path new_path;
+  if (argc > 1){
+    new_path = ledger_act_path_compute
+      (book, argv[1], tracking->object_path, &result);
+    if (result == 0){
+      fprintf(stderr,"info: Error encountered in processing path\n");
+      return 2;
+    }
+  } else new_path = tracking->object_path;
+  switch (new_path.typ){
   case LEDGER_ACT_PATH_BOOK:
     {
       /* read the book */
@@ -215,7 +233,7 @@ int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
   case LEDGER_ACT_PATH_LEDGER:
     {
       struct ledger_ledger const* const ledger =
-          ledger_book_get_ledger_c(book, tracking->object_path.path[0]);
+          ledger_book_get_ledger_c(book, new_path.path[0]);
       if (ledger == NULL){
         fprintf(stderr,"Ledger unavailable.\n");
         result = 0;
@@ -227,7 +245,7 @@ int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
         int const item_id = ledger_ledger_get_id(ledger);
         fprintf(stdout,"total accounts: %i\n", account_count);
         fprintf(stdout,"index path: /ledger@%i\n",
-            tracking->object_path.path[0]
+            new_path.path[0]
           );
         if (item_id >= 0){
           fprintf(stdout,"id: %i\n", item_id);
@@ -245,7 +263,7 @@ int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
   case LEDGER_ACT_PATH_JOURNAL:
     {
       struct ledger_journal const* const journal =
-          ledger_book_get_journal_c(book, tracking->object_path.path[0]);
+          ledger_book_get_journal_c(book, new_path.path[0]);
       if (journal == NULL){
         fprintf(stderr,"Journal unavailable.\n");
         result = 0;
@@ -257,7 +275,7 @@ int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
         int const item_id = ledger_journal_get_id(journal);
         fprintf(stdout,"total entries: %i\n", entry_count);
         fprintf(stdout,"index path: /journal@%i\n",
-            tracking->object_path.path[0]
+            new_path.path[0]
           );
         if (item_id >= 0){
           fprintf(stdout,"id: %i\n", item_id);
@@ -275,7 +293,7 @@ int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
   case LEDGER_ACT_PATH_ENTRY:
     {
       struct ledger_journal const* const journal =
-          ledger_book_get_journal_c(book, tracking->object_path.path[0]);
+          ledger_book_get_journal_c(book, new_path.path[0]);
       struct ledger_entry const* entry;
       if (journal == NULL){
         fprintf(stderr,"Journal unavailable.\n");
@@ -283,7 +301,7 @@ int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
         break;
       }
       entry = ledger_journal_get_entry_c
-        (journal, tracking->object_path.path[1]);
+        (journal, new_path.path[1]);
       if (entry == NULL){
         fprintf(stderr,"Entry unavailable.\n");
         result = 0;
@@ -296,8 +314,8 @@ int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
           ledger_entry_get_description(entry);
         int const item_id = ledger_entry_get_id(entry);
         fprintf(stdout,"index path: /journal@%i/entry@%i\n",
-            tracking->object_path.path[0],
-            tracking->object_path.path[1]
+            new_path.path[0],
+            new_path.path[1]
           );
         if (item_id >= 0){
           fprintf(stdout,"id: %i\n", item_id);
@@ -318,7 +336,7 @@ int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
   case LEDGER_ACT_PATH_ACCOUNT:
     {
       struct ledger_ledger const* const ledger =
-          ledger_book_get_ledger_c(book, tracking->object_path.path[0]);
+          ledger_book_get_ledger_c(book, new_path.path[0]);
       struct ledger_account const* account;
       if (ledger == NULL){
         fprintf(stderr,"Ledger unavailable.\n");
@@ -326,7 +344,7 @@ int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
         break;
       }
       account = ledger_ledger_get_account_c
-        (ledger, tracking->object_path.path[1]);
+        (ledger, new_path.path[1]);
       if (account == NULL){
         fprintf(stderr,"Account unavailable.\n");
         result = 0;
@@ -361,8 +379,8 @@ int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
           ledger_account_get_description(account);
         int const item_id = ledger_account_get_id(account);
         fprintf(stdout,"index path: /ledger@%i/account@%i\n",
-            tracking->object_path.path[0],
-            tracking->object_path.path[1]
+            new_path.path[0],
+            new_path.path[1]
           );
         if (item_id >= 0){
           fprintf(stdout,"id: %i\n", item_id);
