@@ -10,6 +10,7 @@
 #include "../base/entry.h"
 #include "../base/bignum.h"
 #include "../base/table.h"
+#include "../base/sum.h"
 #include <limits.h>
 
 
@@ -446,6 +447,26 @@ int ledger_commit_transaction
     ledger_commit_rollback(&commit, book, act);
   }
   ledger_commit_clear(&commit);
+  return result;
+}
+
+int ledger_commit_check_balance(struct ledger_transaction* act, int *balance){
+  int result = 0;
+  struct ledger_bignum *zero, *sum;
+  zero = ledger_bignum_new();
+  sum = ledger_bignum_new();
+  if (zero != NULL && sum != NULL){
+    struct ledger_table const* table = ledger_transaction_get_table_c(act);
+    int short_ok = ledger_sum_table_column(sum, table, 3);
+    if (!short_ok){
+      result = 0;
+    } else {
+      *balance = (ledger_bignum_compare(sum,zero) == 0);
+      result = 1;
+    }
+  } else result = 0;
+  ledger_bignum_free(sum);
+  ledger_bignum_free(zero);
   return result;
 }
 

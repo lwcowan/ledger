@@ -22,6 +22,14 @@ struct ledger_book;
 int ledger_commit_transaction
   (struct ledger_book* book, struct ledger_transaction* act);
 
+/*
+ * Check whether a transaction is balanced.
+ * - act the transaction to apply
+ * - balance (on success) one if balanced, zero if not balanced
+ * @return one on successful check, zero otherwise
+ */
+int ledger_commit_check_balance(struct ledger_transaction* act, int *balance);
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/

@@ -16,6 +16,7 @@
 
 static int zero_commit_test(void);
 static int nonzero_commit_test(void);
+static int nonzero_balance_test(void);
 
 
 struct test_struct {
@@ -25,7 +26,8 @@ struct test_struct {
 
 struct test_struct test_array[] = {
   { zero_commit_test, "commit empty transaction" },
-  { nonzero_commit_test, "commit non-empty transaction" }
+  { nonzero_commit_test, "commit non-empty transaction" },
+  { nonzero_balance_test, "balance non-empty transaction" }
 };
 
 int zero_commit_test(void){
@@ -283,6 +285,72 @@ int nonzero_commit_test(void){
   } while (0);
   ledger_transaction_free(transaction);
   ledger_book_free(book);
+  return result;
+}
+
+int nonzero_balance_test(void){
+  int result = 0;
+  struct ledger_transaction* transaction;
+  transaction = ledger_transaction_new();
+  if (transaction == NULL){
+    return 0;
+  } else do {
+    int ok;
+    /* prepare the transaction */{
+      struct ledger_table *const table =
+          ledger_transaction_get_table(transaction);
+      struct ledger_table_mark *const mark =
+          ledger_table_begin(table);
+      if (mark == NULL) break;
+      else do {
+        ledger_transaction_set_journal(transaction, 0);
+        ok = ledger_table_add_row(mark);
+        if (!ok) break;
+        /* set target account */
+        ok = ledger_table_put_string(mark, 2,
+                      (unsigned char const*)"/ledger@0/account@0");
+        if (!ok) break;
+        /* set amount */
+        ok = ledger_table_put_string(mark, 3,
+                      (unsigned char const*)"12.34");
+        if (!ok) break;
+        /* set check */
+        ok = ledger_table_put_string(mark, 4,
+                      (unsigned char const*)"+100");
+        if (!ok) break;
+        ledger_table_mark_move(mark, +1);
+        /* check balance here */{
+          int balance;
+          ok = ledger_commit_check_balance(transaction, &balance);
+          if (!ok) break;
+          if (balance) break;
+        }
+        ok = ledger_table_add_row(mark);
+        if (!ok) break;
+        /* set target account */
+        ok = ledger_table_put_string(mark, 2,
+                      (unsigned char const*)"/ledger@0/account@1");
+        if (!ok) break;
+        /* set amount */
+        ok = ledger_table_put_string(mark, 3,
+                      (unsigned char const*)"-12.34");
+        if (!ok) break;
+        /* set check */
+        ok = ledger_table_put_string(mark, 4, NULL);
+        if (!ok) break;
+        /* check balance again here */{
+          int balance;
+          ok = ledger_commit_check_balance(transaction, &balance);
+          if (!ok) break;
+          if (!balance) break;
+        }
+      } while (0);
+      ledger_table_mark_free(mark);
+    }
+    if (!ok) break;
+    result = 1;
+  } while (0);
+  ledger_transaction_free(transaction);
   return result;
 }
 
