@@ -382,7 +382,7 @@ int ledger_cli_make_entry
   int journal_index;
   struct ledger_journal *pick_journal;
   if (tracking->object_path.len >= 1
-  &&  tracking->object_path.typ == LEDGER_ACT_PATH_LEDGER)
+  &&  tracking->object_path.typ == LEDGER_ACT_PATH_JOURNAL)
   {
     journal_index = tracking->object_path.path[0];
   } else journal_index = -1;
