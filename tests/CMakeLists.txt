@@ -46,3 +46,21 @@ target_link_libraries("ledger_test_io_book" ledger_io ledger_base)
 target_link_libraries("ledger_test_io_manifest" ledger_io ledger_base cjson)
 target_link_libraries("ledger_test_io_table" ledger_io ledger_base)
 target_link_libraries("ledger_test_io_util" ledger_io ledger_base cjson)
+
+
+
+#transaction test
+add_executable("ledger_test_transaction" "test_transaction.c")
+#action path test
+add_executable("ledger_test_act_path" "test_act_path.c")
+#action path test
+add_executable("ledger_test_commit" "test_commit.c")
+
+target_link_libraries("ledger_test_transaction" ledger_act ledger_base)
+target_link_libraries("ledger_test_act_path" ledger_act ledger_base)
+target_link_libraries("ledger_test_commit" ledger_act ledger_base)
+
+#argument list test
+add_executable("ledger_test_arg_list" "test_arg_list.c")
+
+target_link_libraries("ledger_test_arg_list" ledger_act)

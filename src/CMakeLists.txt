@@ -31,3 +31,29 @@ set(ledger_io_SOURCES
 
 add_library(ledger_io ${ledger_io_SOURCES})
 target_link_libraries(ledger_io  zip cjson minicsv)
+
+#set action library code
+set(ledger_act_SOURCES
+  act/transact.h       act/transact.c
+  act/path.h           act/path.c
+  act/arg.h            act/arg.c
+  act/commit.h         act/commit.c
+  )
+
+add_library(ledger_act ${ledger_act_SOURCES})
+target_link_libraries(ledger_act  ledger_base)
+
+#set ledger-cli code
+set(ledger_cli_SOURCES
+  cli/line.h           cli/line.c
+  cli/test.h           cli/test.c
+  cli/quit.h           cli/quit.c
+  cli/iocmd.h          cli/iocmd.c
+  cli/navigate.h       cli/navigate.c
+  cli/manage.h         cli/manage.c
+  cli/cli.c
+  )
+
+add_executable(ledger_cli ${ledger_cli_SOURCES})
+target_link_libraries(ledger_cli
+  ledger_act ledger_io ledger_base linenoise)
