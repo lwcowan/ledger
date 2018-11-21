@@ -41,6 +41,18 @@ struct cJSON* ledger_io_util_extract_json
   (struct zip_t *zip, char const* name, int *ok);
 
 /*
+ * Extract a single number from a zip archive.
+ * - zip archive from which to extract
+ * - name entry name
+ * - ok success flag
+ * @returns 0 if no entry by the given name was available (success),
+ *   -1 on read fault (not success), or a parsing of the string to a
+ *   number (success)
+ */
+int ledger_io_util_extract_int
+  (struct zip_t *zip, char const* name, int *ok);
+
+/*
  * Add JSON to a zip archive.
  * - zip archive to which to add
  * - name entry name
@@ -60,6 +72,17 @@ int ledger_io_util_archive_text
  */
 int ledger_io_util_archive_json
   (struct zip_t *zip, char const* name, struct cJSON const* json);
+
+/*
+ * Add an integer to a zip archive.
+ * - zip archive to which to add
+ * - name entry name
+ * - value the integer to store
+ * - ok success flag
+ * @returns a success flag
+ */
+int ledger_io_util_archive_int
+  (struct zip_t *zip, char const* name, int value);
 
 /*
  * Construct a file name.
