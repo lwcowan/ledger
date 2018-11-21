@@ -34,6 +34,18 @@ struct ledger_act_path {
  */
 struct ledger_act_path ledger_act_path_root(void);
 
+/*
+ * Construct a string representation of the given path.
+ * - buf buffer to receive the etnry name
+ * - len length of file name
+ * - path the path to render
+ * - book the book to navigate
+ * @return the number of characters needed to express the path
+ */
+int ledger_act_path_render
+  ( unsigned char* buf, int len, struct ledger_act_path path,
+    struct ledger_book const* book);
+
 
 /*
  * Compute an index path from a text string.
