@@ -6,6 +6,8 @@
 #include "../base/account.h"
 #include "../base/entry.h"
 #include "../base/table.h"
+#include "../base/sum.h"
+#include "../base/bignum.h"
 #include "line.h"
 #include <stdio.h>
 
@@ -153,6 +155,27 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
         fprintf(stderr,"Account unavailable.\n");
         result = 0;
         break;
+      }
+      /* report the current account balance */{
+        int sum_ok = 0;
+        unsigned char sum_buffer[64];
+        struct ledger_bignum *sum;
+        struct ledger_table const* account_table =
+          ledger_account_get_table_c(account);
+        sum = ledger_bignum_new();
+        if (sum != NULL){
+          sum_ok = ledger_sum_table_column(sum, account_table, 2);
+        }
+        if (sum_ok){
+          sum_ok = ledger_bignum_get_text
+            (sum, sum_buffer, sizeof(sum_buffer), 1);
+          sum_ok = (sum_ok >= 0 && sum_ok < sizeof(sum_buffer));
+        }
+        ledger_bignum_free(sum);
+        if (sum_ok)
+          fprintf(stdout, "balance: %s\n", sum_buffer);
+        else
+          fprintf(stdout, "balance unavailable\n");
       }
       fprintf(stderr, "transaction lines: %i\n",
           ledger_table_count_rows(ledger_account_get_table_c(account)));
