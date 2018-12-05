@@ -142,15 +142,23 @@ int ledger_bignum_extend
       return 0;
   }
   /* skip allocation */if (point_place <= n->point_place
-    &&  digits <= n->digit_count)
+    &&  digits <= n->digit_count
+    &&  (digits-point_place) <= (n->digit_count-n->point_place))
   {
     ledger_bignum_zero_all(n);
     return 1;
   }
   /* extend the arguments */
-  if (point_place < n->point_place) point_place = n->point_place;
+  if (point_place < n->point_place){
+    digits = digits+n->point_place-point_place;
+    point_place = n->point_place;
+  }
   if (digits-point_place < n->digit_count-n->point_place){
     digits = n->digit_count-n->point_place+point_place;
+  }
+  /* re-sanitize the input */{
+    if (digits > LEDGER_BIGNUM_DIGIT_MAX)
+      return 0;
   }
   return ledger_bignum_alloc_unchecked(n,digits,point_place);
 }
@@ -224,7 +232,9 @@ int ledger_bignum_gp_add
     if (ok){
       memcpy(tmp.digits, dst->digits, sizeof(unsigned char)*digit_count);
       tmp.digits[digit_count] = carry;
+      ledger_bignum_swap(&tmp, dst);
     }
+    ledger_bignum_clear(&tmp);
   }
   return ok;
 }
