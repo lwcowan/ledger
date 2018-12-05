@@ -12,7 +12,7 @@ int main(int argc, char **argv){
     return EXIT_FAILURE;
   }
   /* enter processing loop */{
-    ledger_cli_set_history_len(&line_tracking, 10);
+    ledger_cli_set_history_len(&line_tracking, 100);
     int result = 0;
     while (!line_tracking.done){
       char *line = ledger_cli_get_line(&line_tracking);
