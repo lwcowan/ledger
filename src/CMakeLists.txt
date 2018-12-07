@@ -38,6 +38,7 @@ set(ledger_act_SOURCES
   act/path.h           act/path.c
   act/arg.h            act/arg.c
   act/commit.h         act/commit.c
+  act/select.h         act/select.c
   )
 
 add_library(ledger_act ${ledger_act_SOURCES})
@@ -52,6 +53,7 @@ set(ledger_cli_SOURCES
   cli/navigate.h       cli/navigate.c
   cli/manage.h         cli/manage.c
   cli/rename.h         cli/rename.c
+  cli/select.h         cli/select.c
   cli/print.h          cli/print.c
   cli/cli.c
   )
