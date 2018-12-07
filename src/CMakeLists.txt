@@ -52,6 +52,7 @@ set(ledger_cli_SOURCES
   cli/navigate.h       cli/navigate.c
   cli/manage.h         cli/manage.c
   cli/rename.h         cli/rename.c
+  cli/print.h          cli/print.c
   cli/cli.c
   )
 
