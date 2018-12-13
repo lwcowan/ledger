@@ -280,6 +280,10 @@ int nonzero_compare_test(void){
       ptr,(unsigned char const*)"48",NULL)) break;
     if (ledger_bignum_compare(ptr, other_ptr) != 0) break;
     if (ledger_bignum_compare(other_ptr, ptr) != 0) break;
+    if (!ledger_bignum_set_text(
+      other_ptr,(unsigned char const*)"-48",NULL)) break;
+    if (ledger_bignum_compare(ptr, other_ptr) <= 0) break;
+    if (ledger_bignum_compare(other_ptr, ptr) >= 0) break;
     result = 1;
   } while (0);
   ledger_bignum_free(other_ptr);
@@ -623,6 +627,7 @@ int negate_test(void){
     if (ledger_util_ustrcmp(buf,
         (unsigned char const*)"99.45") != 0)
       break;
+    if (ledger_bignum_compare(a,b) >= 0) break;
     if (!ledger_bignum_negate(c,b)) break;
     if (ledger_bignum_get_text(c,buf,sizeof(buf),0) != 6) break;
     if (ledger_util_ustrcmp(buf,
