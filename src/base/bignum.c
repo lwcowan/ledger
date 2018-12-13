@@ -332,7 +332,7 @@ int ledger_bignum_compare
   /* optimize for sign differences */
   if (a->negative && (!b->negative)){
     return -1;
-  } else if (a->negative && (!b->negative)){
+  } else if (b->negative && (!a->negative)){
     return +1;
   } else {
     /* same sign */
