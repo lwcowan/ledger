@@ -2,6 +2,7 @@
 #include "select.h"
 #include "../base/table.h"
 #include "../base/util.h"
+#include "../base/bignum.h"
 
 
 /*
@@ -62,76 +63,208 @@ int ledger_select_check_cond
   ( struct ledger_table_mark* m, struct ledger_select_cond cnd)
 {
   int yes;
-  switch (cnd.cmp){
-  case LEDGER_SELECT_EQUAL:
+  switch (cnd.cmp&(~15u)){
+  case LEDGER_SELECT_ID:
     {
-      unsigned char text_stash[64];
-      unsigned char* text = ledger_select_buf_fetch_str
-        (m,cnd.column, text_stash, sizeof(text_stash));
-      if (text == NULL) yes = -1;
-      else {
-        yes = (ledger_util_ustrcmp(text, cnd.value)==0) ? 1 : 0;
-        ledger_select_buf_free(text, text_stash);
+      int cnd_value = ledger_util_atoi(cnd.value);
+      int id_stash;
+      switch (cnd.cmp&15u){
+      case LEDGER_SELECT_EQUAL:
+        {
+          if (!ledger_table_fetch_id(m, cnd.column, &id_stash)){
+            yes = -1;
+          } else {
+            yes = (id_stash == cnd_value) ? 1 : 0;
+          }
+        }break;
+      case LEDGER_SELECT_LESS:
+        {
+          if (!ledger_table_fetch_id(m, cnd.column, &id_stash)){
+            yes = -1;
+          } else {
+            yes = (id_stash < cnd_value) ? 1 : 0;
+          }
+        }break;
+      case LEDGER_SELECT_MORE:
+        {
+          if (!ledger_table_fetch_id(m, cnd.column, &id_stash)){
+            yes = -1;
+          } else {
+            yes = (id_stash > cnd_value) ? 1 : 0;
+          }
+        }break;
+      case LEDGER_SELECT_NOTEQUAL:
+        {
+          if (!ledger_table_fetch_id(m, cnd.column, &id_stash)){
+            yes = -1;
+          } else {
+            yes = (id_stash != cnd_value) ? 1 : 0;
+          }
+        }break;
+      case LEDGER_SELECT_NOTLESS:
+        {
+          if (!ledger_table_fetch_id(m, cnd.column, &id_stash)){
+            yes = -1;
+          } else {
+            yes = (id_stash >= cnd_value) ? 1 : 0;
+          }
+        }break;
+      case LEDGER_SELECT_NOTMORE:
+        {
+          if (!ledger_table_fetch_id(m, cnd.column, &id_stash)){
+            yes = -1;
+          } else {
+            yes = (id_stash <= cnd_value) ? 1 : 0;
+          }
+        }break;
+      default:
+        {
+          yes = 0;
+        }break;
       }
     }break;
-  case LEDGER_SELECT_LESS:
+  case LEDGER_SELECT_BIGNUM:
     {
-      unsigned char text_stash[64];
-      unsigned char* text = ledger_select_buf_fetch_str
-        (m,cnd.column, text_stash, sizeof(text_stash));
-      if (text == NULL) yes = -1;
-      else {
-        yes = (ledger_util_ustrcmp(text, cnd.value)<0) ? 1 : 0;
-        ledger_select_buf_free(text, text_stash);
+      struct ledger_bignum *cnd_value = ledger_bignum_new();
+      struct ledger_bignum *bignum_stash = ledger_bignum_new();
+      if (cnd_value != NULL){
+        if (!ledger_bignum_set_text(cnd_value, cnd.value, NULL)){
+          ledger_bignum_free(cnd_value);
+          cnd_value = NULL;
+        }
       }
-    }break;
-  case LEDGER_SELECT_MORE:
-    {
-      unsigned char text_stash[64];
-      unsigned char* text = ledger_select_buf_fetch_str
-        (m,cnd.column, text_stash, sizeof(text_stash));
-      if (text == NULL) yes = -1;
-      else {
-        yes = (ledger_util_ustrcmp(text, cnd.value)>0) ? 1 : 0;
-        ledger_select_buf_free(text, text_stash);
+      if (cnd_value == NULL || bignum_stash == NULL){
+        yes = -1;
+      } else switch (cnd.cmp&15u){
+      case LEDGER_SELECT_EQUAL:
+        {
+          if (!ledger_table_fetch_bignum(m, cnd.column, bignum_stash)){
+            yes = -1;
+          } else {
+            yes = (ledger_bignum_compare(bignum_stash, cnd_value)==0) ? 1 : 0;
+          }
+        }break;
+      case LEDGER_SELECT_LESS:
+        {
+          if (!ledger_table_fetch_bignum(m, cnd.column, bignum_stash)){
+            yes = -1;
+          } else {
+            yes = (ledger_bignum_compare(bignum_stash, cnd_value)<0) ? 1 : 0;
+          }
+        }break;
+      case LEDGER_SELECT_MORE:
+        {
+          if (!ledger_table_fetch_bignum(m, cnd.column, bignum_stash)){
+            yes = -1;
+          } else {
+            yes = (ledger_bignum_compare(bignum_stash, cnd_value)>0) ? 1 : 0;
+          }
+        }break;
+      case LEDGER_SELECT_NOTEQUAL:
+        {
+          if (!ledger_table_fetch_bignum(m, cnd.column, bignum_stash)){
+            yes = -1;
+          } else {
+            yes = (ledger_bignum_compare(bignum_stash, cnd_value)!=0) ? 1 : 0;
+          }
+        }break;
+      case LEDGER_SELECT_NOTLESS:
+        {
+          if (!ledger_table_fetch_bignum(m, cnd.column, bignum_stash)){
+            yes = -1;
+          } else {
+            yes = (ledger_bignum_compare(bignum_stash, cnd_value)>=0) ? 1 : 0;
+          }
+        }break;
+      case LEDGER_SELECT_NOTMORE:
+        {
+          if (!ledger_table_fetch_bignum(m, cnd.column, bignum_stash)){
+            yes = -1;
+          } else {
+            yes = (ledger_bignum_compare(bignum_stash, cnd_value)<=0) ? 1 : 0;
+          }
+        }break;
+      default:
+        {
+          yes = 0;
+        }break;
       }
+      ledger_bignum_free(cnd_value);
+      ledger_bignum_free(bignum_stash);
     }break;
-  case LEDGER_SELECT_NOTEQUAL:
-    {
-      unsigned char text_stash[64];
-      unsigned char* text = ledger_select_buf_fetch_str
-        (m,cnd.column, text_stash, sizeof(text_stash));
-      if (text == NULL) yes = -1;
-      else {
-        yes = (ledger_util_ustrcmp(text, cnd.value)!=0) ? 1 : 0;
-        ledger_select_buf_free(text, text_stash);
-      }
-    }break;
-  case LEDGER_SELECT_NOTLESS:
-    {
-      unsigned char text_stash[64];
-      unsigned char* text = ledger_select_buf_fetch_str
-        (m,cnd.column, text_stash, sizeof(text_stash));
-      if (text == NULL) yes = -1;
-      else {
-        yes = (ledger_util_ustrcmp(text, cnd.value)>=0) ? 1 : 0;
-        ledger_select_buf_free(text, text_stash);
-      }
-    }break;
-  case LEDGER_SELECT_NOTMORE:
-    {
-      unsigned char text_stash[64];
-      unsigned char* text = ledger_select_buf_fetch_str
-        (m,cnd.column, text_stash, sizeof(text_stash));
-      if (text == NULL) yes = -1;
-      else {
-        yes = (ledger_util_ustrcmp(text, cnd.value)<=0) ? 1 : 0;
-        ledger_select_buf_free(text, text_stash);
-      }
-    }break;
+  case LEDGER_SELECT_STRING:
   default:
-    {
-      yes = 0;
+    switch (cnd.cmp&15u){
+    case LEDGER_SELECT_EQUAL:
+      {
+        unsigned char text_stash[64];
+        unsigned char* text = ledger_select_buf_fetch_str
+          (m,cnd.column, text_stash, sizeof(text_stash));
+        if (text == NULL) yes = -1;
+        else {
+          yes = (ledger_util_ustrcmp(text, cnd.value)==0) ? 1 : 0;
+          ledger_select_buf_free(text, text_stash);
+        }
+      }break;
+    case LEDGER_SELECT_LESS:
+      {
+        unsigned char text_stash[64];
+        unsigned char* text = ledger_select_buf_fetch_str
+          (m,cnd.column, text_stash, sizeof(text_stash));
+        if (text == NULL) yes = -1;
+        else {
+          yes = (ledger_util_ustrcmp(text, cnd.value)<0) ? 1 : 0;
+          ledger_select_buf_free(text, text_stash);
+        }
+      }break;
+    case LEDGER_SELECT_MORE:
+      {
+        unsigned char text_stash[64];
+        unsigned char* text = ledger_select_buf_fetch_str
+          (m,cnd.column, text_stash, sizeof(text_stash));
+        if (text == NULL) yes = -1;
+        else {
+          yes = (ledger_util_ustrcmp(text, cnd.value)>0) ? 1 : 0;
+          ledger_select_buf_free(text, text_stash);
+        }
+      }break;
+    case LEDGER_SELECT_NOTEQUAL:
+      {
+        unsigned char text_stash[64];
+        unsigned char* text = ledger_select_buf_fetch_str
+          (m,cnd.column, text_stash, sizeof(text_stash));
+        if (text == NULL) yes = -1;
+        else {
+          yes = (ledger_util_ustrcmp(text, cnd.value)!=0) ? 1 : 0;
+          ledger_select_buf_free(text, text_stash);
+        }
+      }break;
+    case LEDGER_SELECT_NOTLESS:
+      {
+        unsigned char text_stash[64];
+        unsigned char* text = ledger_select_buf_fetch_str
+          (m,cnd.column, text_stash, sizeof(text_stash));
+        if (text == NULL) yes = -1;
+        else {
+          yes = (ledger_util_ustrcmp(text, cnd.value)>=0) ? 1 : 0;
+          ledger_select_buf_free(text, text_stash);
+        }
+      }break;
+    case LEDGER_SELECT_NOTMORE:
+      {
+        unsigned char text_stash[64];
+        unsigned char* text = ledger_select_buf_fetch_str
+          (m,cnd.column, text_stash, sizeof(text_stash));
+        if (text == NULL) yes = -1;
+        else {
+          yes = (ledger_util_ustrcmp(text, cnd.value)<=0) ? 1 : 0;
+          ledger_select_buf_free(text, text_stash);
+        }
+      }break;
+    default:
+      {
+        yes = 0;
+      }break;
     }break;
   }
   return yes;

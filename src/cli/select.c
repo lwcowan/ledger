@@ -232,8 +232,18 @@ int ledger_cli_select(struct ledger_cli_line *tracking, int argc, char **argv){
     } else if (strcmp(argv[argi],"-r") == 0){
       /* reverse the direction */
       direction = -direction;
-    } else if (strcmp(argv[argi],"-c") == 0){
+    } else if (strcmp(argv[argi],"-c") == 0
+      ||  strcmp(argv[argi],"-n") == 0
+      ||  strcmp(argv[argi],"-i") == 0
+    ){
       /* add a condition */
+      int cond_type;
+      if (strcmp(argv[argi],"-n") == 0)
+        cond_type = LEDGER_SELECT_BIGNUM;
+      else if (strcmp(argv[argi],"-i") == 0)
+        cond_type = LEDGER_SELECT_ID;
+      else
+        cond_type = LEDGER_SELECT_STRING;
       if (condition_count >= 10){
         fprintf(stderr,"select: Too many conditions\n");
         return 1;
@@ -253,7 +263,7 @@ int ledger_cli_select(struct ledger_cli_line *tracking, int argc, char **argv){
         } else break;
         if (++argi < argc){
           conditions[condition_count].column = name_index;
-          conditions[condition_count].cmp = cmp_index;
+          conditions[condition_count].cmp = cmp_index|cond_type;
           conditions[condition_count].value = argv[argi];
           condition_count += 1;
         } else break;
@@ -266,6 +276,16 @@ int ledger_cli_select(struct ledger_cli_line *tracking, int argc, char **argv){
       "options:\n"
       "  -c (field) (cmp) (value)\n"
       "          Add a condition for a particular field.\n"
+      "          (field) field name\n"
+      "          (cmp) comparator (one of ==, <, >, !=, <=, >=)\n"
+      "          (value) value against which to compare\n"
+      "  -n (field) (cmp) (value)\n"
+      "          Add a big number condition for a particular field.\n"
+      "          (field) field name\n"
+      "          (cmp) comparator (one of ==, <, >, !=, <=, >=)\n"
+      "          (value) value against which to compare\n"
+      "  -i (field) (cmp) (value)\n"
+      "          Add an identifier condition for a particular field.\n"
       "          (field) field name\n"
       "          (cmp) comparator (one of ==, <, >, !=, <=, >=)\n"
       "          (value) value against which to compare\n"

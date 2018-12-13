@@ -30,6 +30,18 @@ enum ledger_select_cmp {
   /* `a` less than or equal to `b` */
   LEDGER_SELECT_NOTMORE = 7
 };
+/*
+ * Comparison type.
+ */
+enum ledger_select_cmp_type {
+  /* identifer integer */
+  LEDGER_SELECT_ID = 16,
+  /* big number */
+  LEDGER_SELECT_BIGNUM = 32,
+  /* unsigned character string  */
+  LEDGER_SELECT_STRING = 48
+};
+
 
 /* select condition */
 struct ledger_select_cond {
