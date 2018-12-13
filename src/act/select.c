@@ -197,6 +197,8 @@ int ledger_select_by_cond_c
   }
   end = ledger_table_end_c(t);
   if (cur == NULL || end == NULL){
+    ledger_table_mark_free(cur);
+    ledger_table_mark_free(end);
     return -1;
   } else for (; !ledger_table_mark_is_equal(cur, end);
         ledger_table_mark_move(cur, used_direction))
@@ -213,6 +215,8 @@ int ledger_select_by_cond_c
       result = -1;
     }
   }
+  ledger_table_mark_free(cur);
+  ledger_table_mark_free(end);
   return result;
 }
 
