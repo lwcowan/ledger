@@ -510,7 +510,6 @@ int book_path_render_test(void){
   if (book == NULL){
     return 0;
   } else do {
-    int ok;
     unsigned char path_buffer[256];
     struct ledger_act_path const old_path = ledger_act_path_root();
     if (ledger_act_path_render

@@ -264,7 +264,8 @@ int ledger_cli_select(struct ledger_cli_line *tracking, int argc, char **argv){
         if (++argi < argc){
           conditions[condition_count].column = name_index;
           conditions[condition_count].cmp = cmp_index|cond_type;
-          conditions[condition_count].value = argv[argi];
+          conditions[condition_count].value =
+              (unsigned char const*)argv[argi];
           condition_count += 1;
         } else break;
       } else break;
@@ -299,7 +300,8 @@ int ledger_cli_select(struct ledger_cli_line *tracking, int argc, char **argv){
     /* resolve paths */
     if (path_text != NULL){
       new_path = ledger_act_path_compute
-        (book, path_text, tracking->object_path, &result);
+        ( book, (unsigned char const*)path_text,
+          tracking->object_path, &result);
       if (result == 0){
         fprintf(stderr,"select: Error encountered in processing path\n");
         result = 1;

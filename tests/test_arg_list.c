@@ -46,11 +46,6 @@ int equal_test(void){
     ledger_arg_list_free(ptr);
     return 0;
   } else do {
-    int ok;
-    unsigned char const* description =
-      (unsigned char const*)"new description";
-    unsigned char const* description2 =
-      (unsigned char const*)"other description";
     if (!ledger_arg_list_is_equal(ptr,other_ptr)) break;
     if (!ledger_arg_list_is_equal(other_ptr,ptr)) break;
     result = 1;

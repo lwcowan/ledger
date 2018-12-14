@@ -210,7 +210,7 @@ int ledger_commit_acquire_lines
   int result;
   int const journal_index = ledger_transaction_get_journal(act);
   struct ledger_bignum* tmp_bignum;
-  char const* date = ledger_transaction_get_date(act);
+  unsigned char const* date = ledger_transaction_get_date(act);
   struct ledger_journal* const active_journal =
     ledger_book_get_journal(book, journal_index);
   struct ledger_table* const active_j_table =

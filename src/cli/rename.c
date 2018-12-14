@@ -30,7 +30,7 @@ int ledger_cli_rename
     return 2;
   }
   new_path = ledger_act_path_compute
-    (book, argv[1], tracking->object_path, &result);
+    (book, (unsigned char const*)argv[1], tracking->object_path, &result);
   if (result == 0){
     fprintf(stderr,"rename: Error encountered in processing path\n");
     return 2;
@@ -49,7 +49,8 @@ int ledger_cli_rename
         fprintf(stderr,"Ledger unavailable.\n");
         result = 0;
       } else {
-        result = ledger_ledger_set_name(ledger, argv[2]);
+        result = ledger_ledger_set_name
+            (ledger, (unsigned char const*)argv[2]);
       }
     }break;
   case LEDGER_ACT_PATH_JOURNAL:
@@ -60,7 +61,8 @@ int ledger_cli_rename
         fprintf(stderr,"Journal unavailable.\n");
         result = 0;
       } else {
-        result = ledger_journal_set_name(journal, argv[2]);
+        result = ledger_journal_set_name
+            (journal, (unsigned char const*)argv[2]);
       }
     }break;
   case LEDGER_ACT_PATH_ENTRY:
@@ -80,7 +82,7 @@ int ledger_cli_rename
         result = 0;
         break;
       } else {
-        result = ledger_entry_set_name(entry, argv[2]);
+        result = ledger_entry_set_name(entry, (unsigned char const*)argv[2]);
       }
     }break;
   case LEDGER_ACT_PATH_ACCOUNT:
@@ -100,7 +102,8 @@ int ledger_cli_rename
         result = 0;
         break;
       } else {
-        result = ledger_account_set_name(account, argv[2]);
+        result = ledger_account_set_name
+          (account, (unsigned char const*)argv[2]);
       }
     }break;
   default:

@@ -30,7 +30,7 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
   struct ledger_act_path new_path;
   if (argc > 1){
     new_path = ledger_act_path_compute
-      (book, argv[1], tracking->object_path, &result);
+      (book, (unsigned char const*)argv[1], tracking->object_path, &result);
     if (result == 0){
       fprintf(stderr,"list: Error encountered in processing path\n");
       return 2;
@@ -310,7 +310,7 @@ int ledger_cli_info(struct ledger_cli_line *tracking, int argc, char **argv){
   struct ledger_act_path new_path;
   if (argc > 1){
     new_path = ledger_act_path_compute
-      (book, argv[1], tracking->object_path, &result);
+      (book, (unsigned char const*)argv[1], tracking->object_path, &result);
     if (result == 0){
       fprintf(stderr,"info: Error encountered in processing path\n");
       return 2;
@@ -519,7 +519,8 @@ int ledger_cli_enter(struct ledger_cli_line *tracking, int argc, char **argv){
   /* compute new path */{
     int ok;
     struct ledger_act_path const new_path =
-      ledger_act_path_compute(book, argv[1], tracking->object_path, &ok);
+      ledger_act_path_compute(book, (unsigned char const*)argv[1],
+                  tracking->object_path, &ok);
     if (!ok){
       fputs("enter: Object not found.\n",stderr);
       result = 1;
