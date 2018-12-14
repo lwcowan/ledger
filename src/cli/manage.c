@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "../base/util.h"
 
 
 int ledger_cli_manage_entry
@@ -59,25 +60,25 @@ int ledger_cli_make_ledger
 {
   int argi;
   int help_requested = 0;
-  char const* name_string = NULL;
-  char const* description_string = NULL;
-  char const* id_string = NULL;
+  unsigned char const* name_string = NULL;
+  unsigned char const* description_string = NULL;
+  unsigned char const* id_string = NULL;
   int id_note = -1;
   int ledger_index;
   /* scan arguments */
   for (argi = 1; argi < argc; ++argi){
     if (strcmp(argv[argi],"-d") == 0){
       if (++argi < argc){
-        description_string = argv[argi];
+        description_string = (unsigned char const*)argv[argi];
       }
     } else if (strcmp(argv[argi],"-i") == 0){
       if (++argi < argc){
-        id_string = argv[argi];
+        id_string = (unsigned char const*)argv[argi];
       }
     } else if (strcmp(argv[argi],"-?") == 0){
       help_requested = 1;
     } else {
-      name_string = argv[argi];
+      name_string = (unsigned char const*)argv[argi];
     }
   }
   if (help_requested || name_string == NULL){
@@ -100,7 +101,7 @@ int ledger_cli_make_ledger
       return 1;
     }
     if (id_string != NULL){
-      id_note = atoi(id_string);
+      id_note = ledger_util_atoi(id_string);
       if (id_note < 0){
         fputs("make_ledger: Negative ID not allowed\n", stderr);
         return 1;
@@ -153,25 +154,25 @@ int ledger_cli_make_journal
 {
   int argi;
   int help_requested = 0;
-  char const* name_string = NULL;
-  char const* description_string = NULL;
-  char const* id_string = NULL;
+  unsigned char const* name_string = NULL;
+  unsigned char const* description_string = NULL;
+  unsigned char const* id_string = NULL;
   int id_note = -1;
   int journal_index;
   /* scan arguments */
   for (argi = 1; argi < argc; ++argi){
     if (strcmp(argv[argi],"-d") == 0){
       if (++argi < argc){
-        description_string = argv[argi];
+        description_string = (unsigned char const*)argv[argi];
       }
     } else if (strcmp(argv[argi],"-i") == 0){
       if (++argi < argc){
-        id_string = argv[argi];
+        id_string = (unsigned char const*)argv[argi];
       }
     } else if (strcmp(argv[argi],"-?") == 0){
       help_requested = 1;
     } else {
-      name_string = argv[argi];
+      name_string = (unsigned char const*)argv[argi];
     }
   }
   if (help_requested || name_string == NULL){
@@ -194,7 +195,7 @@ int ledger_cli_make_journal
       return 1;
     }
     if (id_string != NULL){
-      id_note = atoi(id_string);
+      id_note = ledger_util_atoi(id_string);
       if (id_note < 0){
         fputs("make_journal: Negative ID not allowed\n", stderr);
         return 1;
@@ -248,10 +249,10 @@ int ledger_cli_make_account
 {
   int argi;
   int help_requested = 0;
-  char const* name_string = NULL;
-  char const* description_string = NULL;
-  char const* id_string = NULL;
-  char const* pick_ledger_string = NULL;
+  unsigned char const* name_string = NULL;
+  unsigned char const* description_string = NULL;
+  unsigned char const* id_string = NULL;
+  unsigned char const* pick_ledger_string = NULL;
   int id_note = -1;
   int account_index;
   int ledger_index;
@@ -265,20 +266,20 @@ int ledger_cli_make_account
   for (argi = 1; argi < argc; ++argi){
     if (strcmp(argv[argi],"-d") == 0){
       if (++argi < argc){
-        description_string = argv[argi];
+        description_string = (unsigned char const*)argv[argi];
       }
     } else if (strcmp(argv[argi],"-i") == 0){
       if (++argi < argc){
-        id_string = argv[argi];
+        id_string = (unsigned char const*)argv[argi];
       }
     } else if (strcmp(argv[argi],"-l") == 0){
       if (++argi < argc){
-        pick_ledger_string = argv[argi];
+        pick_ledger_string = (unsigned char const*)argv[argi];
       }
     } else if (strcmp(argv[argi],"-?") == 0){
       help_requested = 1;
     } else {
-      name_string = argv[argi];
+      name_string = (unsigned char const*)argv[argi];
     }
   }
   if (help_requested || name_string == NULL){
@@ -326,7 +327,7 @@ int ledger_cli_make_account
       return 1;
     }
     if (id_string != NULL){
-      id_note = atoi(id_string);
+      id_note = ledger_util_atoi(id_string);
       if (id_note < 0){
         fputs("make_account: Negative ID not allowed\n", stderr);
         return 1;
@@ -375,12 +376,10 @@ int ledger_cli_make_entry
   int result;
   int argi;
   int help_requested = 0;
-  char const* name_string = NULL;
-  char const* description_string = NULL;
-  char const* time_string = NULL;
-  char const* pick_journal_string = NULL;
-  int id_note = -1;
-  int account_index;
+  unsigned char const* name_string = NULL;
+  unsigned char const* description_string = NULL;
+  unsigned char const* time_string = NULL;
+  unsigned char const* pick_journal_string = NULL;
   int journal_index;
   struct ledger_journal *pick_journal;
   if (tracking->object_path.len >= 1
@@ -392,20 +391,20 @@ int ledger_cli_make_entry
   for (argi = 1; argi < argc; ++argi){
     if (strcmp(argv[argi],"-d") == 0){
       if (++argi < argc){
-        description_string = argv[argi];
+        description_string = (unsigned char const*)argv[argi];
       }
     } else if (strcmp(argv[argi],"-t") == 0){
       if (++argi < argc){
-        time_string = argv[argi];
+        time_string = (unsigned char const*)argv[argi];
       }
     } else if (strcmp(argv[argi],"-j") == 0){
       if (++argi < argc){
-        pick_journal_string = argv[argi];
+        pick_journal_string = (unsigned char const*)argv[argi];
       }
     } else if (strcmp(argv[argi],"-?") == 0){
       help_requested = 1;
     } else {
-      name_string = argv[argi];
+      name_string = (unsigned char const*)argv[argi];
     }
   }
   if (help_requested || name_string == NULL){
@@ -484,6 +483,13 @@ int ledger_cli_make_entry
             stderr);
         break;
       }
+      ok = ledger_transaction_set_description
+          (next_transaction, description_string);
+      if (!ok) {
+        fputs("make_entry: Error when setting transaction description\n",
+            stderr);
+        break;
+      }
       /* acquire mark */{
         struct ledger_table* const table =
           ledger_transaction_get_table(next_transaction);
@@ -540,7 +546,9 @@ int ledger_cli_make_entry
             if (arg_count >= 3){
               /* get amount */
               ok = ledger_bignum_set_text
-                ( next_amount, ledger_arg_list_get(list_pull, 1), NULL);
+                ( next_amount,
+                  (unsigned char const*)ledger_arg_list_get(list_pull, 1),
+                  NULL);
               if (!ok) {
                 fputs("make_entry: Error when parsing "
                   "line amount\n", stderr);
@@ -567,7 +575,9 @@ int ledger_cli_make_entry
             if (arg_count >= 3){
               /* get amount */
               ok = ledger_bignum_set_text
-                ( next_amount, ledger_arg_list_get(list_pull, 1), NULL);
+                ( next_amount,
+                  (unsigned char const*)ledger_arg_list_get(list_pull, 1),
+                  NULL);
               if (!ok) {
                 fputs("make_entry: Error when parsing "
                   "line amount\n", stderr);

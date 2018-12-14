@@ -157,7 +157,6 @@ int ledger_arg_list_set_count(struct ledger_arg_list* a, int n){
     a->argc = n;
     return 1;
   } else if (n >= a->argc){
-    int save_id;
     int i;
     /* allocate larger array */
     char** new_array = (char** )ledger_util_malloc(n*sizeof(char*));
@@ -249,8 +248,8 @@ int ledger_arg_list_parse(struct ledger_arg_list* a, char const* command){
           quote = 1;
         } else if (*p == ' ') {
           if (alpha_count > 0){
-            total_pieces[micro_token_count] =
-              ledger_util_ustrndup(token_start, alpha_count, &ok);
+            total_pieces[micro_token_count] = (char*)ledger_util_ustrndup(
+                  (unsigned char const*)token_start, alpha_count, &ok);
             if (!ok) break;
             micro_token_count += 1;
             alpha_count = 0;
@@ -263,8 +262,8 @@ int ledger_arg_list_parse(struct ledger_arg_list* a, char const* command){
       }
     }
     if (ok && alpha_count > 0 && micro_token_count < token_count){
-      total_pieces[micro_token_count] =
-        ledger_util_ustrndup(token_start, alpha_count, &ok);
+      total_pieces[micro_token_count] = (char*)ledger_util_ustrndup(
+            (unsigned char const*)token_start, alpha_count, &ok);
       if (ok) micro_token_count += 1;
     }
     if (!ok){

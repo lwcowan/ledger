@@ -65,10 +65,9 @@ int ledger_act_path_push_string
 int ledger_act_path_push_int
   (unsigned char* buf, int len, int n)
 {
-  int i;
   unsigned char number_text[sizeof(int)*CHAR_BIT/2+1];
   ledger_util_itoa(n, number_text, sizeof(number_text), 0);
-  return ledger_act_path_push_string(buf, len, number_text);
+  return ledger_act_path_push_string(buf, len, (char*)number_text);
 }
 
 int ledger_act_path_push_token
@@ -79,22 +78,22 @@ int ledger_act_path_push_token
   switch (typ){
   case LEDGER_ACT_PATH_LEDGER:
     if (out < len) out += ledger_act_path_push_string
-        (buf+out,len-out,(unsigned char const*)"ledger");
+        (buf+out,len-out,"ledger");
     else out += 6;
     break;
   case LEDGER_ACT_PATH_JOURNAL:
     if (out < len) out += ledger_act_path_push_string
-        (buf+out,len-out,(unsigned char const*)"journal");
+        (buf+out,len-out,"journal");
     else out += 7;
     break;
   case LEDGER_ACT_PATH_ACCOUNT:
     if (out < len) out += ledger_act_path_push_string
-        (buf+out,len-out,(unsigned char const*)"account");
+        (buf+out,len-out,"account");
     else out += 7;
     break;
   case LEDGER_ACT_PATH_ENTRY:
     if (out < len) out += ledger_act_path_push_string
-        (buf+out,len-out,(unsigned char const*)"entry");
+        (buf+out,len-out,"entry");
     else out += 5;
     break;
   }
@@ -102,7 +101,7 @@ int ledger_act_path_push_token
     if (out < len) buf[out] = ':';
     out += 1;
     if (out < len) out += ledger_act_path_push_string
-        (buf+out, len-out, name);
+        (buf+out, len-out, (char const*)name);
     else out += ledger_util_ustrlen(name);
   } else if (item_id >= 0){
     if (out < len) buf[out] = '#';
@@ -266,7 +265,6 @@ struct ledger_act_path ledger_act_path_compute
   ( struct ledger_book const* book, unsigned char const* path_text,
     struct ledger_act_path start, int *ok)
 {
-  int slash_count = 0;
   struct ledger_act_path finish;
   int completion = 1;
   unsigned char const* up = (unsigned char const*)"..";
@@ -318,7 +316,9 @@ struct ledger_act_path ledger_act_path_compute
               /* parse the path */
               int next_typ = 0;
               int next_index = -1;
-              if (ledger_util_ustrncmp("ledger:",token_point,7) == 0){
+              if (ledger_util_ustrncmp(
+                (unsigned char const*)"ledger:",token_point,7) == 0)
+              {
                 unsigned char const* next_name = token_point+7;
                 next_index = ledger_find_ledger_by_name(book, next_name);
                 if (next_index < 0){
@@ -326,7 +326,9 @@ struct ledger_act_path ledger_act_path_compute
                   break;
                 }
                 next_typ = LEDGER_ACT_PATH_LEDGER;
-              } else if (ledger_util_ustrncmp("ledger#",token_point,7) == 0){
+              } else if (ledger_util_ustrncmp(
+                (unsigned char const*)"ledger#",token_point,7) == 0)
+              {
                 int next_id = ledger_util_atoi(token_point+7);
                 next_index = ledger_find_ledger_by_id(book, next_id);
                 if (next_index < 0){
@@ -334,7 +336,9 @@ struct ledger_act_path ledger_act_path_compute
                   break;
                 }
                 next_typ = LEDGER_ACT_PATH_LEDGER;
-              } else if (ledger_util_ustrncmp("ledger@",token_point,7) == 0){
+              } else if (ledger_util_ustrncmp(
+                (unsigned char const*)"ledger@",token_point,7) == 0)
+              {
                 next_index = ledger_util_atoi(token_point+7);
                 if (next_index < 0
                 ||  next_index >= ledger_book_get_ledger_count(book))
@@ -343,7 +347,9 @@ struct ledger_act_path ledger_act_path_compute
                   break;
                 }
                 next_typ = LEDGER_ACT_PATH_LEDGER;
-              } else if (ledger_util_ustrncmp("journal:",token_point,8) == 0){
+              } else if (ledger_util_ustrncmp(
+                (unsigned char const*)"journal:",token_point,8) == 0)
+              {
                 unsigned char const* next_name = token_point+8;
                 next_index = ledger_find_journal_by_name(book, next_name);
                 if (next_index < 0){
@@ -351,7 +357,9 @@ struct ledger_act_path ledger_act_path_compute
                   break;
                 }
                 next_typ = LEDGER_ACT_PATH_JOURNAL;
-              } else if (ledger_util_ustrncmp("journal#",token_point,8) == 0){
+              } else if (ledger_util_ustrncmp(
+                (unsigned char const*)"journal#",token_point,8) == 0)
+              {
                 int next_id = ledger_util_atoi(token_point+8);
                 next_index = ledger_find_journal_by_id(book, next_id);
                 if (next_index < 0){
@@ -359,7 +367,9 @@ struct ledger_act_path ledger_act_path_compute
                   break;
                 }
                 next_typ = LEDGER_ACT_PATH_JOURNAL;
-              } else if (ledger_util_ustrncmp("journal@",token_point,8) == 0){
+              } else if (ledger_util_ustrncmp(
+                (unsigned char const*)"journal@",token_point,8) == 0)
+              {
                 next_index = ledger_util_atoi(token_point+8);
                 if (next_index < 0
                 ||  next_index >= ledger_book_get_journal_count(book))
@@ -386,7 +396,9 @@ struct ledger_act_path ledger_act_path_compute
               if (ledger == NULL){
                 completion = 0;
                 break;
-              } else if (ledger_util_ustrncmp("account:",token_point,8) == 0){
+              } else if (ledger_util_ustrncmp(
+                (unsigned char const*)"account:",token_point,8) == 0)
+              {
                 unsigned char const* next_name = token_point+8;
                 next_index = ledger_find_account_by_name(ledger, next_name);
                 if (next_index < 0){
@@ -394,7 +406,9 @@ struct ledger_act_path ledger_act_path_compute
                   break;
                 }
                 next_typ = LEDGER_ACT_PATH_ACCOUNT;
-              } else if (ledger_util_ustrncmp("account#",token_point,8) == 0){
+              } else if (ledger_util_ustrncmp(
+                (unsigned char const*)"account#",token_point,8) == 0)
+              {
                 int next_id = ledger_util_atoi(token_point+8);
                 next_index = ledger_find_account_by_id(ledger, next_id);
                 if (next_index < 0){
@@ -402,7 +416,9 @@ struct ledger_act_path ledger_act_path_compute
                   break;
                 }
                 next_typ = LEDGER_ACT_PATH_ACCOUNT;
-              } else if (ledger_util_ustrncmp("account@",token_point,8) == 0){
+              } else if (ledger_util_ustrncmp(
+                (unsigned char const*)"account@",token_point,8) == 0)
+              {
                 next_index = ledger_util_atoi(token_point+8);
                 if (next_index < 0
                 ||  next_index >= ledger_ledger_get_account_count(ledger))
@@ -429,7 +445,9 @@ struct ledger_act_path ledger_act_path_compute
               if (journal == NULL){
                 completion = 0;
                 break;
-              } else if (ledger_util_ustrncmp("entry:",token_point,6) == 0){
+              } else if (ledger_util_ustrncmp(
+                (unsigned char const*)"entry:",token_point,6) == 0)
+              {
                 unsigned char const* next_name = token_point+6;
                 next_index = ledger_find_entry_by_name(journal, next_name);
                 if (next_index < 0){
@@ -437,7 +455,9 @@ struct ledger_act_path ledger_act_path_compute
                   break;
                 }
                 next_typ = LEDGER_ACT_PATH_ENTRY;
-              } else if (ledger_util_ustrncmp("entry#",token_point,6) == 0){
+              } else if (ledger_util_ustrncmp(
+                (unsigned char const*)"entry#",token_point,6) == 0)
+              {
                 int next_id = ledger_util_atoi(token_point+6);
                 next_index = ledger_find_entry_by_id(journal, next_id);
                 if (next_index < 0){
@@ -445,7 +465,9 @@ struct ledger_act_path ledger_act_path_compute
                   break;
                 }
                 next_typ = LEDGER_ACT_PATH_ENTRY;
-              } else if (ledger_util_ustrncmp("entry@",token_point,6) == 0){
+              } else if (ledger_util_ustrncmp(
+                (unsigned char const*)"entry@",token_point,6) == 0)
+              {
                 next_index = ledger_util_atoi(token_point+6);
                 if (next_index < 0
                 ||  next_index >= ledger_journal_get_entry_count(journal))
