@@ -3,6 +3,7 @@
 
 add_subdirectory(zip)
 add_subdirectory(cJSON)
+add_subdirectory(lua)
 
 #minicsv library
 option(MINICSV_BUILD_TESTS "Build test program for minicsv library")
