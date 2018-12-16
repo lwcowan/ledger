@@ -37,3 +37,7 @@ set(lua_LIB_FILES
 
 add_library(lua ${lua_CORE_FILES} ${lua_LIB_FILES})
 
+if (UNIX)
+  find_library(m_LIBRARY NAMES m)
+  target_link_libraries(lua ${m_LIBRARY})
+endif(UNIX)
