@@ -44,6 +44,14 @@ set(ledger_act_SOURCES
 add_library(ledger_act ${ledger_act_SOURCES})
 target_link_libraries(ledger_act  ledger_base)
 
+#set lua library code
+set(ledger_lua_SOURCES
+  lua/luaext.h         lua/luaext.c
+  )
+
+add_library(ledger_lua ${ledger_lua_SOURCES})
+target_link_libraries(ledger_lua ledger_act ledger_base lua)
+
 #set ledger-cli code
 set(ledger_cli_SOURCES
   cli/line.h           cli/line.c

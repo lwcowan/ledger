@@ -64,3 +64,9 @@ target_link_libraries("ledger_test_commit" ledger_act ledger_base)
 add_executable("ledger_test_arg_list" "test_arg_list.c")
 
 target_link_libraries("ledger_test_arg_list" ledger_act)
+
+
+#lua extension test
+add_executable("ledger_test_luaext" "test_luaext.c")
+
+target_link_libraries("ledger_test_luaext" ledger_lua)
