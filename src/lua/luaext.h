@@ -11,6 +11,7 @@
 extern "C" {
 #endif /*__cplusplus*/
 
+
 /*
  * Lua state
  */
@@ -27,6 +28,16 @@ struct ledger_lua* ledger_lua_new(void);
  * - l the state to free
  */
 void ledger_lua_close(struct ledger_lua* l);
+
+/*
+ * Execute a Lua script on the ledger-lua state.
+ * - l the state to use
+ * - name a name for the string
+ * - s string to execute
+ * @return one on success, zero otherwise
+ */
+int ledger_lua_exec_str(struct ledger_lua* l,
+    unsigned char const* name, unsigned char const* s);
 
 
 #ifdef __cplusplus

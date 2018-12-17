@@ -10,6 +10,15 @@ struct ledger_lua {
 };
 
 /*
+ * String reader structure.
+ */
+struct ledger_lua_str_reader {
+  /* Text to read. */
+  unsigned char const* p;
+};
+
+
+/*
  * Close a Lua structure.
  * - l the Lua structure to close
  */
@@ -33,6 +42,33 @@ int ledger_lua_init(struct ledger_lua* l);
  *   NULL on successful free, or NULL otherwise
  */
 void* ledger_lua_alloc(void *ud, void *ptr, size_t osize, size_t nsize);
+
+/*
+ * Load a text string of a certain length.
+ * - l ledger-lua state
+ * - ss NUL-terminated string to load
+ * @return one on success, zero otherwise
+ */
+static int ledger_lua_load_str
+  ( struct ledger_lua const* l, unsigned char const* ss,
+    unsigned char const* chunk_name);
+
+/*
+ * Read a string for Lua.
+ * - base Lua state
+ * - data string reader structure
+ * - size pointer to hold output size
+ * @return the next chunk for processing on success, or NULL at end-of-string
+ */
+static char const* ledger_lua_str_read
+  (lua_State *base, void *data, size_t *size);
+
+/*
+ * Run the function at the top of the stack.
+ * - l ledger-lua state
+ * @return one on success, zero otherwise
+ */
+static int ledger_lua_exec_top( struct ledger_lua* l);
 
 
 /* BEGIN static implementation */
@@ -88,6 +124,44 @@ void* ledger_lua_alloc(void *ud, void *ptr, size_t osize, size_t nsize){
   }
 }
 
+const char * ledger_lua_str_read(lua_State *l, void *data, size_t *size){
+  struct ledger_lua_str_reader *const reader =
+      (struct ledger_lua_str_reader *)data;
+  if (reader->p[0] != 0){
+    char const* out = (char const*)(reader->p);
+    size_t i;
+    for (i = 0; i < 256 && reader->p[0] != 0; ++i){
+      reader->p += 1;
+    }
+    *size = i;
+    return out;
+  } else {
+    *size = 0;
+    return NULL;
+  }
+}
+
+int ledger_lua_load_str
+  ( struct ledger_lua const* l, unsigned char const* ss,
+    unsigned char const* chunk_name)
+{
+  int l_result;
+  struct ledger_lua_str_reader reader = { ss };
+  l_result = lua_load(l->base,
+      &ledger_lua_str_read, &reader, (char const*)chunk_name, "t");
+  return l_result==LUA_OK?1:0;
+}
+
+int ledger_lua_exec_top(struct ledger_lua* l){
+  int l_result;
+  if (!lua_isfunction(l->base, -1))
+    return 0;
+  else {
+    l_result = lua_pcall(l->base, 0, 0, 0);
+    return l_result==LUA_OK?1:0;
+  }
+}
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -109,6 +183,15 @@ void ledger_lua_close(struct ledger_lua* a){
     ledger_lua_clear(a);
     ledger_util_free(a);
   }
+}
+
+int ledger_lua_exec_str
+  (struct ledger_lua* l, unsigned char const* name, unsigned char const* s)
+{
+  int result;
+  result = ledger_lua_load_str(l,s, name);
+  if (result == 0) return 0;
+  else return ledger_lua_exec_top(l);
 }
 
 /* END   implementation */

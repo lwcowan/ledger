@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 static int allocate_test(char const* );
+static int exec_str_test(char const* );
 
 struct test_struct {
   int (*fn)(char const* );
@@ -12,7 +13,8 @@ struct test_struct {
 };
 
 struct test_struct test_array[] = {
-  { allocate_test, "Lua startup" }
+  { allocate_test, "Lua startup" },
+  { exec_str_test, "Lua execute string" }
 };
 
 
@@ -23,6 +25,25 @@ int allocate_test(char const* name){
   if (ptr == NULL) return 0;
   ledger_lua_close(ptr);
   return 1;
+}
+
+int exec_str_test(char const* name){
+  int ok = 0;
+  struct ledger_lua* ptr;
+  (void)name;
+  ptr = ledger_lua_new();
+  if (ptr == NULL) return 0;
+  else do {
+    unsigned char const* task_name =
+      (unsigned char const*)"hello";
+    unsigned char const* task_text =
+      (unsigned char const*)"a=2+2";
+    ok = ledger_lua_exec_str(ptr, task_name, task_text);
+    if (!ok) break;
+    ok = 1;
+  } while (0);
+  ledger_lua_close(ptr);
+  return ok;
 }
 
 
