@@ -39,6 +39,13 @@ void ledger_lua_close(struct ledger_lua* l);
 int ledger_lua_exec_str(struct ledger_lua* l,
     unsigned char const* name, unsigned char const* s);
 
+/*
+ * Add libraries to Lua for standalone processing.
+ * - l the state to configure
+ * @return one on success, zero otherwise
+ */
+int ledger_lua_openlibs(struct ledger_lua* l);
+
 
 #ifdef __cplusplus
 };

@@ -2,10 +2,12 @@
 #include "luaext.h"
 #include "../base/util.h"
 #include "../../deps/lua/src/lua.h"
+#include "../../deps/lua/src/lualib.h"
 #include <stddef.h>
 #include <string.h>
 
 struct ledger_lua {
+  int lib_type;
   lua_State* base;
 };
 
@@ -87,6 +89,7 @@ int ledger_lua_init(struct ledger_lua* l){
     return 0;
   }
   l->base = new_state;
+  l->lib_type = 0;
   return 1;
 }
 
@@ -192,6 +195,19 @@ int ledger_lua_exec_str
   result = ledger_lua_load_str(l,s, name);
   if (result == 0) return 0;
   else return ledger_lua_exec_top(l);
+}
+
+int ledger_lua_openlibs(struct ledger_lua* l){
+  int ok = 0;
+  if (l->lib_type != 0){
+    return l->lib_type == 1;
+  } else do {
+    luaL_openlibs(l->base);
+    ok = 1;
+  } while (0);
+  if (ok) l->lib_type = 1;
+  else l->lib_type = -1;
+  return ok;
 }
 
 /* END   implementation */

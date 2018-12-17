@@ -6,6 +6,7 @@
 
 static int allocate_test(char const* );
 static int exec_str_test(char const* );
+static int exec_lib_test(char const* );
 
 struct test_struct {
   int (*fn)(char const* );
@@ -14,7 +15,8 @@ struct test_struct {
 
 struct test_struct test_array[] = {
   { allocate_test, "Lua startup" },
-  { exec_str_test, "Lua execute string" }
+  { exec_str_test, "Lua execute string" },
+  { exec_lib_test, "Lua execute string with libraries" }
 };
 
 
@@ -38,6 +40,31 @@ int exec_str_test(char const* name){
       (unsigned char const*)"hello";
     unsigned char const* task_text =
       (unsigned char const*)"a=2+2";
+    ok = ledger_lua_exec_str(ptr, task_name, task_text);
+    if (!ok) break;
+    ok = 1;
+  } while (0);
+  ledger_lua_close(ptr);
+  return ok;
+}
+
+int exec_lib_test(char const* name){
+  int ok = 0;
+  struct ledger_lua* ptr;
+  (void)name;
+  ptr = ledger_lua_new();
+  if (ptr == NULL) return 0;
+  else do {
+    unsigned char const* task_name =
+      (unsigned char const*)"exec lib";
+    unsigned char const* task_text =
+      (unsigned char const*)"a=2+2;\n"
+      "print(\"\\n\\t\\t\\t\" .. a);\n"
+      "print(\"\\t\\t\\t\" .. string.upper(\"pass\"));\n"
+      "io.write(\"\\t\\t...\");\n"
+      ;
+    ok = ledger_lua_openlibs(ptr);
+    if (!ok) break;
     ok = ledger_lua_exec_str(ptr, task_name, task_text);
     if (!ok) break;
     ok = 1;
