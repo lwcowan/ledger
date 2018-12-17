@@ -5,6 +5,7 @@
 #include "../../deps/lua/src/lualib.h"
 #include <stddef.h>
 #include <string.h>
+#include <stdio.h>
 
 struct ledger_lua {
   int lib_type;
@@ -17,6 +18,18 @@ struct ledger_lua {
 struct ledger_lua_str_reader {
   /* Text to read. */
   unsigned char const* p;
+};
+
+/*
+ * File reader structure.
+ */
+struct ledger_lua_file_reader {
+  /* File to read. */
+  FILE* f;
+  /* Error encounter. */
+  int err;
+  /* read buffer */
+  unsigned char buf[256];
 };
 
 
@@ -56,9 +69,29 @@ static int ledger_lua_load_str
     unsigned char const* chunk_name);
 
 /*
+ * Load a text string of a certain length.
+ * - l ledger-lua state
+ * - fn NUL-terminated name of file to load
+ * @return one on success, zero otherwise
+ */
+static int ledger_lua_load_file
+  ( struct ledger_lua const* l, char const* fn,
+    unsigned char const* chunk_name);
+
+/*
  * Read a string for Lua.
  * - base Lua state
  * - data string reader structure
+ * - size pointer to hold output size
+ * @return the next chunk for processing on success, or NULL at end-of-string
+ */
+static char const* ledger_lua_str_read
+  (lua_State *base, void *data, size_t *size);
+
+/*
+ * Read a file for Lua.
+ * - base Lua state
+ * - data file reader structure
  * - size pointer to hold output size
  * @return the next chunk for processing on success, or NULL at end-of-string
  */
@@ -72,8 +105,42 @@ static char const* ledger_lua_str_read
  */
 static int ledger_lua_exec_top( struct ledger_lua* l);
 
+/*
+ * from the default Lua 5.3.5 interpreter:
+ *
+ * Create the 'arg' table, which stores all arguments from the
+ * command line ('argv'). It should be aligned so that, at index 0,
+ * it has 'argv[script]', which is the script name. The arguments
+ * to the script (everything after 'script') go to positive indices;
+ * other arguments (before the script name) go to negative indices.
+ * If there is no script name, assume interpreter's name as base.
+ */
+static int ledger_lua_set_arg_i(lua_State *L);
+
+
 
 /* BEGIN static implementation */
+
+int ledger_lua_set_arg_i(lua_State *L){
+  /*
+   * Code based on default Lua 5.3.5 interpreter
+   * Copyright (C) 1994-2018 Lua.org, PUC-Rio.
+   * Licensed under the MIT License.
+   */
+  char **argv = (char **)lua_touserdata(L, 2);
+  int argc = (int)lua_tointeger(L, 1);
+  int script = (int)lua_tointeger(L, 3);
+  int i, narg;
+  if (script == argc) script = 0;  /* no script name? */
+  narg = argc - (script + 1);  /* number of positive indices */
+  lua_createtable(L, narg, script + 1);
+  for (i = 0; i < argc; i++) {
+    lua_pushstring(L, argv[i]);
+    lua_rawseti(L, -2, i - script);
+  }
+  lua_setglobal(L, "arg");
+  return 0;
+}
 
 void ledger_lua_clear(struct ledger_lua* l){
   if (l->base != NULL){
@@ -144,6 +211,24 @@ const char * ledger_lua_str_read(lua_State *l, void *data, size_t *size){
   }
 }
 
+const char * ledger_lua_file_read(lua_State *l, void *data, size_t *size){
+  struct ledger_lua_file_reader *const reader =
+      (struct ledger_lua_file_reader *)data;
+  size_t len = fread
+    (reader->buf,sizeof(unsigned char), sizeof(reader->buf), reader->f);
+  if (ferror(reader->f)){
+    *size = 0;
+    reader->err = 1;
+    return NULL;
+  } else if (len > 0){
+    *size = len;
+    return (char const*)reader->buf;
+  } else {
+    *size = 0;
+    return NULL;
+  }
+}
+
 int ledger_lua_load_str
   ( struct ledger_lua const* l, unsigned char const* ss,
     unsigned char const* chunk_name)
@@ -153,6 +238,25 @@ int ledger_lua_load_str
   l_result = lua_load(l->base,
       &ledger_lua_str_read, &reader, (char const*)chunk_name, "t");
   return l_result==LUA_OK?1:0;
+}
+
+int ledger_lua_load_file
+  ( struct ledger_lua const* l, char const* fn,
+    unsigned char const* chunk_name)
+{
+  int l_result;
+  FILE *f = fopen(fn,"rt");
+  if (f != NULL){
+    struct ledger_lua_file_reader reader = { f, 0 };
+    l_result = lua_load(l->base,
+        &ledger_lua_file_read, &reader, (char const*)chunk_name, "t");
+    fclose(f);
+    if (l_result == LUA_OK && reader.err){
+      /* reject successful partial compile */
+      lua_pop(l->base, 1);
+      return 0;
+    } else return l_result==LUA_OK?1:0;
+  } else return 0;
 }
 
 int ledger_lua_exec_top(struct ledger_lua* l){
@@ -208,6 +312,35 @@ int ledger_lua_openlibs(struct ledger_lua* l){
   if (ok) l->lib_type = 1;
   else l->lib_type = -1;
   return ok;
+}
+
+int ledger_lua_exec_file(struct ledger_lua* l,
+    unsigned char const* name, char const* f)
+{
+  int result;
+  result = ledger_lua_load_file(l,f, name);
+  if (result == 0) return 0;
+  else return ledger_lua_exec_top(l);
+}
+
+int ledger_lua_set_arg
+  (struct ledger_lua* l, char **argv, int argc, int script)
+{
+  int status;
+  lua_State *ls = l->base;
+  /* use protected call technique from default Lua interpreter */
+  /*
+   * Code based on default Lua 5.3.5 interpreter
+   * Copyright (C) 1994-2018 Lua.org, PUC-Rio.
+   * Licensed under the MIT License.
+   */
+  lua_pushcfunction(ls, &ledger_lua_set_arg_i);
+    /* to call '...set_arg_i' in protected mode */
+  lua_pushinteger(ls, argc);  /* 1st argument */
+  lua_pushlightuserdata(ls, argv); /* 2nd argument */
+  lua_pushinteger(ls, script);  /* 3rd argument */
+  status = lua_pcall(ls, 3, 0, 0);  /* do the call */
+  return status==LUA_OK?1:0;
 }
 
 /* END   implementation */

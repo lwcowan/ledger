@@ -52,6 +52,9 @@ set(ledger_lua_SOURCES
 add_library(ledger_lua ${ledger_lua_SOURCES})
 target_link_libraries(ledger_lua ledger_act ledger_base lua)
 
+add_executable(ledger_lua_exec lua/lua.c)
+target_link_libraries(ledger_lua_exec ledger_lua linenoise)
+
 #set ledger-cli code
 set(ledger_cli_SOURCES
   cli/line.h           cli/line.c

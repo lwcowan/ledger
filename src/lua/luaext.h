@@ -46,6 +46,27 @@ int ledger_lua_exec_str(struct ledger_lua* l,
  */
 int ledger_lua_openlibs(struct ledger_lua* l);
 
+/*
+ * Execute a Lua script on the ledger-lua state.
+ * - l the state to use
+ * - name a name for the string
+ * - f name of file to execute
+ * @return one on success, zero otherwise
+ */
+int ledger_lua_exec_file(struct ledger_lua* l,
+    unsigned char const* name, char const* f);
+
+/*
+ * Set command-line arguments for a ledger-lua state.
+ * - l the state to configure
+ * - argv argument text strings to copy
+ * - argc number of arguments
+ * - script position of script name
+ * @return one on success, zero otherwise
+ */
+int ledger_lua_set_arg
+  (struct ledger_lua* l, char **argv, int argc, int script);
+
 
 #ifdef __cplusplus
 };
