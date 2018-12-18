@@ -1,5 +1,6 @@
 
 #include "luaext.h"
+#include "llbase.h"
 #include "../base/util.h"
 #include "../../deps/lua/src/lua.h"
 #include "../../deps/lua/src/lualib.h"
@@ -117,6 +118,12 @@ static int ledger_lua_exec_top( struct ledger_lua* l);
  */
 static int ledger_lua_set_arg_i(lua_State *L);
 
+/*
+ * Load the ledger library.
+ * @param l library to load
+ * @return one on success, zero otherwise
+ */
+static int ledger_lua_loadledgerlib(lua_State *l);
 
 
 /* BEGIN static implementation */
@@ -269,6 +276,17 @@ int ledger_lua_exec_top(struct ledger_lua* l){
   }
 }
 
+int ledger_lua_loadledgerlib(lua_State *l){
+  /* create the `ledger` table */{
+    lua_newtable(l);
+    lua_setglobal(l, "ledger");
+  }
+  /* load the base library */{
+    ledger_luaopen_base(l);
+  }
+  return 0;
+}
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -306,7 +324,11 @@ int ledger_lua_openlibs(struct ledger_lua* l){
   if (l->lib_type != 0){
     return l->lib_type == 1;
   } else do {
+    int l_result;
     luaL_openlibs(l->base);
+    lua_pushcfunction(l->base, &ledger_lua_loadledgerlib);
+    l_result = lua_pcall(l->base,0,0,0);
+    if (l_result != LUA_OK) break;
     ok = 1;
   } while (0);
   if (ok) l->lib_type = 1;
