@@ -3,6 +3,7 @@
 #include "../../deps/lua/src/lua.h"
 #include "../../deps/lua/src/lauxlib.h"
 #include "../base/util.h"
+#include "../base/bignum.h"
 #include <limits.h>
 
 
@@ -12,6 +13,15 @@
  * @return one
  */
 static int ledger_llbase_poststring(struct lua_State *L);
+
+/* [INTERNAL]
+ * Post the big number on the top of the stack.
+ * - L lua state to modify
+ * @return one
+ */
+static int ledger_llbase_postbignum(struct lua_State *L);
+
+static char const* ledger_llbase_bignum_meta = "ledger.bignum";
 
 /*   BEGIN ledger/base/util { */
 
@@ -91,6 +101,127 @@ static const struct luaL_Reg ledger_luaL_util_lib[] = {
   {NULL,NULL}
 };
 
+/*   BEGIN ledger/base/bignum { */
+
+/*
+ * `ledger.bignum.create([v~string | v~number [, digits, point]])`
+ * - v the value to convert to a big number
+ * - digits minimum number of centesimal digits for this number
+ * - point position of the centesimal point
+ * @return a big number instance
+ */
+static int ledger_luaL_bignum_create(struct lua_State *L);
+
+/*
+ * `ledger.bignum.__gc(self~ledger.bignum)`
+ * - self the number to free
+ */
+static int ledger_luaL_bignum___gc(struct lua_State *L);
+
+/*
+ * `ledger.bignum.__eq(a~ledger.bignum, b~ledger.bignum)`
+ * - a first number
+ * - b second number
+ * @return true if equal, false otherwise
+ */
+static int ledger_luaL_bignum___eq(struct lua_State *L);
+
+/*
+ * `ledger.bignum.__lt(a~ledger.bignum, b~ledger.bignum)`
+ * - a first number
+ * - b second number
+ * @return true if `a` is less than `b`, false otherwise
+ */
+static int ledger_luaL_bignum___lt(struct lua_State *L);
+
+/*
+ * `ledger.bignum.__le(a~ledger.bignum, b~ledger.bignum)`
+ * - a first number
+ * - b second number
+ * @return true if `a` is less or equal to `b`, false otherwise
+ */
+static int ledger_luaL_bignum___le(struct lua_State *L);
+
+/*
+ * `ledger.bignum.tostring(self~ledger.bignum)`
+ * `ledger.bignum.__tostring(self~ledger.bignum)`
+ * - self the number to query
+ * @return a string representation of the big number
+ */
+static int ledger_luaL_bignum_tostring(struct lua_State *L);
+
+/*
+ * `ledger.bignum.tointeger(self~ledger.bignum)`
+ * - self the number to query
+ * @return an integer representation of the big number
+ */
+static int ledger_luaL_bignum_tointeger(struct lua_State *L);
+
+/*
+ * `ledger.bignum.__len(self~ledger.bignum)`
+ * - self the number to query
+ * @return the number of centesimal digits in the number
+ */
+static int ledger_luaL_bignum___len(struct lua_State *L);
+
+/*
+ * `ledger.bignum.findpoint(self~ledger.bignum)`
+ * - self the number to query
+ * @return the position of the centesimal point
+ */
+static int ledger_luaL_bignum_findpoint(struct lua_State *L);
+
+/*
+ * `ledger.bignum.__unm(self~ledger.bignum)`
+ * - self the number to negate
+ * @return a negated version of this number
+ */
+static int ledger_luaL_bignum___unm(struct lua_State *L);
+
+/*
+ * `ledger.bignum.__add(left~ledger.bignum, right~ledger.bignum)`
+ * - left one addend
+ * - right another addend
+ * @return the sum of the two big numbers
+ */
+static int ledger_luaL_bignum___add(struct lua_State *L);
+
+/*
+ * `ledger.bignum.__sub(left~ledger.bignum, right~ledger.bignum)`
+ * - left the minuend
+ * - right the subtrahend
+ * @return the sum of the two big numbers
+ */
+static int ledger_luaL_bignum___sub(struct lua_State *L);
+
+/* [INTERNAL]
+ * Compare two big numbers at positions #1 and #2 on the
+ *   Lua stack.
+ * - L Lua state to interrogate
+ * @return zero if equal, negative if #1 is less that #2,
+ *   positive if #1 is greater than #2
+ */
+static int ledger_luaL_bignum_cmp(struct lua_State *L);
+
+static const struct luaL_Reg ledger_luaL_bignum_lib[] = {
+  {"create", ledger_luaL_bignum_create},
+  {"__gc", ledger_luaL_bignum___gc},
+  {"__eq", ledger_luaL_bignum___eq},
+  {"__lt", ledger_luaL_bignum___lt},
+  {"__le", ledger_luaL_bignum___le},
+  {"__tostring", ledger_luaL_bignum_tostring},
+  {"tostring", ledger_luaL_bignum_tostring},
+  {"tointeger", ledger_luaL_bignum_tointeger},
+  {"__len", ledger_luaL_bignum___len},
+  {"findpoint", ledger_luaL_bignum_findpoint},
+  {"__unm", ledger_luaL_bignum___unm},
+  {"__add", ledger_luaL_bignum___add},
+  {"__sub", ledger_luaL_bignum___sub},
+  {NULL,NULL}
+};
+
+/* } END   ledger/base/bignum */
+
 /* BEGIN static implementation */
 
 int ledger_llbase_poststring(struct lua_State *L){
@@ -101,6 +232,26 @@ int ledger_llbase_poststring(struct lua_State *L){
    */
   unsigned char const* str = (unsigned char const*)lua_touserdata(L, 1);
   lua_pushstring(L, (char const*)str);
+  return 1;
+}
+
+int ledger_llbase_postbignum(struct lua_State *L){
+  /* ARG:
+   *   1 *bignum
+   * RET:
+   *   2 @return
+   */
+  struct ledger_bignum* num = (struct ledger_bignum*)lua_touserdata(L, 1);
+  /* get a full user data for the big number pointer */
+  void ** ptr = (void**)lua_newuserdata(L, sizeof(void*));
+  if (ptr == NULL){
+    luaL_error(L, "unable to allocate space for `ledger.bignum`"
+      " indirect pointer");
+    return 0;
+  }
+  (*ptr) = num;
+  /* apply the userdata registry item `ledger.bignum` to this userdata */
+  luaL_setmetatable(L, ledger_llbase_bignum_meta);
   return 1;
 }
 
@@ -274,6 +425,340 @@ int ledger_luaL_util_atoi(struct lua_State *L){
 
 /* } END   ledger/base/util */
 
+/*   BEGIN ledger/base/bignum { */
+
+int ledger_luaL_bignum_create(struct lua_State *L){
+  /* ARG:
+   *   1 ?value~(string|number)
+   *   2 ?digits~number
+   *   2 ?point~number
+   * RET:
+   *   3 @return
+   * THROW:
+   *   X
+   */
+  unsigned char const* value_str = NULL;
+  lua_Integer value_int = 0;
+  int value_type;
+  struct ledger_bignum* next_bignum;
+  int digits = 0;
+  int point = 0;
+  int ok;
+  if (lua_isinteger(L, 1)){
+    value_type = LUA_NUMTAGS+1;
+    value_int = lua_tointeger(L, 1);
+  } else if (lua_isstring(L, 1)){
+    value_type = LUA_TSTRING;
+    value_str = (unsigned char const*)lua_tostring(L, 1);
+  } else if (lua_isnoneornil(L, 1)){
+    value_type = LUA_TNIL;
+  } else {
+    luaL_error(L, "ledger.bignum.create: illegal argument #1");
+    return 0;
+  }
+  if (value_type != LUA_TNIL){
+    /* process other arguments */
+    digits = (int)luaL_optinteger(L, 2, 0);
+    point = (int)luaL_optinteger(L, 3, 0);
+  }
+  /* execute C API */{
+    next_bignum = ledger_bignum_new();
+    if (next_bignum != NULL){
+      int sub_ok;
+      if (digits > 0){
+        sub_ok = ledger_bignum_alloc(next_bignum, digits, point);
+      } else sub_ok = 1;
+      if (sub_ok) switch (value_type){
+      case LUA_NUMTAGS+1:
+        {
+          ok = ledger_bignum_set_long(next_bignum, (long)value_int);
+        }break;
+      case LUA_TSTRING:
+        {
+          ok = ledger_bignum_set_text(next_bignum, value_str, NULL);
+        }break;
+      default:
+        ok = 1;
+        break;
+      }
+    } else ok = 0;
+  }
+  /* enter protection */if (ok){
+    int success_line;
+    lua_pushcfunction(L, ledger_llbase_postbignum);
+    lua_pushlightuserdata(L, next_bignum);
+    success_line = lua_pcall(L, 1, 1, 0);
+    if (success_line != LUA_OK){
+      ledger_bignum_free(next_bignum);
+      /* throw; */
+      lua_error(L);
+    } else /* leave return at top of stack */;
+  } else {
+    ledger_bignum_free(next_bignum);
+    luaL_error(L, "ledger.bignum.create: generic error");
+  }
+  return 1;
+}
+
+int ledger_luaL_bignum___gc(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.bignum
+   * RET:
+   *   X
+   */
+  struct ledger_bignum** num =
+    (struct ledger_bignum**)luaL_checkudata(L, 1, ledger_llbase_bignum_meta);
+  ledger_bignum_free(*num);
+  *num = NULL;
+  return 0;
+}
+
+int ledger_luaL_bignum_cmp(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.bignum
+   *   2  right~ledger.bignum
+   * ...:
+   */
+  struct ledger_bignum** left =
+    (struct ledger_bignum**)luaL_checkudata(L, 1, ledger_llbase_bignum_meta);
+  struct ledger_bignum** right =
+    (struct ledger_bignum**)luaL_checkudata(L, 2, ledger_llbase_bignum_meta);
+  if (*left != NULL && *right != NULL){
+    return ledger_bignum_compare(*left, *right);
+  } else {
+    luaL_error(L, "ledger_luaL_bignum_cmp: inconsistency check #1 triggered");
+    return -2;
+  }
+}
+
+int ledger_luaL_bignum___eq(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.bignum
+   *   2  right~ledger.bignum
+   * RET:
+   *   3 @return~boolean
+   */
+  int result = ledger_luaL_bignum_cmp(L);
+  lua_pushboolean(L, result==0);
+  return 1;
+}
+
+int ledger_luaL_bignum___lt(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.bignum
+   *   2  right~ledger.bignum
+   * RET:
+   *   3 @return~boolean
+   */
+  int result = ledger_luaL_bignum_cmp(L);
+  lua_pushboolean(L, result<0);
+  return 1;
+}
+
+int ledger_luaL_bignum___le(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.bignum
+   *   2  right~ledger.bignum
+   * RET:
+   *   3 @return~boolean
+   */
+  int result = ledger_luaL_bignum_cmp(L);
+  lua_pushboolean(L, result<=0);
+  return 1;
+}
+
+int ledger_luaL_bignum_tostring(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.bignum
+   *   2 ?want_plus
+   * RET:
+   *   X
+   */
+  struct ledger_bignum** num =
+    (struct ledger_bignum**)luaL_checkudata(L, 1, ledger_llbase_bignum_meta);
+  unsigned char *outstr;
+  int want_plus;
+  int ok;
+  want_plus = lua_toboolean(L, 2);
+  /* execute C API */{
+    size_t maxlen = ledger_bignum_get_text(*num, NULL, 0, want_plus);
+    outstr = ledger_util_malloc(maxlen+1);
+    if (outstr == NULL){
+      ok = 0;
+    } else {
+      ledger_bignum_get_text(*num, outstr, maxlen+1, want_plus);
+      outstr[maxlen] = 0;
+      ok = 1;
+    }
+  }
+  /* enter protection */if (ok){
+    int success_line;
+    lua_pushcfunction(L, ledger_llbase_poststring);
+    lua_pushlightuserdata(L, outstr);
+    success_line = lua_pcall(L, 1, 1, 0);
+    ledger_util_free(outstr);
+    if (success_line != LUA_OK){
+      /* throw; */
+      lua_error(L);
+    } else /* leave return at top of stack */;
+  } else {
+    luaL_error(L, "ledger.bignum.tostring: generic error");
+  }
+  return 1;
+}
+
+int ledger_luaL_bignum_tointeger(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.bignum
+   * RET:
+   *   2  @return~integer
+   */
+  struct ledger_bignum** num =
+    (struct ledger_bignum**)luaL_checkudata(L, 1, ledger_llbase_bignum_meta);
+  long out_value = ledger_bignum_get_long(*num);
+  lua_pushinteger(L, (lua_Integer)out_value);
+  return 1;
+}
+
+int ledger_luaL_bignum___len(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.bignum
+   * RET:
+   *   2  @return~integer
+   */
+  struct ledger_bignum** num =
+    (struct ledger_bignum**)luaL_checkudata(L, 1, ledger_llbase_bignum_meta);
+  int out_value = ledger_bignum_count_digits(*num);
+  lua_pushinteger(L, (lua_Integer)out_value);
+  return 1;
+}
+
+int ledger_luaL_bignum_findpoint(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.bignum
+   * RET:
+   *   2  @return~integer
+   */
+  struct ledger_bignum** num =
+    (struct ledger_bignum**)luaL_checkudata(L, 1, ledger_llbase_bignum_meta);
+  int out_value = ledger_bignum_find_point(*num);
+  lua_pushinteger(L, (lua_Integer)out_value);
+  return 1;
+}
+
+int ledger_luaL_bignum___unm(struct lua_State *L){
+  /* ARG:
+   *   1 value~ledger.bignum
+   * RET:
+   *   2 @return~ledger.bignum
+   * THROW:
+   *   X
+   */
+  struct ledger_bignum** num =
+    (struct ledger_bignum**)luaL_checkudata(L, 1, ledger_llbase_bignum_meta);
+  struct ledger_bignum* next_bignum;
+  int ok;
+  /* execute C API */{
+    next_bignum = ledger_bignum_new();
+    if (next_bignum != NULL){
+      ok = ledger_bignum_negate(next_bignum, *num);
+    } else ok = 0;
+  }
+  /* enter protection */if (ok){
+    int success_line;
+    lua_pushcfunction(L, ledger_llbase_postbignum);
+    lua_pushlightuserdata(L, next_bignum);
+    success_line = lua_pcall(L, 1, 1, 0);
+    if (success_line != LUA_OK){
+      ledger_bignum_free(next_bignum);
+      /* throw; */
+      lua_error(L);
+    } else /* leave return at top of stack */;
+  } else {
+    ledger_bignum_free(next_bignum);
+    luaL_error(L, "ledger.bignum.__unm: generic error");
+  }
+  return 1;
+}
+
+int ledger_luaL_bignum___add(struct lua_State *L){
+  /* ARG:
+   *   1 left~ledger.bignum
+   *   2 right~ledger.bignum
+   * RET:
+   *   3 @return~ledger.bignum
+   * THROW:
+   *   X
+   */
+  struct ledger_bignum** left =
+    (struct ledger_bignum**)luaL_checkudata(L, 1, ledger_llbase_bignum_meta);
+  struct ledger_bignum** right =
+    (struct ledger_bignum**)luaL_checkudata(L, 2, ledger_llbase_bignum_meta);
+  struct ledger_bignum* next_bignum;
+  int ok;
+  /* execute C API */{
+    next_bignum = ledger_bignum_new();
+    if (next_bignum != NULL){
+      ok = ledger_bignum_add(next_bignum, *left, *right);
+    } else ok = 0;
+  }
+  /* enter protection */if (ok){
+    int success_line;
+    lua_pushcfunction(L, ledger_llbase_postbignum);
+    lua_pushlightuserdata(L, next_bignum);
+    success_line = lua_pcall(L, 1, 1, 0);
+    if (success_line != LUA_OK){
+      ledger_bignum_free(next_bignum);
+      /* throw; */
+      lua_error(L);
+    } else /* leave return at top of stack */;
+  } else {
+    ledger_bignum_free(next_bignum);
+    luaL_error(L, "ledger.bignum.__add: generic error");
+  }
+  return 1;
+}
+
+int ledger_luaL_bignum___sub(struct lua_State *L){
+  /* ARG:
+   *   1 left~ledger.bignum
+   *   2 right~ledger.bignum
+   * RET:
+   *   3 @return~ledger.bignum
+   * THROW:
+   *   X
+   */
+  struct ledger_bignum** left =
+    (struct ledger_bignum**)luaL_checkudata(L, 1, ledger_llbase_bignum_meta);
+  struct ledger_bignum** right =
+    (struct ledger_bignum**)luaL_checkudata(L, 2, ledger_llbase_bignum_meta);
+  struct ledger_bignum* next_bignum;
+  int ok;
+  /* execute C API */{
+    next_bignum = ledger_bignum_new();
+    if (next_bignum != NULL){
+      ok = ledger_bignum_subtract(next_bignum, *left, *right);
+    } else ok = 0;
+  }
+  /* enter protection */if (ok){
+    int success_line;
+    lua_pushcfunction(L, ledger_llbase_postbignum);
+    lua_pushlightuserdata(L, next_bignum);
+    success_line = lua_pcall(L, 1, 1, 0);
+    if (success_line != LUA_OK){
+      ledger_bignum_free(next_bignum);
+      /* throw; */
+      lua_error(L);
+    } else /* leave return at top of stack */;
+  } else {
+    ledger_bignum_free(next_bignum);
+    luaL_error(L, "ledger.bignum.__sub: generic error");
+  }
+  return 1;
+}
+
+/* } END   ledger/base/bignum */
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -289,6 +774,18 @@ void ledger_luaopen_base(struct lua_State *L){
   /* add util lib */{
     luaL_newlib(L, ledger_luaL_util_lib);
     lua_setfield(L, -2, "util");
+  }
+  /* add bignum lib */{
+    luaL_newlib(L, ledger_luaL_bignum_lib);
+    lua_pushvalue(L, -1);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+    lua_pushstring(L, ledger_llbase_bignum_meta);
+    lua_setfield(L, -2, "__name");  /* metatable.__name = tname */
+    /* registry.name = metatable */{
+      lua_setfield(L, LUA_REGISTRYINDEX, ledger_llbase_bignum_meta);
+    }
+    lua_setfield(L, -2, "bignum");
   }
   return;
 }
