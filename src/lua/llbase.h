@@ -11,11 +11,33 @@
 extern "C" {
 #endif /*__cplusplus*/
 
+struct ledger_bignum;
 
 /*
  * Lua state
  */
 struct lua_State;
+
+
+/*
+ * Post the string on the top of the stack.
+ * - L lua state to modify
+ * - str string, freed by this function if `ok`
+ * - ok if nonzero, the string is posted, else the error is raised
+ * - err error message if not `ok`
+ * @return one on success, zero otherwise
+ */
+int ledger_llbase_poststring
+  (struct lua_State *L, unsigned char* str, int ok, char const* err);
+
+/*
+ * Post the given big number to the top of the stack.
+ * - L lua state to modify
+ * - bn number to post
+ * @return one on success, zero otherwise
+ */
+int ledger_llbase_postbignum
+  (struct lua_State *L, struct ledger_bignum* bn, int ok, char const* err);
 
 /*
  * Open the base library.
