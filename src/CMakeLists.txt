@@ -16,6 +16,7 @@ set(ledger_base_SOURCES
   )
 
 add_library(ledger_base ${ledger_base_SOURCES})
+target_link_libraries(ledger_base refalloc)
 
 #set io library code
 set(ledger_io_SOURCES
