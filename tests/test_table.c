@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 static int allocate_test(void);
+static int acquire_ref_test(void);
 static int trivial_equal_test(void);
 static int trivial_mark_test(void);
 static int set_schema_test(void);
@@ -25,6 +26,7 @@ struct test_struct {
 
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
+  { acquire_ref_test, "acquire" },
   { trivial_equal_test, "trivial_equal" },
   { trivial_mark_test, "trivial_mark_test" },
   { set_schema_test, "set schema" },
@@ -44,6 +46,26 @@ int allocate_test(void){
   if (ptr == NULL) return 0;
   ledger_table_free(ptr);
   return 1;
+}
+
+int acquire_ref_test(void){
+  int ok = 0;
+  struct ledger_table* ptr;
+  ptr = ledger_table_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int column_types[3] =
+      { LEDGER_TABLE_ID, LEDGER_TABLE_USTR, LEDGER_TABLE_BIGNUM };
+    if (ledger_table_acquire(ptr) != ptr) break;
+    ok = ledger_table_set_column_types(ptr,3,column_types);
+    if (!ok) break;
+    if (ledger_table_get_column_count(ptr) != 3) break;
+    ledger_table_free(ptr);
+    if (ledger_table_get_column_count(ptr) != 3) break;
+    ledger_table_free(ptr);
+    ok = 1;
+  } while (0);
+  return ok;
 }
 
 int trivial_equal_test(void){
