@@ -29,6 +29,7 @@ static int add_implicit_test(void);
 static int subtract_test(void);
 static int subtract_inverted_test(void);
 static int subtract_implicit_test(void);
+static int set_dot_text_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -58,7 +59,8 @@ struct test_struct test_array[] = {
   { add_implicit_test, "add implicit" },
   { subtract_test, "subtract" },
   { subtract_inverted_test, "subtract inverted" },
-  { subtract_implicit_test, "subtract implicit" }
+  { subtract_implicit_test, "subtract implicit" },
+  { set_dot_text_test, "set text starting with a dot" }
 };
 
 
@@ -901,6 +903,30 @@ int subtract_implicit_test(void){
   return result;
 }
 
+int set_dot_text_test(void){
+  int result = 0;
+  struct ledger_bignum* ptr;
+  unsigned char buffer[24];
+  ptr = ledger_bignum_new();
+  if (ptr == NULL) return 0;
+  do {
+    if (!ledger_bignum_set_text(
+        ptr,(unsigned char const*)".95",NULL)) break;
+    if (ledger_bignum_get_text(ptr,NULL,0,0) != 4) break;
+    if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),0) != 4) break;
+    if (ledger_util_ustrcmp(
+        (unsigned char const*)"0.95",buffer) != 0) break;
+    if (!ledger_bignum_set_text(
+        ptr,(unsigned char const*)"-.378",NULL)) break;
+    if (ledger_bignum_get_text(ptr,NULL,0,0) != 7) break;
+    if (ledger_bignum_get_text(ptr,buffer,sizeof(buffer),0) != 7) break;
+    if (ledger_util_ustrcmp(
+        (unsigned char const*)"-0.3780",buffer) != 0) break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(ptr);
+  return result;
+}
 
 int main(int argc, char **argv){
   int pass_count = 0;

@@ -500,7 +500,9 @@ int ledger_bignum_set_text
     while (text[str_extent] >= '0' && text[str_extent] <= '9'){
       str_extent += 1;
     }
-    if (str_extent == complement_extent){
+    if (str_extent == complement_extent
+    &&  text[str_extent] != '.')
+    {
       /* no number here */
       str_extent = 0;
     } else if (text[str_extent] == '.'){
