@@ -8,6 +8,7 @@
 #include <limits.h>
 
 static int allocate_test(void);
+static int acquire_ref_test(void);
 static int description_test(void);
 static int null_description_test(void);
 static int name_test(void);
@@ -28,6 +29,7 @@ struct test_struct {
 
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
+  { acquire_ref_test, "acquire reference" },
   { description_test, "description" },
   { null_description_test, "null_description" },
   { name_test, "name" },
@@ -49,6 +51,23 @@ int allocate_test(void){
   if (ptr == NULL) return 0;
   ledger_ledger_free(ptr);
   return 1;
+}
+
+int acquire_ref_test(void){
+  int ok = 0;
+  struct ledger_ledger* ptr;
+  ptr = ledger_ledger_new();
+  if (ptr == NULL) return 0;
+  else do {
+    if (ledger_ledger_acquire(ptr) != ptr) break;
+    ledger_ledger_set_id(ptr, 870);
+    if (ledger_ledger_get_id(ptr) != 870) break;
+    ledger_ledger_free(ptr);
+    if (ledger_ledger_get_id(ptr) != 870) break;
+    ledger_ledger_free(ptr);
+    ok = 1;
+  } while (0);
+  return ok;
 }
 
 int description_test(void){
