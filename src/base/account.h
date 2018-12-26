@@ -22,6 +22,13 @@ struct ledger_account;
 struct ledger_account* ledger_account_new(void);
 
 /*
+ * Acquire a reference to an account.
+ * - a an old account
+ * @return the account on success, otherwise NULL
+ */
+struct ledger_account* ledger_account_acquire(struct ledger_account* a);
+
+/*
  * Destroy an account.
  * - a the account to destroy
  */
@@ -85,7 +92,9 @@ int ledger_account_is_equal
   (struct ledger_account const* a, struct ledger_account const* b);
 
 /*
- * Modify an account's transaction table.
+ * Modify an account's transaction table. The user should acquire a
+ *     reference to the table by calling `ledger_table_acquire` after
+ *     this function.
  * - a account to modify
  * @return the transaction table
  */

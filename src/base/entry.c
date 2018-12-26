@@ -25,10 +25,21 @@ static int ledger_entry_init(struct ledger_entry* a);
  */
 static void ledger_entry_clear(struct ledger_entry* a);
 
+/*
+ * Callback for cleaning up a table.
+ * - t pointer to a table
+ */
+static void ledger_entry_free_cb(void* t);
 
 /* BEGIN static implementation */
 
+void ledger_entry_free_cb(void* t){
+  ledger_entry_clear((struct ledger_entry*) t);
+  return;
+}
+
 int ledger_entry_init(struct ledger_entry* a){
+  /* NOTE pre-clear compatible */
   a->description = NULL;
   a->name = NULL;
   a->item_id = -1;
@@ -52,21 +63,25 @@ void ledger_entry_clear(struct ledger_entry* a){
 /* BEGIN implementation */
 
 struct ledger_entry* ledger_entry_new(void){
-  struct ledger_entry* a = (struct ledger_entry* )ledger_util_malloc
-    (sizeof(struct ledger_entry));
-  if (a != NULL){
-    if (!ledger_entry_init(a)){
-      ledger_util_free(a);
-      a = NULL;
+  struct ledger_entry* t = (struct ledger_entry* )ledger_util_ref_malloc
+    (sizeof(struct ledger_entry), ledger_entry_free_cb);
+  if (t != NULL){
+    if (!ledger_entry_init(t)){
+      ledger_util_ref_free(t);
+      t = NULL;
     }
   }
-  return a;
+  return t;
+}
+
+struct ledger_entry* ledger_entry_acquire(struct ledger_entry* t){
+  return (struct ledger_entry*)ledger_util_ref_acquire(t);
 }
 
 void ledger_entry_free(struct ledger_entry* a){
   if (a != NULL){
-    ledger_entry_clear(a);
-    ledger_util_free(a);
+    /* NOTE ledger_entry_clear(a); called indirectly */
+    ledger_util_ref_free(a);
   }
 }
 

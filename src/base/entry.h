@@ -22,6 +22,13 @@ struct ledger_entry;
 struct ledger_entry* ledger_entry_new(void);
 
 /*
+ * Acquire a reference to an entry.
+ * - a an old entry
+ * @return the entry on success, otherwise NULL
+ */
+struct ledger_entry* ledger_entry_acquire(struct ledger_entry* a);
+
+/*
  * Destroy an entry.
  * - a the entry to destroy
  */

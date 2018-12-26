@@ -41,6 +41,13 @@ struct ledger_table_mark;
 struct ledger_table* ledger_table_new(void);
 
 /*
+ * Acquire an old table.
+ * - t the table for which to acquire a reference
+ * @return the table on success, otherwise NULL
+ */
+struct ledger_table* ledger_table_acquire(struct ledger_table* );
+
+/*
  * Destroy a table.
  * - a the table to destroy
  */

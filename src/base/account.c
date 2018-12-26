@@ -34,10 +34,26 @@ static int ledger_account_init(struct ledger_account* a);
  */
 static void ledger_account_clear(struct ledger_account* a);
 
+/*
+ * Callback for reference counting.
+ * - a account to clear
+ */
+static void ledger_account_free_cb(void* a);
+
 
 /* BEGIN static implementation */
 
+void ledger_account_free_cb(void* a){
+  ledger_account_clear((struct ledger_account*)a);
+  return;
+}
+
 int ledger_account_init(struct ledger_account* a){
+  /* NOTE pre-clear compatible */
+  a->description = NULL;
+  a->name = NULL;
+  a->item_id = -1;
+  a->table = NULL;
   /* prepare the table */{
     int ok = 0;
     int const schema_size = sizeof(ledger_account_schema)/
@@ -57,9 +73,6 @@ int ledger_account_init(struct ledger_account* a){
       a->table = new_table;
     }
   }
-  a->description = NULL;
-  a->name = NULL;
-  a->item_id = -1;
   return 1;
 }
 
@@ -79,21 +92,25 @@ void ledger_account_clear(struct ledger_account* a){
 /* BEGIN implementation */
 
 struct ledger_account* ledger_account_new(void){
-  struct ledger_account* a = (struct ledger_account* )ledger_util_malloc
-    (sizeof(struct ledger_account));
+  struct ledger_account* a = (struct ledger_account* )ledger_util_ref_malloc
+    (sizeof(struct ledger_account), ledger_account_free_cb);
   if (a != NULL){
     if (!ledger_account_init(a)){
-      ledger_util_free(a);
+      ledger_util_ref_free(a);
       a = NULL;
     }
   }
   return a;
 }
 
+struct ledger_account* ledger_account_acquire(struct ledger_account* a){
+  return (struct ledger_account*)ledger_util_ref_acquire(a);
+}
+
 void ledger_account_free(struct ledger_account* a){
   if (a != NULL){
-    ledger_account_clear(a);
-    ledger_util_free(a);
+    /* NOTE ledger_account_clear(a); called indirectly */
+    ledger_util_ref_free(a);
   }
 }
 

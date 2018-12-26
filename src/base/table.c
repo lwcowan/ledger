@@ -64,6 +64,12 @@ struct ledger_table_mark {
 };
 
 /*
+ * Callback for cleaning up a table.
+ * - t pointer to a table
+ */
+static void ledger_table_free_cb(void* t);
+
+/*
  * Initialize a table.
  * - t table to initialize
  * @return one on success, zero on failure
@@ -113,7 +119,13 @@ static void ledger_table_drop_all_rows(struct ledger_table* table);
 
 /* BEGIN static implementation */
 
+void ledger_table_free_cb(void* t){
+  ledger_table_clear((struct ledger_table*) t);
+  return;
+}
+
 int ledger_table_init(struct ledger_table* t){
+  /* NOTE pre-clear compatible */
   t->columns = 0;
   t->rows = 0;
   t->column_types = NULL;
@@ -223,21 +235,25 @@ void ledger_table_drop_all_rows(struct ledger_table* table){
 /* BEGIN implementation */
 
 struct ledger_table* ledger_table_new(void){
-  struct ledger_table* t = (struct ledger_table* )ledger_util_malloc
-    (sizeof(struct ledger_table));
+  struct ledger_table* t = (struct ledger_table* )ledger_util_ref_malloc
+    (sizeof(struct ledger_table), ledger_table_free_cb);
   if (t != NULL){
     if (!ledger_table_init(t)){
-      ledger_util_free(t);
+      ledger_util_ref_free(t);
       t = NULL;
     }
   }
   return t;
 }
 
+struct ledger_table* ledger_table_acquire(struct ledger_table* t){
+  return (struct ledger_table*)ledger_util_ref_acquire(t);
+}
+
 void ledger_table_free(struct ledger_table* t){
   if (t != NULL){
-    ledger_table_clear(t);
-    ledger_util_free(t);
+    /*NOTE ledger_table_clear(t); called indirectly*/
+    ledger_util_ref_free(t);
   }
 }
 
