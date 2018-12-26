@@ -12,6 +12,9 @@
 extern "C" {
 #endif /*__cplusplus*/
 
+typedef void (*ledger_util_ref_dtor)(void*);
+
+
 /*
  * Call `malloc` from in this library.
  * - siz size of block to allocate
@@ -24,6 +27,27 @@ void* ledger_util_malloc(size_t siz);
  * - ptr pointer to block of memory to free
  */
 void ledger_util_free(void* ptr);
+
+/*
+ * Call `malloc` from in this library.
+ * - siz size of block to allocate
+ * - dtor destructor for block of memory
+ * @return the heap-allocated block, otherwise NULL
+ */
+void* ledger_util_ref_malloc(size_t siz, ledger_util_ref_dtor dtor);
+
+/*
+ * Acquire a reference to a block of memory.
+ * - ptr pointer to block of memory to acquire
+ * @return the pointer on success
+ */
+void* ledger_util_ref_acquire(void* ptr);
+
+/*
+ * Free a reference to a block of memory.
+ * - ptr pointer to block of memory to free
+ */
+void ledger_util_ref_free(void* ptr);
 
 /*
  * Duplicate a UTF-8 string.

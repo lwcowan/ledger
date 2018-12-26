@@ -9,6 +9,7 @@
 #include "../src/base/journal.h"
 
 static int allocate_test(void);
+static int acquire_ref_test(void);
 static int description_test(void);
 static int null_description_test(void);
 static int notes_test(void);
@@ -29,6 +30,7 @@ struct test_struct {
 };
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
+  { acquire_ref_test, "acquire reference" },
   { description_test, "description" },
   { null_description_test, "null_description" },
   { notes_test, "notes" },
@@ -51,6 +53,23 @@ int allocate_test(void){
   if (ptr == NULL) return 0;
   ledger_book_free(ptr);
   return 1;
+}
+
+int acquire_ref_test(void){
+  int ok = 0;
+  struct ledger_book* ptr;
+  ptr = ledger_book_new();
+  if (ptr == NULL) return 0;
+  else do {
+    if (ledger_book_acquire(ptr) != ptr) break;
+    ledger_book_set_sequence(ptr, 870);
+    if (ledger_book_get_sequence(ptr) != 870) break;
+    ledger_book_free(ptr);
+    if (ledger_book_get_sequence(ptr) != 870) break;
+    ledger_book_free(ptr);
+    ok = 1;
+  } while (0);
+  return ok;
 }
 
 int description_test(void){

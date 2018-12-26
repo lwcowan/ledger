@@ -4,8 +4,13 @@
 #include <string.h>
 #include <stdlib.h>
 
+static void acquire_ref_dtor(void*);
+
 static int allocate_test(void);
 static int allocate_zero_test(void);
+static int allocate_ref_test(void);
+static int acquire_ref_test(void);
+static int allocate_ref_zero_test(void);
 static int string_test(void);
 static int string_length_test(void);
 static int null_string_dup_test(void);
@@ -26,6 +31,9 @@ struct test_struct {
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
   { allocate_zero_test, "allocate_zero" },
+  { allocate_ref_test, "allocate (reference counted)" },
+  { acquire_ref_test, "acquire (reference counted)" },
+  { allocate_ref_zero_test, "allocate_zero (reference counted)" },
   { string_test, "string duplicate" },
   { string_length_test, "string length" },
   { null_string_dup_test, "null string duplicate" },
@@ -53,6 +61,48 @@ int allocate_zero_test(void){
   ptr = ledger_util_malloc(0);
   if (ptr != NULL){
     ledger_util_free(ptr);
+    return 0;
+  }
+  return 1;
+}
+
+int allocate_ref_test(void){
+  void* ptr;
+  ptr = ledger_util_ref_malloc(15, NULL);
+  if (ptr == NULL) return 0;
+  ledger_util_ref_free(ptr);
+  return 1;
+}
+
+static void acquire_ref_dtor(void* ptr){
+  int** const num = (int**)ptr;
+  (**num) -= 1;
+  return;
+}
+int acquire_ref_test(void){
+  int ok = 0;
+  int num = 5;
+  int** ptr;
+  ptr = (int**)ledger_util_ref_malloc(15, &acquire_ref_dtor);
+  if (ptr == NULL) return 0;
+  else do {
+    *ptr = &num;
+    if (ledger_util_ref_acquire(ptr) != ptr) break;
+    ledger_util_ref_free(ptr);
+    if (num != 5) break;
+    ledger_util_ref_free(ptr);
+    if (num != 4) break;
+    ok = 1;
+  } while (0);
+  if (num != 4) ledger_util_ref_free(ptr);
+  return ok;
+}
+
+int allocate_ref_zero_test(void){
+  void* ptr;
+  ptr = ledger_util_ref_malloc(0, NULL);
+  if (ptr != NULL){
+    ledger_util_ref_free(ptr);
     return 0;
   }
   return 1;

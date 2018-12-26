@@ -26,6 +26,13 @@ struct ledger_book;
 struct ledger_book* ledger_book_new(void);
 
 /*
+ * Acquire a reference to a book.
+ * - a an old book
+ * @return the book on success, otherwise NULL
+ */
+struct ledger_book* ledger_book_acquire(struct ledger_book* a);
+
+/*
  * Destroy a book.
  * - book the book to destroy
  */

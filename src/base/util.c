@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include "../../deps/refalloc/refalloc.h"
 
 /* BEGIN implementation */
 
@@ -13,6 +14,20 @@ void* ledger_util_malloc(size_t siz){
 
 void ledger_util_free(void* ptr){
   free(ptr);
+  return;
+}
+
+void* ledger_util_ref_malloc(size_t siz, ledger_util_ref_dtor dtor){
+  if (siz == 0) return NULL;
+  return refalloc_malloc(siz, dtor);
+}
+
+void* ledger_util_ref_acquire(void* ptr){
+  return refalloc_acquire(ptr);
+}
+
+void ledger_util_ref_free(void* ptr){
+  refalloc_release(ptr);
   return;
 }
 

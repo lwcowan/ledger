@@ -10,6 +10,7 @@
 
 static int allocate_test(void);
 static int allocate_table_test(void);
+static int acquire_table_test(void);
 static int description_test(void);
 static int null_description_test(void);
 static int name_test(void);
@@ -31,6 +32,7 @@ struct test_struct {
 struct test_struct test_array[] = {
   { allocate_test, "allocate" },
   { allocate_table_test, "table pre-allocation" },
+  { acquire_table_test, "table acquisition" },
   { description_test, "description" },
   { null_description_test, "null_description" },
   { name_test, "name" },
@@ -70,6 +72,37 @@ int allocate_table_test(void){
       if (ledger_table_get_column_type(table,2) != 1) break;
       if (ledger_table_get_column_type(table,3) != 2) break;
       if (ledger_table_get_column_type(table,4) != 3) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_journal_free(ptr);
+  return result;
+}
+
+int acquire_table_test(void){
+  int result = 0;
+  struct ledger_journal* ptr;
+  ptr = ledger_journal_new();
+  if (ptr == NULL) return 0;
+  else do {
+    if (ledger_journal_get_table(ptr) == NULL) break;
+    if (ledger_journal_acquire(ptr) != ptr) break;
+    if (ledger_journal_get_table_c(ptr) == NULL) break;
+    ledger_journal_free(ptr);
+    /* check the table */{
+      struct ledger_table* table;
+      table = ledger_journal_get_table(ptr);
+      if (table == NULL) break;
+      if (ledger_table_acquire(table) != table) break;
+      ledger_journal_free(ptr);
+      ptr = NULL;
+      if (ledger_table_get_column_count(table) != 5) break;
+      if (ledger_table_get_column_type(table,0) != 1) break;
+      if (ledger_table_get_column_type(table,1) != 1) break;
+      if (ledger_table_get_column_type(table,2) != 1) break;
+      if (ledger_table_get_column_type(table,3) != 2) break;
+      if (ledger_table_get_column_type(table,4) != 3) break;
+      ledger_table_free(table);
     }
     result = 1;
   } while (0);
