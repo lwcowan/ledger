@@ -22,6 +22,13 @@ struct ledger_journal;
 struct ledger_journal* ledger_journal_new(void);
 
 /*
+ * Acquire a reference to a journal.
+ * - a an old journal
+ * @return the journal on success, otherwise NULL
+ */
+struct ledger_journal* ledger_journal_acquire(struct ledger_journal* a);
+
+/*
  * Destroy a journal.
  * - a the journal to destroy
  */

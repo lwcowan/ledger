@@ -48,10 +48,30 @@ static int ledger_journal_init(struct ledger_journal* a);
  */
 static void ledger_journal_clear(struct ledger_journal* a);
 
+/*
+ * Callback for cleaning up a journal.
+ * - j pointer to a journal
+ */
+static void ledger_journal_free_cb(void* j);
+
+
 
 /* BEGIN static implementation */
 
+void ledger_journal_free_cb(void* j){
+  ledger_journal_clear((struct ledger_journal*) j);
+  return;
+}
+
 int ledger_journal_init(struct ledger_journal* a){
+  /* NOTE pre-clear compatible */
+  a->description = NULL;
+  a->name = NULL;
+  a->item_id = -1;
+  a->sequence_id = 0;
+  a->entries = NULL;
+  a->entry_count = 0;
+  a->table = NULL;
   /* prepare the table */{
     int ok = 0;
     int const schema_size = sizeof(ledger_journal_schema)/
@@ -71,12 +91,6 @@ int ledger_journal_init(struct ledger_journal* a){
       a->table = new_table;
     }
   }
-  a->description = NULL;
-  a->name = NULL;
-  a->item_id = -1;
-  a->sequence_id = 0;
-  a->entries = NULL;
-  a->entry_count = 0;
   return 1;
 }
 
@@ -98,21 +112,25 @@ void ledger_journal_clear(struct ledger_journal* a){
 /* BEGIN implementation */
 
 struct ledger_journal* ledger_journal_new(void){
-  struct ledger_journal* a = (struct ledger_journal* )ledger_util_malloc
-    (sizeof(struct ledger_journal));
+  struct ledger_journal* a = (struct ledger_journal* )ledger_util_ref_malloc
+    (sizeof(struct ledger_journal), ledger_journal_free_cb);
   if (a != NULL){
     if (!ledger_journal_init(a)){
-      ledger_util_free(a);
+      ledger_util_ref_free(a);
       a = NULL;
     }
   }
   return a;
 }
 
+struct ledger_journal* ledger_journal_acquire(struct ledger_journal* a){
+  return (struct ledger_journal*)ledger_util_ref_acquire(a);
+}
+
 void ledger_journal_free(struct ledger_journal* a){
   if (a != NULL){
-    ledger_journal_clear(a);
-    ledger_util_free(a);
+    /* NOTE ledger_journal_clear(a); called indirectly */
+    ledger_util_ref_free(a);
   }
 }
 
