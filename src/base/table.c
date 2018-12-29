@@ -17,6 +17,16 @@
 #endif /*LEDGER_TABLE_SCHEMA_MAX*/
 
 /*
+ * Row schema.
+ */
+struct ledger_table_schema {
+  /* column line */
+  int columns;
+  /* column types */
+  int types[];
+};
+
+/*
  * Table item
  */
 union ledger_table_item {
@@ -44,12 +54,10 @@ struct ledger_table_row {
  * Actualization of the table structure
  */
 struct ledger_table {
-  /* column line */
-  int columns;
+  /* column schema */
+  struct ledger_table_schema *schema;
   /* row count cache */
   int rows;
-  /* column types */
-  int* column_types;
   /* double-linked list of table rows */
   struct ledger_table_row root;
 };
@@ -116,6 +124,43 @@ static void ledger_table_row_free
  */
 static void ledger_table_drop_all_rows(struct ledger_table* table);
 
+/*
+ * Construct a new table schema.
+ * - columns number of columns to use
+ * @return the schema on success, NULL otherwise
+ */
+static struct ledger_table_schema* ledger_table_schema_new
+  (int columns, int const* types);
+
+/*
+ * Acquire a table schema.
+ * - sch the schema to acquire
+ * @return the schema on success, NULL otherwise
+ */
+static struct ledger_table_schema* ledger_table_schema_acquire
+  (struct ledger_table_schema* sch);
+
+/*
+ * Clear out a schema.
+ * - sch the schema to clear
+ */
+static void ledger_table_schema_clear(struct ledger_table_schema* sch);
+
+/*
+ * Release a schema.
+ * - sch the schema to release
+ */
+static void ledger_table_schema_free(struct ledger_table_schema* sch);
+
+/*
+ * Compare two schemata for equality.
+ * - a one schema
+ * - b another schema
+ * @return nonzero if the schemata are equal, zero otherwise
+ */
+int ledger_table_schema_is_equal
+  (struct ledger_table_schema const* a, struct ledger_table_schema const* b);
+
 
 /* BEGIN static implementation */
 
@@ -126,9 +171,8 @@ void ledger_table_free_cb(void* t){
 
 int ledger_table_init(struct ledger_table* t){
   /* NOTE pre-clear compatible */
-  t->columns = 0;
+  t->schema = NULL;
   t->rows = 0;
-  t->column_types = NULL;
   t->root.prev = &t->root;
   t->root.next = &t->root;
   return 1;
@@ -136,9 +180,8 @@ int ledger_table_init(struct ledger_table* t){
 
 void ledger_table_clear(struct ledger_table* t){
   ledger_table_drop_all_rows(t);
-  ledger_util_free(t->column_types);
-  t->column_types = NULL;
-  t->columns = 0;
+  ledger_table_schema_free(t->schema);
+  t->schema = NULL;
   return;
 }
 
@@ -230,6 +273,65 @@ void ledger_table_drop_all_rows(struct ledger_table* table){
   return;
 }
 
+void ledger_table_schema_free_cb(void* ptr){
+  ledger_table_schema_clear((struct ledger_table_schema*)ptr);
+  return;
+}
+
+struct ledger_table_schema* ledger_table_schema_new
+  (int columns, int const* types)
+{
+  /* NOTE pre-clear compatible */
+  struct ledger_table_schema* new_schema = (struct ledger_table_schema*)
+      ledger_util_ref_malloc
+        ( sizeof(struct ledger_table_schema)+columns*sizeof(int),
+          ledger_table_schema_free_cb);
+  if (new_schema != NULL){
+    int i;
+    new_schema->columns = columns;
+    for (i = 0; i < columns; ++i){
+      new_schema->types[i] = types[i];
+    }
+    return new_schema;
+  } else return NULL;
+}
+
+struct ledger_table_schema* ledger_table_schema_acquire
+  (struct ledger_table_schema* sch)
+{
+  return (struct ledger_table_schema*)ledger_util_ref_acquire(sch);
+}
+
+void ledger_table_schema_free(struct ledger_table_schema* sch){
+  if (sch != NULL){
+    ledger_util_ref_free(sch);
+  }
+  return;
+}
+
+void ledger_table_schema_clear(struct ledger_table_schema* sch){
+  int i;
+  for (i = 0; i < sch->columns; ++i){
+    sch->types[i] = -1;
+  }
+  return;
+}
+
+int ledger_table_schema_is_equal
+  (struct ledger_table_schema const* a, struct ledger_table_schema const* b)
+{
+  /* trivial table schemata */
+  if (a == NULL && b == NULL) return 1;
+  else if (a == NULL || b == NULL) return 0;
+  /* compare top-level features */{
+    if (a->columns != b->columns)
+      return 0;
+    if (memcmp(a->types, b->types, sizeof(int)*a->columns) != 0)
+      return 0;
+  }
+  return 1;
+}
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -267,15 +369,12 @@ int ledger_table_is_equal
   /* compare top-level features */{
     if (a->rows != b->rows)
       return 0;
-    if (a->columns != b->columns)
-      return 0;
-    if (memcmp(a->column_types, b->column_types,
-        sizeof(unsigned char)*a->columns) != 0)
+    if (!ledger_table_schema_is_equal(a->schema, b->schema))
       return 0;
   }
-  /* compare row by row */{
-    int const columns = a->columns;
-    int const* const schema = a->column_types;
+  /* compare row by row */if (a->schema != NULL){
+    int const columns = a->schema->columns;
+    int const* const schema = a->schema->types;
     struct ledger_table_mark a_mark = {a,a->root.next,0};
     struct ledger_table_mark b_mark = {b,b->root.next,0};
     for (; a_mark.row != &a->root && b_mark.row != &b->root;
@@ -338,18 +437,19 @@ void ledger_table_mark_free(struct ledger_table_mark* m){
 }
 
 int ledger_table_get_column_count(struct ledger_table const* t){
-  return t->columns;
+  return t->schema != NULL ? t->schema->columns : 0;
 }
 
 int ledger_table_get_column_type(struct ledger_table const* t, int i){
-  if (i < 0 || i >= t->columns) return 0;
-  else return t->column_types[i];
+  struct ledger_table_schema const* const s = t->schema;
+  if (s == NULL || i < 0 || i >= s->columns) return 0;
+  else return s->types[i];
 }
 
 int ledger_table_set_column_types
   (struct ledger_table* t, int n, int const* types)
 {
-  int *new_schema;
+  struct ledger_table_schema *new_schema;
   /* validate the types */{
     int i;
     if (n > LEDGER_TABLE_SCHEMA_MAX) return 0;
@@ -362,20 +462,15 @@ int ledger_table_set_column_types
     if (i < n) /* invalid schema so */return 0;
   }
   /* allocate the column schema */{
-    new_schema = (int*)ledger_util_malloc(n*sizeof(int));
+    new_schema = ledger_table_schema_new(n, types);
     if (new_schema == NULL) return 0;
-    else {
-      if (n > 0)
-        memcpy(new_schema,types,sizeof(int)*n);
-    }
   }
   /* reset the rows */{
     ledger_table_drop_all_rows(t);
   }
   /* store the new schema */{
-    ledger_util_free(t->column_types);
-    t->column_types = new_schema;
-    t->columns = n;
+    ledger_table_schema_free(t->schema);
+    t->schema = new_schema;
   }
   return 1;
 }
@@ -390,9 +485,12 @@ int ledger_table_add_row(struct ledger_table_mark* mark){
     struct ledger_table* const table = (struct ledger_table *)mark->source;
     struct ledger_table_row * const old_row = mark->row;
     struct ledger_table_row *new_row = NULL;
+    struct ledger_table_schema const* const schema = table->schema;
+    int const columns = ((schema!=NULL)?schema->columns:0);
+    int const* const types = ((schema!=NULL)?schema->types:0);
     do {
       /* allocate the row */
-      new_row = ledger_table_row_new(table->columns, table->column_types);
+      new_row = ledger_table_row_new(columns, types);
       if (new_row == NULL) break;
       /* attach the row */
       new_row->prev = old_row->prev;
@@ -406,7 +504,7 @@ int ledger_table_add_row(struct ledger_table_mark* mark){
       result = 1;
     } while (0);
     if (!result){
-      ledger_table_row_free(new_row, table->columns, table->column_types);
+      ledger_table_row_free(new_row, schema->columns, schema->types);
     }
     return result;
   } else return 0;
@@ -417,6 +515,9 @@ int ledger_table_drop_row(struct ledger_table_mark* mark){
     int result;
     struct ledger_table* const table = (struct ledger_table *)mark->source;
     struct ledger_table_row * const old_row = mark->row;
+    struct ledger_table_schema const* const schema = table->schema;
+    int const columns = ((schema!=NULL)?schema->columns:0);
+    int const* const types = ((schema!=NULL)?schema->types:0);
     if (old_row == &table->root){
       /* don't allow it */;
       result = 0;
@@ -427,7 +528,7 @@ int ledger_table_drop_row(struct ledger_table_mark* mark){
       /* move the mark */
       mark->row = old_row->prev;
       /* free the row */
-      ledger_table_row_free(old_row, table->columns, table->column_types);
+      ledger_table_row_free(old_row, columns, types);
       /* cache the new row count */
       table->rows -= 1;
       result = 1;
@@ -443,14 +544,17 @@ int ledger_table_fetch_string
     int result;
     struct ledger_table* const table = (struct ledger_table *)mark->source;
     struct ledger_table_row * const old_row = mark->row;
+    struct ledger_table_schema const* const schema = table->schema;
+    int const columns = ((schema!=NULL)?schema->columns:0);
+    int const* const types = ((schema!=NULL)?schema->types:0);
     if (old_row == &table->root
     ||  i < 0
-    ||  i >= table->columns)
+    ||  i >= columns)
     {
       /* don't allow it */;
       result = -1;
     } else /* fetch the string */{
-      switch (table->column_types[i]){
+      switch (types[i]){
       case LEDGER_TABLE_ID:
         if (old_row->data[i].item_id < 0){
           result = 0;
@@ -492,14 +596,17 @@ int ledger_table_put_string
     int result;
     struct ledger_table* const table = (struct ledger_table *)mark->source;
     struct ledger_table_row * const old_row = mark->row;
+    struct ledger_table_schema const* const schema = table->schema;
+    int const columns = ((schema!=NULL)?schema->columns:0);
+    int const* const types = ((schema!=NULL)?schema->types:0);
     if (old_row == &table->root
     ||  i < 0
-    ||  i >= table->columns)
+    ||  i >= columns)
     {
       /* don't allow it */;
       result = -1;
     } else /* put the string */{
-      switch (table->column_types[i]){
+      switch (types[i]){
       case LEDGER_TABLE_ID:
         if (value == NULL || *value == 0){
           old_row->data[i].item_id = -1;
@@ -551,14 +658,17 @@ int ledger_table_fetch_bignum
     int result;
     struct ledger_table* const table = (struct ledger_table *)mark->source;
     struct ledger_table_row * const old_row = mark->row;
+    struct ledger_table_schema const* const schema = table->schema;
+    int const columns = ((schema!=NULL)?schema->columns:0);
+    int const* const types = ((schema!=NULL)?schema->types:0);
     if (old_row == &table->root
     ||  i < 0
-    ||  i >= table->columns)
+    ||  i >= columns)
     {
       /* don't allow it */;
       result = -1;
     } else /* fetch the string */{
-      switch (table->column_types[i]){
+      switch (types[i]){
       case LEDGER_TABLE_ID:
         if (old_row->data[i].item_id < 0){
           result = ledger_bignum_set_long(n, -1);
@@ -591,14 +701,17 @@ int ledger_table_put_bignum
     int result;
     struct ledger_table* const table = (struct ledger_table *)mark->source;
     struct ledger_table_row * const old_row = mark->row;
+    struct ledger_table_schema const* const schema = table->schema;
+    int const columns = ((schema!=NULL)?schema->columns:0);
+    int const* const types = ((schema!=NULL)?schema->types:0);
     if (old_row == &table->root
     ||  i < 0
-    ||  i >= table->columns)
+    ||  i >= columns)
     {
       /* don't allow it */;
       result = -1;
     } else /* put the string */{
-      switch (table->column_types[i]){
+      switch (types[i]){
       case LEDGER_TABLE_ID:
         if (value == NULL){
           old_row->data[i].item_id = 0;
@@ -676,14 +789,17 @@ int ledger_table_fetch_id
     int result;
     struct ledger_table* const table = (struct ledger_table *)mark->source;
     struct ledger_table_row * const old_row = mark->row;
+    struct ledger_table_schema const* const schema = table->schema;
+    int const columns = ((schema!=NULL)?schema->columns:0);
+    int const* const types = ((schema!=NULL)?schema->types:0);
     if (old_row == &table->root
     ||  i < 0
-    ||  i >= table->columns)
+    ||  i >= columns)
     {
       /* don't allow it */;
       result = -1;
     } else /* fetch the string */{
-      switch (table->column_types[i]){
+      switch (types[i]){
       case LEDGER_TABLE_ID:
         if (old_row->data[i].item_id < 0){
           *n = -1;
@@ -721,14 +837,17 @@ int ledger_table_put_id
     int result;
     struct ledger_table* const table = (struct ledger_table *)mark->source;
     struct ledger_table_row * const old_row = mark->row;
+    struct ledger_table_schema const* const schema = table->schema;
+    int const columns = ((schema!=NULL)?schema->columns:0);
+    int const* const types = ((schema!=NULL)?schema->types:0);
     if (old_row == &table->root
     ||  i < 0
-    ||  i >= table->columns)
+    ||  i >= columns)
     {
       /* don't allow it */;
       result = -1;
     } else /* put the string */{
-      switch (table->column_types[i]){
+      switch (types[i]){
       case LEDGER_TABLE_ID:
         if (value < 0){
           old_row->data[i].item_id = -1;
