@@ -206,9 +206,12 @@ struct ledger_table_row* ledger_table_row_new(int n, int const* schema){
   if (new_row != NULL){
     int ok = 0;
     do {
-      /* initialize each element in the row */
       int i;
       int entry_ok = 0;
+      /* initialize row pointers */
+      new_row->next = new_row;
+      new_row->prev = new_row;
+      /* initialize each element in the row */
       for (i = 0; i < n; ++i){
         switch (schema[i]){
         case LEDGER_TABLE_ID:
@@ -240,6 +243,10 @@ struct ledger_table_row* ledger_table_row_new(int n, int const* schema){
 void ledger_table_row_free
   (struct ledger_table_row* r, int n, int const* schema)
 {
+  /* detach the row */{
+    r->prev->next = r->next;
+    r->next->prev = r->prev;
+  }
   /* free the row entries */{
     int i;
     for (i = 0; i < n; ++i){
@@ -260,6 +267,16 @@ void ledger_table_row_free
     ledger_util_free(r);
   }
   return;
+}
+
+int ledger_table_row_attach
+  (struct ledger_table_row* new_row, struct ledger_table_row* old_row)
+{
+  new_row->prev = old_row->prev;
+  new_row->next = old_row;
+  old_row->prev->next = new_row;
+  old_row->prev = new_row;
+  return 1;
 }
 
 void ledger_table_drop_all_rows(struct ledger_table* table){
@@ -493,10 +510,8 @@ int ledger_table_add_row(struct ledger_table_mark* mark){
       new_row = ledger_table_row_new(columns, types);
       if (new_row == NULL) break;
       /* attach the row */
-      new_row->prev = old_row->prev;
-      new_row->next = old_row;
-      old_row->prev->next = new_row;
-      old_row->prev = new_row;
+      if (!ledger_table_row_attach(new_row, old_row))
+        break;
       /* set mark to new row */
       mark->row = new_row;
       /* cache the new row count */
@@ -522,12 +537,9 @@ int ledger_table_drop_row(struct ledger_table_mark* mark){
       /* don't allow it */;
       result = 0;
     } else /* remove the row */{
-      /* detach the row */
-      old_row->prev->next = old_row->next;
-      old_row->next->prev = old_row->prev;
       /* move the mark */
       mark->row = old_row->prev;
-      /* free the row */
+      /* free the row (NOTE also detaches) */
       ledger_table_row_free(old_row, columns, types);
       /* cache the new row count */
       table->rows -= 1;
