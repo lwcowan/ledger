@@ -91,6 +91,28 @@ static int ledger_table_init(struct ledger_table* t);
 static void ledger_table_clear(struct ledger_table* t);
 
 /*
+ * Lock a table for modification.
+ * - t table to lock
+ * @return one on success, zero on failure
+ */
+static void ledger_table_lock(struct ledger_table const* t);
+
+/*
+ * Lock two tables simultaneously for modification.
+ * - t first table to lock
+ * - t2 second table to lock
+ * @return one on success, zero on failure
+ */
+static void ledger_table_lock2
+  (struct ledger_table const* t, struct ledger_table const* t2);
+
+/*
+ * Unlock a table for modification.
+ * - t table to unlock
+ */
+static void ledger_table_unlock(struct ledger_table const* t);
+
+/*
  * Construct a new mark.
  * - t table to use
  * - row row pointer
@@ -161,8 +183,118 @@ static void ledger_table_schema_free(struct ledger_table_schema* sch);
 int ledger_table_schema_is_equal
   (struct ledger_table_schema const* a, struct ledger_table_schema const* b);
 
+/*
+ * Subroutine for table comparison.
+ * - a first table
+ * - b second table
+ * @return one if equal, zero otherwise
+ */
+static int ledger_table_is_equal_sub
+  (struct ledger_table const* a, struct ledger_table const* b);
+
+/*
+ * Subroutine for table row insertion.
+ * - mark mark pointing to the neighboring row
+ * @return one on success, zero otherwise
+ */
+static int ledger_table_add_row_sub(struct ledger_table_mark* mark);
+
+/*
+ * Subroutine for table row deletion.
+ * - mark mark pointing to the row to delete
+ * @return one on success, zero otherwise
+ */
+static int ledger_table_drop_row_sub(struct ledger_table_mark* mark);
+
+/*
+ * Subroutine for fetching strings from a field.
+ * - mark mark pointing to the row to read
+ * - i field index
+ * - buf output buffer
+ * - len length of buffer in bytes
+ * @return one on success, zero otherwise
+ */
+static int ledger_table_fetch_string_sub
+  (struct ledger_table_mark const* mark, int i, unsigned char* buf, int len);
+
+/*
+ * Subroutine for putting identifiers to a field.
+ * - mark mark pointing to the row to write
+ * - i field index
+ * - value identifier to put
+ * @return one on success, zero otherwise
+ */
+static int ledger_table_put_id_sub
+  ( struct ledger_table_mark const* mark, int i, int value);
+
+/*
+ * Subroutine for fetching identifiers from a field.
+ * - mark mark pointing to the row to read
+ * - i field index
+ * - n place to stored the fetched identifier
+ * @return one on success, zero otherwise
+ */
+static int ledger_table_fetch_id_sub
+  (struct ledger_table_mark const* mark, int i, int* n);
+
+/*
+ * Subroutine for putting big numbers to a field.
+ * - mark mark pointing to the row to write
+ * - i field index
+ * - value number to put
+ * @return one on success, zero otherwise
+ */
+static int ledger_table_put_bignum_sub
+  ( struct ledger_table_mark const* mark, int i,
+    struct ledger_bignum const* value);
+
+/*
+ * Subroutine for fetching big numbers from a field.
+ * - mark mark pointing to the row to read
+ * - i field index
+ * - n place to stored the fetched number
+ * @return one on success, zero otherwise
+ */
+static int ledger_table_fetch_bignum_sub
+  (struct ledger_table_mark const* mark, int i, struct ledger_bignum* n);
+
+/*
+ * Subroutine for putting strings to a field.
+ * - mark mark pointing to the row to write
+ * - i field index
+ * - value string to put
+ * @return one on success, zero otherwise
+ */
+static int ledger_table_put_string_sub
+  (struct ledger_table_mark const* mark, int i, unsigned char const* value);
 
 /* BEGIN static implementation */
+
+void ledger_table_lock(struct ledger_table const* t){
+  return;
+}
+
+void ledger_table_lock2
+  (struct ledger_table const* t, struct ledger_table const* t2)
+{
+  unsigned char buf[sizeof(struct ledger_table const*)];
+  unsigned char buf2[sizeof(struct ledger_table const*)];
+  memcpy(buf,&t,sizeof(t));
+  memcpy(buf2,&t2,sizeof(t2));
+  /* create a fixed locking order to eliminate deadlocks */
+  if (memcmp(buf,buf2,sizeof(t)) < 0){
+    ledger_table_lock(t);
+    ledger_table_lock(t2);
+  } else {
+    ledger_table_lock(t2);
+    ledger_table_lock(t);
+  }
+  return;
+}
+
+void ledger_table_unlock(struct ledger_table const* t){
+  return;
+}
 
 void ledger_table_free_cb(void* t){
   ledger_table_clear((struct ledger_table*) t);
@@ -358,40 +490,10 @@ int ledger_table_schema_is_equal
   return 1;
 }
 
-/* END   static implementation */
 
-/* BEGIN implementation */
-
-struct ledger_table* ledger_table_new(void){
-  struct ledger_table* t = (struct ledger_table* )ledger_util_ref_malloc
-    (sizeof(struct ledger_table), ledger_table_free_cb);
-  if (t != NULL){
-    if (!ledger_table_init(t)){
-      ledger_util_ref_free(t);
-      t = NULL;
-    }
-  }
-  return t;
-}
-
-struct ledger_table* ledger_table_acquire(struct ledger_table* t){
-  return (struct ledger_table*)ledger_util_ref_acquire(t);
-}
-
-void ledger_table_free(struct ledger_table* t){
-  if (t != NULL){
-    /*NOTE ledger_table_clear(t); called indirectly*/
-    ledger_util_ref_free(t);
-  }
-}
-
-
-int ledger_table_is_equal
+int ledger_table_is_equal_sub
   (struct ledger_table const* a, struct ledger_table const* b)
 {
-  /* trivial tables */
-  if (a == NULL && b == NULL) return 1;
-  else if (a == NULL || b == NULL) return 0;
   /* compare top-level features */{
     if (a->rows != b->rows)
       return 0;
@@ -434,78 +536,7 @@ int ledger_table_is_equal
   return 1;
 }
 
-struct ledger_table_mark* ledger_table_begin(struct ledger_table* t){
-  return ledger_table_mark_new(t, t->root->next, 1);
-}
-
-struct ledger_table_mark* ledger_table_begin_c
-  (struct ledger_table const* t)
-{
-  return ledger_table_mark_new(t, t->root->next, 0);
-}
-
-struct ledger_table_mark* ledger_table_end(struct ledger_table* t){
-  return ledger_table_mark_new(t, t->root, 1);
-}
-
-struct ledger_table_mark* ledger_table_end_c(struct ledger_table const* t){
-  return ledger_table_mark_new(t, t->root, 0);
-}
-
-int ledger_table_mark_is_equal
-  (struct ledger_table_mark const* a, struct ledger_table_mark const* b)
-{
-  return (a->source == b->source &&  a->row == b->row);
-}
-
-void ledger_table_mark_free(struct ledger_table_mark* m){
-  ledger_util_free(m);
-}
-
-int ledger_table_get_column_count(struct ledger_table const* t){
-  return t->schema != NULL ? t->schema->columns : 0;
-}
-
-int ledger_table_get_column_type(struct ledger_table const* t, int i){
-  struct ledger_table_schema const* const s = t->schema;
-  if (s == NULL || i < 0 || i >= s->columns) return 0;
-  else return s->types[i];
-}
-
-int ledger_table_set_column_types
-  (struct ledger_table* t, int n, int const* types)
-{
-  struct ledger_table_schema *new_schema;
-  /* validate the types */{
-    int i;
-    if (n > LEDGER_TABLE_SCHEMA_MAX) return 0;
-    for (i = 0; i < n; ++i){
-      if (types[i] >= 1 && types[i] <= 3)
-        continue;
-      else
-        break;
-    }
-    if (i < n) /* invalid schema so */return 0;
-  }
-  /* allocate the column schema */{
-    new_schema = ledger_table_schema_new(n, types);
-    if (new_schema == NULL) return 0;
-  }
-  /* reset the rows */{
-    ledger_table_drop_all_rows(t);
-  }
-  /* store the new schema */{
-    ledger_table_schema_free(t->schema);
-    t->schema = new_schema;
-  }
-  return 1;
-}
-
-int ledger_table_count_rows(struct ledger_table const* t){
-  return t->rows;
-}
-
-int ledger_table_add_row(struct ledger_table_mark* mark){
+int ledger_table_add_row_sub(struct ledger_table_mark* mark){
   if (mark->mutable_flag){
     int result = 0;
     struct ledger_table* const table = (struct ledger_table *)mark->source;
@@ -534,7 +565,7 @@ int ledger_table_add_row(struct ledger_table_mark* mark){
   } else return 0;
 }
 
-int ledger_table_drop_row(struct ledger_table_mark* mark){
+int ledger_table_drop_row_sub(struct ledger_table_mark* mark){
   if (mark->mutable_flag){
     int result;
     struct ledger_table* const table = (struct ledger_table *)mark->source;
@@ -558,7 +589,7 @@ int ledger_table_drop_row(struct ledger_table_mark* mark){
   } else return 0;
 }
 
-int ledger_table_fetch_string
+int ledger_table_fetch_string_sub
   (struct ledger_table_mark const* mark, int i, unsigned char* buf, int len)
 {
   /* const or mutable accepted */{
@@ -610,7 +641,7 @@ int ledger_table_fetch_string
   }
 }
 
-int ledger_table_put_string
+int ledger_table_put_string_sub
   (struct ledger_table_mark const* mark, int i, unsigned char const* value)
 {
   if (mark->mutable_flag){
@@ -672,7 +703,7 @@ int ledger_table_put_string
   } else return 0;
 }
 
-int ledger_table_fetch_bignum
+int ledger_table_fetch_bignum_sub
   (struct ledger_table_mark const* mark, int i, struct ledger_bignum* n)
 {
   /* const or mutable accepted */{
@@ -714,7 +745,7 @@ int ledger_table_fetch_bignum
   }
 }
 
-int ledger_table_put_bignum
+int ledger_table_put_bignum_sub
   ( struct ledger_table_mark const* mark, int i,
     struct ledger_bignum const* value)
 {
@@ -788,22 +819,8 @@ int ledger_table_put_bignum
   } else return 0;
 }
 
-void ledger_table_mark_move(struct ledger_table_mark* m, int n){
-  if (n > 0){
-    int i;
-    for (i = 0; i < n; ++i){
-      m->row = m->row->next;
-    }
-  } else if (n < 0){
-    int i;
-    for (i = 0; i > n; --i){
-      m->row = m->row->prev;
-    }
-  } else /* stay put and */return;
-}
 
-
-int ledger_table_fetch_id
+int ledger_table_fetch_id_sub
   (struct ledger_table_mark const* mark, int i, int* n)
 {
   /* const or mutable accepted */{
@@ -851,7 +868,7 @@ int ledger_table_fetch_id
   }
 }
 
-int ledger_table_put_id
+int ledger_table_put_id_sub
   ( struct ledger_table_mark const* mark, int i, int value)
 {
   if (mark->mutable_flag){
@@ -918,6 +935,251 @@ int ledger_table_put_id
     }
     return result;
   } else return 0;
+}
+
+/* END   static implementation */
+
+/* BEGIN implementation */
+
+struct ledger_table* ledger_table_new(void){
+  struct ledger_table* t = (struct ledger_table* )ledger_util_ref_malloc
+    (sizeof(struct ledger_table), ledger_table_free_cb);
+  if (t != NULL){
+    if (!ledger_table_init(t)){
+      ledger_util_ref_free(t);
+      t = NULL;
+    }
+  }
+  return t;
+}
+
+struct ledger_table* ledger_table_acquire(struct ledger_table* t){
+  return (struct ledger_table*)ledger_util_ref_acquire(t);
+}
+
+void ledger_table_free(struct ledger_table* t){
+  if (t != NULL){
+    /*NOTE ledger_table_clear(t); called indirectly*/
+    ledger_util_ref_free(t);
+  }
+}
+
+
+int ledger_table_is_equal
+  (struct ledger_table const* a, struct ledger_table const* b)
+{
+  int result;
+  /* trivial tables */
+  if (a == NULL && b == NULL) return 1;
+  else if (a == NULL || b == NULL) return 0;
+  ledger_table_lock2(a,b);
+  result = ledger_table_is_equal_sub(a,b);
+  ledger_table_unlock(a);
+  ledger_table_unlock(b);
+  return result;
+}
+
+struct ledger_table_mark* ledger_table_begin(struct ledger_table* t){
+  struct ledger_table_mark* m;
+  ledger_table_lock(t);
+  m = ledger_table_mark_new(t, t->root->next, 1);
+  ledger_table_unlock(t);
+  return m;
+}
+
+struct ledger_table_mark* ledger_table_begin_c
+  (struct ledger_table const* t)
+{
+  struct ledger_table_mark* m;
+  ledger_table_lock(t);
+  m = ledger_table_mark_new(t, t->root->next, 0);
+  ledger_table_unlock(t);
+  return m;
+}
+
+struct ledger_table_mark* ledger_table_end(struct ledger_table* t){
+  struct ledger_table_mark* m;
+  ledger_table_lock(t);
+  m = ledger_table_mark_new(t, t->root, 1);
+  ledger_table_unlock(t);
+  return m;
+}
+
+struct ledger_table_mark* ledger_table_end_c(struct ledger_table const* t){
+  struct ledger_table_mark* m;
+  ledger_table_lock(t);
+  m = ledger_table_mark_new(t, t->root, 0);
+  ledger_table_unlock(t);
+  return m;
+}
+
+int ledger_table_mark_is_equal
+  (struct ledger_table_mark const* a, struct ledger_table_mark const* b)
+{
+  return (a->source == b->source &&  a->row == b->row);
+}
+
+void ledger_table_mark_free(struct ledger_table_mark* m){
+  ledger_util_free(m);
+}
+
+int ledger_table_get_column_count(struct ledger_table const* t){
+  int columns;
+  ledger_table_lock(t);
+  columns = t->schema != NULL ? t->schema->columns : 0;
+  ledger_table_unlock(t);
+  return columns;
+}
+
+int ledger_table_get_column_type(struct ledger_table const* t, int i){
+  int typ;
+  ledger_table_lock(t);
+  /* get type value */{
+    struct ledger_table_schema const* const s = t->schema;
+    if (s == NULL || i < 0 || i >= s->columns) typ = 0;
+    else typ = s->types[i];
+  }
+  ledger_table_unlock(t);
+  return typ;
+}
+
+int ledger_table_set_column_types
+  (struct ledger_table* t, int n, int const* types)
+{
+  struct ledger_table_schema *new_schema;
+  /* validate the types */{
+    int i;
+    if (n > LEDGER_TABLE_SCHEMA_MAX) return 0;
+    for (i = 0; i < n; ++i){
+      if (types[i] >= 1 && types[i] <= 3)
+        continue;
+      else
+        break;
+    }
+    if (i < n) /* invalid schema so */return 0;
+  }
+  /* allocate the column schema */{
+    new_schema = ledger_table_schema_new(n, types);
+    if (new_schema == NULL) return 0;
+  }
+  ledger_table_lock(t);
+  /* reset the rows */{
+    ledger_table_drop_all_rows(t);
+  }
+  /* store the new schema */{
+    ledger_table_schema_free(t->schema);
+    t->schema = new_schema;
+  }
+  ledger_table_unlock(t);
+  return 1;
+}
+
+int ledger_table_count_rows(struct ledger_table const* t){
+  int nrows;
+  ledger_table_lock(t);
+  nrows = t->rows;
+  ledger_table_unlock(t);
+  return nrows;
+}
+
+int ledger_table_add_row(struct ledger_table_mark* mark){
+  int result;
+  ledger_table_lock(mark->source);
+  result = ledger_table_add_row_sub(mark);
+  ledger_table_unlock(mark->source);
+  return result;
+}
+
+int ledger_table_drop_row(struct ledger_table_mark* mark){
+  int result;
+  ledger_table_lock(mark->source);
+  result = ledger_table_drop_row_sub(mark);
+  ledger_table_unlock(mark->source);
+  return result;
+}
+
+
+int ledger_table_fetch_string
+  (struct ledger_table_mark const* mark, int i, unsigned char* buf, int len)
+{
+  int result;
+  ledger_table_lock(mark->source);
+  result = ledger_table_fetch_string_sub(mark, i, buf, len);
+  ledger_table_unlock(mark->source);
+  return result;
+}
+
+
+int ledger_table_put_string
+  (struct ledger_table_mark const* mark, int i, unsigned char const* value)
+{
+  int result;
+  ledger_table_lock(mark->source);
+  result = ledger_table_put_string_sub(mark, i, value);
+  ledger_table_unlock(mark->source);
+  return result;
+}
+
+
+int ledger_table_fetch_bignum
+  (struct ledger_table_mark const* mark, int i, struct ledger_bignum* n)
+{
+  int result;
+  ledger_table_lock(mark->source);
+  result = ledger_table_fetch_bignum_sub(mark, i, n);
+  ledger_table_unlock(mark->source);
+  return result;
+}
+
+int ledger_table_put_bignum
+  ( struct ledger_table_mark const* mark, int i,
+    struct ledger_bignum const* value)
+{
+  int result;
+  ledger_table_lock(mark->source);
+  result = ledger_table_put_bignum_sub(mark, i, value);
+  ledger_table_unlock(mark->source);
+  return result;
+}
+
+
+void ledger_table_mark_move(struct ledger_table_mark* m, int n){
+  if (n == 0) return;
+  ledger_table_lock(m->source);
+  if (n > 0){
+    int i;
+    for (i = 0; i < n; ++i){
+      m->row = m->row->next;
+    }
+  } else if (n < 0){
+    int i;
+    for (i = 0; i > n; --i){
+      m->row = m->row->prev;
+    }
+  }
+  ledger_table_unlock(m->source);
+  return;
+}
+
+int ledger_table_fetch_id
+  (struct ledger_table_mark const* mark, int i, int* n)
+{
+  int result;
+  ledger_table_lock(mark->source);
+  result = ledger_table_fetch_id_sub(mark, i, n);
+  ledger_table_unlock(mark->source);
+  return result;
+}
+
+
+int ledger_table_put_id
+  ( struct ledger_table_mark const* mark, int i, int value)
+{
+  int result;
+  ledger_table_lock(mark->source);
+  result = ledger_table_put_id_sub(mark, i, value);
+  ledger_table_unlock(mark->source);
+  return result;
 }
 
 
