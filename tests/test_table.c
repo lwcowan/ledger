@@ -18,6 +18,8 @@ static int set_row_bignum_test(void);
 static int move_mark_test(void);
 static int nonzero_equal_test(void);
 static int set_row_id_test(void);
+static int suspend_row_test(void);
+static int suspend_lost_row_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -36,7 +38,9 @@ struct test_struct test_array[] = {
   { set_row_bignum_test, "set row bignum" },
   { set_row_id_test, "set row id" },
   { move_mark_test, "mark move" },
-  { nonzero_equal_test, "nonzero equal" }
+  { nonzero_equal_test, "nonzero equal" },
+  { suspend_row_test, "add a suspended row" },
+  { suspend_lost_row_test, "edit a suspended row" }
 };
 
 
@@ -561,6 +565,69 @@ int nonzero_equal_test(void){
     result = 1;
   } while (0);
   ledger_table_free(other_ptr);
+  ledger_table_free(ptr);
+  return result;
+}
+
+int suspend_row_test(void){
+  int result = 0;
+  struct ledger_table* ptr;
+  struct ledger_table_mark* mark = NULL;
+  ptr = ledger_table_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int ok;
+    int column_types[3] =
+      { LEDGER_TABLE_BIGNUM, LEDGER_TABLE_USTR, LEDGER_TABLE_ID };
+    ok = ledger_table_set_column_types(ptr,3,column_types);
+    if (!ok) break;
+    /* iterate from the start */{
+      int value;
+      mark = ledger_table_begin(ptr);
+      if (mark == NULL) break;
+      ok = ledger_table_add_row(mark);
+      if (!ok) break;
+      if (ledger_table_count_rows(ptr) != 1) break;
+      if (!ledger_table_put_id(mark, 0, 93)) break;
+      ledger_table_free(ptr);
+      ptr = NULL;
+      if (!ledger_table_fetch_id(mark, 0, &value)) break;
+      if (value != 93) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_table_mark_free(mark);
+  ledger_table_free(ptr);
+  return result;
+}
+
+int suspend_lost_row_test(void){
+  int result = 0;
+  struct ledger_table* ptr;
+  struct ledger_table_mark* mark = NULL;
+  ptr = ledger_table_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int ok;
+    int column_types[3] =
+      { LEDGER_TABLE_BIGNUM, LEDGER_TABLE_USTR, LEDGER_TABLE_ID };
+    ok = ledger_table_set_column_types(ptr,3,column_types);
+    if (!ok) break;
+    /* iterate from the start */{
+      mark = ledger_table_begin(ptr);
+      if (mark == NULL) break;
+      ok = ledger_table_add_row(mark);
+      if (!ok) break;
+      if (ledger_table_count_rows(ptr) != 1) break;
+      if (!ledger_table_put_id(mark, 0, 93)) break;
+      ledger_table_free(ptr);
+      ptr = NULL;
+      if (ledger_table_add_row(mark)) break;
+      if (ledger_table_drop_row(mark)) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_table_mark_free(mark);
   ledger_table_free(ptr);
   return result;
 }
