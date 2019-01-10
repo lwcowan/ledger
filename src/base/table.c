@@ -20,7 +20,9 @@
  * Row schema.
  */
 struct ledger_table_schema {
-  /* whether the schema is outdated */
+  /* lock flag */
+  int lock_tf;
+  /* whether the schema is outdated (0-no, 1-drop only, 2-yes)*/
   int outdated_tf;
   /* column line */
   int columns;
@@ -50,6 +52,8 @@ struct ledger_table_row {
   struct ledger_table_row* next;
   /* row schema */
   struct ledger_table_schema* schema;
+  /* root flag */
+  int root_tf;
   /* data content (C99 feature) */
   union ledger_table_item data[];
 };
@@ -58,6 +62,8 @@ struct ledger_table_row {
  * Actualization of the table structure
  */
 struct ledger_table {
+  /* lock value */
+  int lock_tf;
   /* column schema */
   struct ledger_table_schema *schema;
   /* row count cache */
@@ -102,13 +108,13 @@ static void ledger_table_clear(struct ledger_table* t);
 static void ledger_table_lock(struct ledger_table const* t);
 
 /*
- * Lock two tables simultaneously for modification.
- * - t first table to lock
- * - t2 second table to lock
+ * Lock two table schemata simultaneously for modification.
+ * - t first table schema to lock
+ * - t2 second table schema to lock
  * @return one on success, zero on failure
  */
-static void ledger_table_lock2
-  (struct ledger_table const* t, struct ledger_table const* t2);
+static void ledger_table_schema_lock2
+  (struct ledger_table_schema const* t, struct ledger_table_schema const* t2);
 
 /*
  * Unlock a table for modification.
@@ -125,6 +131,24 @@ static void ledger_table_unlock(struct ledger_table const* t);
 static struct ledger_table_mark* ledger_table_mark_new
   ( struct ledger_table const* t, struct ledger_table_row const* r,
     int mutable_flag);
+
+/*
+ * Construct a new mark in place.
+ * - t table to use
+ * - row row pointer
+ * - mutable_flag whether the mark should be allowed to modify the table
+ * - ptr pointer to the mark structrue
+ * @return one on success, zero otherwise
+ */
+static int ledger_table_mark_init
+  ( struct ledger_table const* t, struct ledger_table_row const* r,
+    int mutable_flag, struct ledger_table_mark* ptr);
+
+/*
+ * Clear a mark.
+ * - m the mark to clear
+ */
+void ledger_table_mark_clear(struct ledger_table_mark* m);
 
 /*
  * Construct a row given a schema.
@@ -209,7 +233,7 @@ int ledger_table_schema_is_equal
   (struct ledger_table_schema const* a, struct ledger_table_schema const* b);
 
 /*
- * Lock a table schema for modification.
+ * Recursively lock a table schema for modification of rows.
  * - t table schema to lock
  */
 static void ledger_table_schema_lock(struct ledger_table_schema const* t);
@@ -217,15 +241,16 @@ static void ledger_table_schema_lock(struct ledger_table_schema const* t);
 /*
  * Outdate a table schema.
  * - t table schema
+ * @return whether the caller acquired closing rights
  */
-static void ledger_table_schema_outdate(struct ledger_table_schema* t);
+static int ledger_table_schema_outdate(struct ledger_table_schema* t);
 
 /*
  * Check whether a schema is outdated.
  * - t table schema to query
  * @return one if the schema is outdated, zero otherwise
  */
-int ledger_table_schema_is_outdated(struct ledger_table_schema* t);
+int ledger_table_schema_is_outdated(struct ledger_table_schema const* t);
 
 /*
  * Unlock a table schema for modification.
@@ -234,13 +259,10 @@ int ledger_table_schema_is_outdated(struct ledger_table_schema* t);
 static void ledger_table_schema_unlock(struct ledger_table_schema const* t);
 
 /*
- * Subroutine for table comparison.
- * - a first table
- * - b second table
- * @return one if equal, zero otherwise
+ * Close a schema from further modification.
+ * - t the schema to close
  */
-static int ledger_table_is_equal_sub
-  (struct ledger_table const* a, struct ledger_table const* b);
+void ledger_table_schema_close(struct ledger_table_schema* t);
 
 /*
  * Subroutine for table row insertion.
@@ -326,31 +348,22 @@ static int ledger_table_put_string_sub
 static void ledger_table_mark_exchange
   (struct ledger_table_mark *mark, struct ledger_table_row* new_row);
 
+/*
+ * Add one to the mark, ensuring that the mark is still valid.
+ * - m the mark to advance
+ * @return one on success, zero if the mark is caught
+ */
+static int ledger_table_mark_add_one_checked(struct ledger_table_mark* m);
+
 /* BEGIN static implementation */
 
 void ledger_table_lock(struct ledger_table const* t){
-  return;
-}
-
-void ledger_table_lock2
-  (struct ledger_table const* t, struct ledger_table const* t2)
-{
-  unsigned char buf[sizeof(struct ledger_table const*)];
-  unsigned char buf2[sizeof(struct ledger_table const*)];
-  memcpy(buf,&t,sizeof(t));
-  memcpy(buf2,&t2,sizeof(t2));
-  /* create a fixed locking order to eliminate deadlocks */
-  if (memcmp(buf,buf2,sizeof(t)) < 0){
-    ledger_table_lock(t);
-    ledger_table_lock(t2);
-  } else {
-    ledger_table_lock(t2);
-    ledger_table_lock(t);
-  }
+  ((struct ledger_table*)t)->lock_tf += 1;
   return;
 }
 
 void ledger_table_unlock(struct ledger_table const* t){
+  ((struct ledger_table*)t)->lock_tf -= 1;
   return;
 }
 
@@ -364,6 +377,7 @@ int ledger_table_init(struct ledger_table* t){
   t->schema = NULL;
   t->rows = 0;
   t->root = NULL;
+  t->lock_tf = 0;
   /* allocate a root */{
     struct ledger_table_row* root;
     struct ledger_table_schema* schema = ledger_table_schema_new(0,NULL);
@@ -373,19 +387,31 @@ int ledger_table_init(struct ledger_table* t){
       ledger_table_schema_free(schema);
       return 0;
     }
+    root->root_tf = 1;
     t->root = root;
     t->schema = schema;
   }
+  /* POST_CONDITION table has a schema */
   return 1;
 }
 
 void ledger_table_clear(struct ledger_table* t){
-  ledger_table_drop_all_rows(t);
-  ledger_table_row_free(t->root);
-  ledger_table_schema_outdate(t->schema);
-  ledger_table_schema_free(t->schema);
-  t->root = NULL;
-  t->schema = NULL;
+  if (t->schema == NULL){
+    /* rows never made */
+  } else {
+    /* if only one reference held on this table, then no lock necessary */
+    if (ledger_table_schema_outdate(t->schema)){
+      if (t->root != NULL){
+        ledger_table_drop_all_rows(t);
+      }
+      ledger_table_schema_close(t->schema);
+    }
+    ledger_table_row_free(t->root);
+    ledger_table_schema_free(t->schema);
+    t->root = NULL;
+    t->schema = NULL;
+  }
+  /*assert(t->lock_tf == 0);*/
   return;
 }
 
@@ -393,20 +419,48 @@ struct ledger_table_mark* ledger_table_mark_new
   ( struct ledger_table const* t, struct ledger_table_row const* r,
     int mutable_flag)
 {
-  struct ledger_table_row* row =
-    ledger_table_row_acquire((struct ledger_table_row*)r);
   struct ledger_table_mark* ptr;
-  if (row == NULL){
-    return NULL;
-  }
   ptr = (struct ledger_table_mark*)
     ledger_util_malloc(sizeof(struct ledger_table_mark));
-  if (ptr != NULL){
+  if (!ledger_table_mark_init(t,r,mutable_flag,ptr)){
+    ledger_util_free(ptr);
+    ptr = NULL;
+  }
+  return ptr;
+}
+
+int ledger_table_mark_init
+  ( struct ledger_table const* t, struct ledger_table_row const* r,
+    int mutable_flag, struct ledger_table_mark* ptr)
+{
+  struct ledger_table_row* row =
+    ledger_table_row_acquire((struct ledger_table_row*)r);
+  if (row == NULL){
+    return 0;
+  }
+  /* put mark contents */{
     ptr->source = t;
     ptr->row = (struct ledger_table_row*)r;
     ptr->mutable_flag = mutable_flag;
   }
-  return ptr;
+  return 1;
+}
+
+void ledger_table_mark_clear(struct ledger_table_mark* m){
+  ledger_table_row_free(m->row);
+  return;
+}
+
+int ledger_table_mark_add_one_checked(struct ledger_table_mark* m){
+  int consistent_tf;
+  struct ledger_table_row *const row = m->row;
+  ledger_table_schema_lock(row->schema);
+  if (row->next != row){
+    ledger_table_mark_exchange(m, row->next);
+    consistent_tf = 1;
+  } else consistent_tf = 0;
+  ledger_table_schema_unlock(row->schema);
+  return consistent_tf;
 }
 
 void ledger_table_row_free_cb(void* ptr){
@@ -447,6 +501,7 @@ struct ledger_table_row* ledger_table_row_new
       new_row->next = new_row;
       new_row->prev = new_row;
       new_row->schema = new_schema;
+      new_row->root_tf = 0;
       /* initialize each element in the row */
       for (i = 0; i < n; ++i){
         switch (schema[i]){
@@ -564,6 +619,7 @@ struct ledger_table_schema* ledger_table_schema_new
           ledger_table_schema_free_cb);
   if (new_schema != NULL){
     int i;
+    new_schema->lock_tf = 0;
     new_schema->outdated_tf = 0;
     new_schema->columns = columns;
     for (i = 0; i < columns; ++i){
@@ -591,6 +647,7 @@ void ledger_table_schema_clear(struct ledger_table_schema* sch){
   for (i = 0; i < sch->columns; ++i){
     sch->types[i] = -1;
   }
+  /*assert(sch->lock_tf == 0);*/
   return;
 }
 
@@ -610,71 +667,57 @@ int ledger_table_schema_is_equal
 }
 
 void ledger_table_schema_lock(struct ledger_table_schema const* t){
+  ((struct ledger_table_schema*)t)->lock_tf += 1;
+  return;
+}
+
+void ledger_table_schema_lock2
+  (struct ledger_table_schema const* t, struct ledger_table_schema const* t2)
+{
+  unsigned char buf[sizeof(struct ledger_table_schema const*)];
+  unsigned char buf2[sizeof(struct ledger_table_schema const*)];
+  memcpy(buf,&t,sizeof(t));
+  memcpy(buf2,&t2,sizeof(t2));
+  /* create a fixed locking order to eliminate deadlocks */
+  if (memcmp(buf,buf2,sizeof(t)) < 0){
+    ledger_table_schema_lock(t);
+    ledger_table_schema_lock(t2);
+  } else {
+    ledger_table_schema_lock(t2);
+    ledger_table_schema_lock(t);
+  }
   return;
 }
 
 void ledger_table_schema_unlock(struct ledger_table_schema const* t){
+  ((struct ledger_table_schema*)t)->lock_tf -= 1;
   return;
 }
 
-void ledger_table_schema_outdate(struct ledger_table_schema* t){
+int ledger_table_schema_outdate(struct ledger_table_schema* t){
+  int result;
   ledger_table_schema_lock(t);
+  if (t->outdated_tf == 0){
+    result = 1;
+  } else {
+    result = 0;
+    ledger_table_schema_unlock(t);
+  }
+  return result;
+}
+
+void ledger_table_schema_close(struct ledger_table_schema* t){
   t->outdated_tf = 1;
   ledger_table_schema_unlock(t);
   return;
 }
 
-int ledger_table_schema_is_outdated(struct ledger_table_schema* t){
+int ledger_table_schema_is_outdated(struct ledger_table_schema const* t){
   int outdate;
   ledger_table_schema_lock(t);
   outdate = t->outdated_tf;
   ledger_table_schema_unlock(t);
   return outdate;
-}
-
-int ledger_table_is_equal_sub
-  (struct ledger_table const* a, struct ledger_table const* b)
-{
-  /* compare top-level features */{
-    if (a->rows != b->rows)
-      return 0;
-    if (!ledger_table_schema_is_equal(a->schema, b->schema))
-      return 0;
-  }
-  /* compare row by row */if (a->schema != NULL){
-    int const columns = a->schema->columns;
-    int const* const schema = a->schema->types;
-    struct ledger_table_mark a_mark = {a,a->root->next,0};
-    struct ledger_table_mark b_mark = {b,b->root->next,0};
-    for (; a_mark.row != a->root && b_mark.row != b->root;
-         a_mark.row = a_mark.row->next, b_mark.row = b_mark.row->next)
-    {
-      /* perform field-wise comparison */
-      int i;
-      for (i = 0; i < columns; ++i){
-        switch (schema[i]){
-        case LEDGER_TABLE_ID:
-          {
-            if (a_mark.row->data[i].item_id != b_mark.row->data[i].item_id)
-              return 0;
-          }break;
-        case LEDGER_TABLE_BIGNUM:
-          {
-            if (ledger_bignum_compare(
-                a_mark.row->data[i].bignum, b_mark.row->data[i].bignum) != 0)
-              return 0;
-          }break;
-        case LEDGER_TABLE_USTR:
-          {
-            if (ledger_util_ustrcmp(
-                a_mark.row->data[i].string, b_mark.row->data[i].string) != 0)
-              return 0;
-          }break;
-        }
-      }
-    }
-  }
-  return 1;
 }
 
 int ledger_table_add_row_sub(struct ledger_table_mark* mark){
@@ -684,7 +727,7 @@ int ledger_table_add_row_sub(struct ledger_table_mark* mark){
     struct ledger_table_row * const old_row = mark->row;
     struct ledger_table_row *new_row = NULL;
     struct ledger_table_schema const* const schema = old_row->schema;
-    if (schema->outdated_tf){
+    if (ledger_table_schema_is_outdated(schema)){
       result = 0;
     } else do {
       /* allocate the row */
@@ -699,8 +742,11 @@ int ledger_table_add_row_sub(struct ledger_table_mark* mark){
       ledger_table_mark_exchange(mark, new_row);
       /* drop the reference for this function */
       ledger_table_row_free(new_row);
-      /* cache the new row count */
-      table->rows += 1;
+      /* cache the new row count */{
+        ledger_table_lock(mark->source);
+        table->rows += 1;
+        ledger_table_unlock(mark->source);
+      }
       result = 1;
     } while (0);
     if (!result){
@@ -716,20 +762,21 @@ int ledger_table_drop_row_sub(struct ledger_table_mark* mark){
     struct ledger_table* const table = (struct ledger_table *)mark->source;
     struct ledger_table_row * const old_row = mark->row;
     struct ledger_table_schema const* const schema = old_row->schema;
-    if (schema->outdated_tf){
+    if (ledger_table_schema_is_outdated(schema)){
       result = 0;
-    } else if (old_row == table->root){
+    } else if (old_row->root_tf){
       /* don't allow it */;
       result = 0;
     } else /* remove the row */{
       /* move the mark */
-      ledger_table_schema_lock(schema);
       ledger_table_mark_exchange(mark, old_row->prev);
-      ledger_table_schema_unlock(schema);
       /* free the row (NOTE also detaches) */
       ledger_table_row_free(old_row);
       /* cache the new row count */
+      ledger_table_lock(mark->source);
       table->rows -= 1;
+      ledger_table_unlock(mark->source);
+      /* done */
       result = 1;
     }
     return result;
@@ -745,7 +792,8 @@ int ledger_table_fetch_string_sub
     struct ledger_table_schema const* const schema = old_row->schema;
     int const columns = ((schema!=NULL)?schema->columns:0);
     int const* const types = ((schema!=NULL)?schema->types:0);
-    if (i < 0
+    if (old_row->root_tf
+    ||  i < 0
     ||  i >= columns)
     {
       /* don't allow it */;
@@ -795,7 +843,8 @@ int ledger_table_put_string_sub
     struct ledger_table_schema const* const schema = old_row->schema;
     int const columns = ((schema!=NULL)?schema->columns:0);
     int const* const types = ((schema!=NULL)?schema->types:0);
-    if (i < 0
+    if (old_row->root_tf
+    ||  i < 0
     ||  i >= columns)
     {
       /* don't allow it */;
@@ -855,7 +904,8 @@ int ledger_table_fetch_bignum_sub
     struct ledger_table_schema const* const schema = old_row->schema;
     int const columns = ((schema!=NULL)?schema->columns:0);
     int const* const types = ((schema!=NULL)?schema->types:0);
-    if (i < 0
+    if (old_row->root_tf
+    ||  i < 0
     ||  i >= columns)
     {
       /* don't allow it */;
@@ -896,7 +946,8 @@ int ledger_table_put_bignum_sub
     struct ledger_table_schema const* const schema = old_row->schema;
     int const columns = ((schema!=NULL)?schema->columns:0);
     int const* const types = ((schema!=NULL)?schema->types:0);
-    if (i < 0
+    if (old_row->root_tf
+    ||  i < 0
     ||  i >= columns)
     {
       /* don't allow it */;
@@ -968,7 +1019,8 @@ int ledger_table_fetch_id_sub
     struct ledger_table_schema const* const schema = old_row->schema;
     int const columns = ((schema!=NULL)?schema->columns:0);
     int const* const types = ((schema!=NULL)?schema->types:0);
-    if (i < 0
+    if (old_row->root_tf
+    ||  i < 0
     ||  i >= columns)
     {
       /* don't allow it */;
@@ -1014,7 +1066,8 @@ int ledger_table_put_id_sub
     struct ledger_table_schema const* const schema = old_row->schema;
     int const columns = ((schema!=NULL)?schema->columns:0);
     int const* const types = ((schema!=NULL)?schema->types:0);
-    if (i < 0
+    if (old_row->root_tf
+    ||  i < 0
     ||  i >= columns)
     {
       /* don't allow it */;
@@ -1108,29 +1161,129 @@ void ledger_table_free(struct ledger_table* t){
   }
 }
 
-
 int ledger_table_is_equal
   (struct ledger_table const* a, struct ledger_table const* b)
 {
   int result;
+  struct ledger_table_schema *a_schema;
+  struct ledger_table_schema *b_schema;
+  struct ledger_table_mark a_mark;
+  struct ledger_table_mark b_mark;
   /* trivial tables */
   if (a == NULL && b == NULL) return 1;
   else if (a == NULL || b == NULL) return 0;
-  ledger_table_lock2(a,b);
-  result = ledger_table_is_equal_sub(a,b);
-  ledger_table_unlock(a);
-  ledger_table_unlock(b);
+  /* compare top-level features */{
+    int a_rows, b_rows;
+    /* lock and access A */{
+      ledger_table_lock(a);
+      a_rows = a->rows;
+      a_schema = ledger_table_schema_acquire(a->schema);
+      ledger_table_mark_init(a,a->root,0,&a_mark);
+      ledger_table_unlock(a);
+    }
+    /* lock and access B */{
+      ledger_table_lock(b);
+      b_rows = b->rows;
+      b_schema = ledger_table_schema_acquire(b->schema);
+      ledger_table_mark_init(b,b->root,0,&b_mark);
+      ledger_table_unlock(b);
+    }
+    result = 1;
+    do {
+      if (a_rows != b_rows){
+        result = 0;
+        break;
+      }
+      if (a->schema == NULL || b->schema == NULL){
+        /* failed to acquire PRE_CONDITION schema */
+        result = 0;
+        break;
+      }
+      if (!ledger_table_schema_is_equal(a->schema, b->schema)){
+        result = 0;
+        break;
+      }
+    } while(0);
+    ledger_table_schema_free(a_schema);
+    ledger_table_schema_free(b_schema);
+    if (!result){
+      /* the marks will not be used later, so clear them now */
+      ledger_table_mark_clear(&a_mark);
+      ledger_table_mark_clear(&b_mark);
+      return 0;
+    }
+  }
+  /* compare row by row */do {
+    result = 0;
+    /* perform initial consistency check */{
+      if (a_mark.row->root_tf)
+        /* pass */;
+      else if (!ledger_table_mark_add_one_checked(&a_mark))
+        break;
+      if (b_mark.row->root_tf)
+        /* pass */;
+      else if (!ledger_table_mark_add_one_checked(&b_mark))
+        break;
+    }
+    result = 1;
+    while (!(a_mark.row->root_tf || b_mark.row->root_tf)){
+      int i;
+      struct ledger_table_row *const a_row = a_mark.row;
+      struct ledger_table_row *const b_row = b_mark.row;
+      int const *const types = a_row->schema->types;
+      int const columns = a_row->schema->columns;
+      ledger_table_schema_lock2(a_row->schema, b_row->schema);
+      /* perform field-wise comparison */
+      for (i = 0; i < columns; ++i){
+        switch (types[i]){
+        case LEDGER_TABLE_ID:
+          {
+            if (a_row->data[i].item_id != b_row->data[i].item_id)
+              result = 0;
+          }break;
+        case LEDGER_TABLE_BIGNUM:
+          {
+            if (ledger_bignum_compare(
+                a_row->data[i].bignum, b_row->data[i].bignum) != 0)
+              result = 0;
+          }break;
+        case LEDGER_TABLE_USTR:
+          {
+            if (ledger_util_ustrcmp(
+                a_row->data[i].string, b_row->data[i].string) != 0)
+              result = 0;
+          }break;
+        }
+        if (!result) break;
+      }
+      ledger_table_schema_unlock(a_row->schema);
+      ledger_table_schema_unlock(b_row->schema);
+      if (!result) break;
+      /* perform consistency check */{
+        if (!ledger_table_mark_add_one_checked(&a_mark)){
+          result = 0;
+          break;
+        }
+        if (!ledger_table_mark_add_one_checked(&b_mark)){
+          result = 0;
+          break;
+        }
+      }
+    }
+  } while(0);
+  ledger_table_mark_clear(&a_mark);
+  ledger_table_mark_clear(&b_mark);
   return result;
 }
 
 struct ledger_table_mark* ledger_table_begin(struct ledger_table* t){
   struct ledger_table_mark* m;
-  struct ledger_table_schema* const schema = t->root->schema;
+  /* acquire the mark */
   ledger_table_lock(t);
-  ledger_table_schema_lock(schema);
-  m = ledger_table_mark_new(t, t->root->next, 1);
-  ledger_table_schema_unlock(schema);
+  m = ledger_table_mark_new(t, t->root, 1);
   ledger_table_unlock(t);
+  /* move the mark */
+  ledger_table_mark_move(m, +1);
   return m;
 }
 
@@ -1138,33 +1291,27 @@ struct ledger_table_mark* ledger_table_begin_c
   (struct ledger_table const* t)
 {
   struct ledger_table_mark* m;
-  struct ledger_table_schema* const schema = t->root->schema;
+  /* acquire the mark */
   ledger_table_lock(t);
-  ledger_table_schema_lock(schema);
-  m = ledger_table_mark_new(t, t->root->next, 0);
-  ledger_table_schema_unlock(schema);
+  m = ledger_table_mark_new(t, t->root, 0);
   ledger_table_unlock(t);
+  /* move the mark */
+  ledger_table_mark_move(m, +1);
   return m;
 }
 
 struct ledger_table_mark* ledger_table_end(struct ledger_table* t){
   struct ledger_table_mark* m;
-  struct ledger_table_schema* const schema = t->root->schema;
   ledger_table_lock(t);
-  ledger_table_schema_lock(schema);
   m = ledger_table_mark_new(t, t->root, 1);
-  ledger_table_schema_unlock(schema);
   ledger_table_unlock(t);
   return m;
 }
 
 struct ledger_table_mark* ledger_table_end_c(struct ledger_table const* t){
   struct ledger_table_mark* m;
-  struct ledger_table_schema* const schema = t->root->schema;
   ledger_table_lock(t);
-  ledger_table_schema_lock(schema);
   m = ledger_table_mark_new(t, t->root, 0);
-  ledger_table_schema_unlock(schema);
   ledger_table_unlock(t);
   return m;
 }
@@ -1176,7 +1323,7 @@ int ledger_table_mark_is_equal
 }
 
 void ledger_table_mark_free(struct ledger_table_mark* m){
-  ledger_table_row_free(m->row);
+  ledger_table_mark_clear(m);
   ledger_util_free(m);
 }
 
@@ -1193,7 +1340,7 @@ int ledger_table_get_column_type(struct ledger_table const* t, int i){
   ledger_table_lock(t);
   /* get type value */{
     struct ledger_table_schema const* const s = t->schema;
-    if (s == NULL || i < 0 || i >= s->columns) typ = 0;
+    if (i < 0 || i >= s->columns) typ = 0;
     else typ = s->types[i];
   }
   ledger_table_unlock(t);
@@ -1205,6 +1352,8 @@ int ledger_table_set_column_types
 {
   struct ledger_table_schema *new_schema;
   struct ledger_table_row *new_root;
+  struct ledger_table_schema *old_schema;
+  struct ledger_table_row *old_root;
   /* validate the types */{
     int i;
     if (n > LEDGER_TABLE_SCHEMA_MAX) return 0;
@@ -1225,26 +1374,30 @@ int ledger_table_set_column_types
     if (new_root == NULL){
       ledger_table_schema_free(new_schema);
       return 0;
-    }
+    } else new_root->root_tf = 1;
+  }
+  /* reset the rows */if (ledger_table_schema_outdate(t->schema)){
+    ledger_table_drop_all_rows(t);
+    ledger_table_schema_close(t->schema);
+  } else {
+    /* either the table is closing,
+     * or someone else is changing the schema */
+    ledger_table_row_free(new_root);
+    ledger_table_schema_free(new_schema);
+    return 0;
   }
   ledger_table_lock(t);
-  /* reset the rows */{
-    ledger_table_drop_all_rows(t);
-  }
-  /* drop the old root */{
-    ledger_table_row_free(t->root);
-  }
-  /* drop the old schema */{
-    ledger_table_schema_outdate(t->schema);
-    ledger_table_schema_free(t->schema);
-  }
-  /* set the new root */{
-    t->root = new_root;
-  }
-  /* store the new schema */{
-    t->schema = new_schema;
+  /* exchange pointers */{
+    old_root = t->root; t->root = new_root;
+    old_schema = t->schema; t->schema = new_schema;
   }
   ledger_table_unlock(t);
+  /* drop the old root */{
+    ledger_table_row_free(old_root);
+  }
+  /* drop the old schema */{
+    ledger_table_schema_free(old_schema);
+  }
   return 1;
 }
 
@@ -1258,17 +1411,17 @@ int ledger_table_count_rows(struct ledger_table const* t){
 
 int ledger_table_add_row(struct ledger_table_mark* mark){
   int result;
-  ledger_table_lock(mark->source);
+  ledger_table_schema_lock(mark->row->schema);
   result = ledger_table_add_row_sub(mark);
-  ledger_table_unlock(mark->source);
+  ledger_table_schema_unlock(mark->row->schema);
   return result;
 }
 
 int ledger_table_drop_row(struct ledger_table_mark* mark){
   int result;
-  ledger_table_lock(mark->source);
+  ledger_table_schema_lock(mark->row->schema);
   result = ledger_table_drop_row_sub(mark);
-  ledger_table_unlock(mark->source);
+  ledger_table_schema_unlock(mark->row->schema);
   return result;
 }
 
@@ -1277,9 +1430,9 @@ int ledger_table_fetch_string
   (struct ledger_table_mark const* mark, int i, unsigned char* buf, int len)
 {
   int result;
-  ledger_table_lock(mark->source);
+  ledger_table_schema_lock(mark->row->schema);
   result = ledger_table_fetch_string_sub(mark, i, buf, len);
-  ledger_table_unlock(mark->source);
+  ledger_table_schema_unlock(mark->row->schema);
   return result;
 }
 
@@ -1288,9 +1441,9 @@ int ledger_table_put_string
   (struct ledger_table_mark const* mark, int i, unsigned char const* value)
 {
   int result;
-  ledger_table_lock(mark->source);
+  ledger_table_schema_lock(mark->row->schema);
   result = ledger_table_put_string_sub(mark, i, value);
-  ledger_table_unlock(mark->source);
+  ledger_table_schema_unlock(mark->row->schema);
   return result;
 }
 
@@ -1299,9 +1452,9 @@ int ledger_table_fetch_bignum
   (struct ledger_table_mark const* mark, int i, struct ledger_bignum* n)
 {
   int result;
-  ledger_table_lock(mark->source);
+  ledger_table_schema_lock(mark->row->schema);
   result = ledger_table_fetch_bignum_sub(mark, i, n);
-  ledger_table_unlock(mark->source);
+  ledger_table_schema_unlock(mark->row->schema);
   return result;
 }
 
@@ -1310,9 +1463,9 @@ int ledger_table_put_bignum
     struct ledger_bignum const* value)
 {
   int result;
-  ledger_table_lock(mark->source);
+  ledger_table_schema_lock(mark->row->schema);
   result = ledger_table_put_bignum_sub(mark, i, value);
-  ledger_table_unlock(mark->source);
+  ledger_table_schema_unlock(mark->row->schema);
   return result;
 }
 
@@ -1320,21 +1473,21 @@ int ledger_table_put_bignum
 void ledger_table_mark_move(struct ledger_table_mark* m, int n){
   struct ledger_table_schema *const schema = m->row->schema;
   if (n == 0) return;
-  ledger_table_lock(m->source);
   ledger_table_schema_lock(schema);
-  if (n > 0){
-    int i;
-    for (i = 0; i < n; ++i){
-      ledger_table_mark_exchange(m, m->row->next);
-    }
-  } else if (n < 0){
-    int i;
-    for (i = 0; i > n; --i){
-      ledger_table_mark_exchange(m, m->row->prev);
+  if (!ledger_table_schema_is_outdated(schema)){
+    if (n > 0){
+      int i;
+      for (i = 0; i < n; ++i){
+        ledger_table_mark_exchange(m, m->row->next);
+      }
+    } else if (n < 0){
+      int i;
+      for (i = 0; i > n; --i){
+        ledger_table_mark_exchange(m, m->row->prev);
+      }
     }
   }
   ledger_table_schema_unlock(schema);
-  ledger_table_unlock(m->source);
   return;
 }
 
@@ -1342,9 +1495,9 @@ int ledger_table_fetch_id
   (struct ledger_table_mark const* mark, int i, int* n)
 {
   int result;
-  ledger_table_lock(mark->source);
+  ledger_table_schema_lock(mark->row->schema);
   result = ledger_table_fetch_id_sub(mark, i, n);
-  ledger_table_unlock(mark->source);
+  ledger_table_schema_unlock(mark->row->schema);
   return result;
 }
 
@@ -1353,11 +1506,20 @@ int ledger_table_put_id
   ( struct ledger_table_mark const* mark, int i, int value)
 {
   int result;
-  ledger_table_lock(mark->source);
+  ledger_table_schema_lock(mark->row->schema);
   result = ledger_table_put_id_sub(mark, i, value);
-  ledger_table_unlock(mark->source);
+  ledger_table_schema_unlock(mark->row->schema);
   return result;
 }
 
+int ledger_table_mark_get_type
+  (struct ledger_table_mark const* m, int i)
+{
+  struct ledger_table_schema *const schema = m->row->schema;
+  if (i < 0
+  ||  i >= schema->columns)
+    return 0;
+  else return schema->types[i];
+}
 
 /* END   implementation */
