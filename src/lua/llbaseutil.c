@@ -5,10 +5,12 @@
 #include "../../deps/lua/src/lauxlib.h"
 #include "../base/util.h"
 #include "../base/bignum.h"
+#include "../base/sum.h"
 #include <limits.h>
 
 
 static char const* ledger_llbase_bignum_meta = "ledger.bignum";
+static char const* ledger_llbase_table_meta = "ledger.table";
 
 /*   BEGIN ledger/base/util { */
 
@@ -207,7 +209,43 @@ static const struct luaL_Reg ledger_luaL_bignum_lib[] = {
   {NULL,NULL}
 };
 
-/* } END   ledger/base/bignum */
+/* } END   ledger/base/util */
+
+/*   BEGIN ledger/base/sum { */
+
+/* [INTERNAL]
+ * Perform a column sum.
+ * - L Lua state
+ * - arg argument offset
+ * @return one on success
+ */
+static int ledger_luaL_sum_sumC1(struct lua_State *L, int arg);
+
+/* [INTERNAL]
+ * `ledger.sum.sum(~ledger.table, ~number)`
+ * - L Lua state
+ * @return one on success
+ */
+static int ledger_luaL_sum_sum(struct lua_State *L);
+
+/* [INTERNAL]
+ * `ledger.sum(~ledger.table, ~number)`
+ * - L Lua state
+ * @return one on success
+ */
+static int ledger_luaL_sum___call(struct lua_State *L);
+
+static const struct luaL_Reg ledger_luaL_sum_lib[] = {
+  {"sum", ledger_luaL_sum_sum},
+  {NULL,NULL}
+};
+
+static const struct luaL_Reg ledger_luaL_sum_metalib[] = {
+  {"__call", ledger_luaL_sum___call},
+  {NULL,NULL}
+};
+
+/* } END   ledger/base/sum */
 
 /* BEGIN static implementation */
 
@@ -635,6 +673,55 @@ int ledger_luaL_bignum___sub(struct lua_State *L){
 
 /* } END   ledger/base/bignum */
 
+/*   BEGIN ledger/base/sum { */
+
+int ledger_luaL_sum_sum(struct lua_State *L){
+  /* ARG:
+   *   1 table~ledger.table
+   *   2 column~number
+   * RET:
+   *   3 @return~ledger.bignum
+   * THROW:
+   *   X
+   */
+  return ledger_luaL_sum_sumC1(L,0);
+}
+
+int ledger_luaL_sum___call(struct lua_State *L){
+  /* ARG:
+   *   1 ~table
+   *   2 table~ledger.table
+   *   3 column~number
+   * RET:
+   *   4 @return~ledger.bignum
+   * THROW:
+   *   X
+   */
+  return ledger_luaL_sum_sumC1(L,1);
+}
+
+int ledger_luaL_sum_sumC1(struct lua_State *L, int arg){
+  int result;
+  struct ledger_table** t =
+    (struct ledger_table**)luaL_checkudata
+        (L, 1+arg, ledger_llbase_table_meta);
+  int const column = lua_tointeger(L, 2+arg);
+  struct ledger_bignum* bn;
+  bn = ledger_bignum_new();
+  if (bn == NULL){
+    luaL_error(L, "ledger_luaL_sum_sumC1: "
+      "Big number memory not available");
+    /* return 0; */
+  }
+  result = ledger_sum_table_column(bn, *t, column);
+  ledger_llbase_postbignum
+    (L, bn, result, "ledger_luaL_sum_sumC1: "
+        "Big number not available");
+  return 1;
+}
+
+/* } END   ledger/base/sum */
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -655,6 +742,12 @@ void ledger_luaopen_baseutil(struct lua_State *L){
       lua_setfield(L, LUA_REGISTRYINDEX, ledger_llbase_bignum_meta);
     }
     lua_setfield(L, -2, "bignum");
+  }
+  /* add sum lib */{
+    luaL_newlib(L, ledger_luaL_sum_lib);
+    luaL_newlib(L, ledger_luaL_sum_metalib);
+    lua_setmetatable(L, -2);
+    lua_setfield(L, -2, "sum");
   }
   return;
 }
