@@ -1,10 +1,12 @@
 
 #include "llbaseutil.h"
+#include "llbaserefs.h"
 #include "llbase.h"
 #include "../../deps/lua/src/lua.h"
 #include "../../deps/lua/src/lauxlib.h"
 #include "../base/util.h"
 #include "../base/bignum.h"
+#include "../base/table.h"
 #include <limits.h>
 
 
@@ -22,7 +24,23 @@ static int ledger_llbase_poststringP1(struct lua_State *L);
  */
 static int ledger_llbase_postbignumP1(struct lua_State *L);
 
+/* [INTERNAL]
+ * Post the table on the top of the stack.
+ * - L lua state to modify
+ * @return one
+ */
+static int ledger_llbase_posttableP1(struct lua_State *L);
+
+/* [INTERNAL]
+ * Post the table mark on the top of the stack.
+ * - L lua state to modify
+ * @return one
+ */
+static int ledger_llbase_posttablemarkP1(struct lua_State *L);
+
 static char const* ledger_llbase_bignum_meta = "ledger.bignum";
+static char const* ledger_llbase_table_meta = "ledger.table";
+static char const* ledger_llbase_tablemark_meta = "ledger.table.mark";
 
 /* } END   ledger/base/bignum */
 
@@ -62,6 +80,48 @@ int ledger_llbase_postbignumP1(struct lua_State *L){
   return 1;
 }
 
+int ledger_llbase_posttableP1(struct lua_State *L){
+  /* ARG:
+   *   1 *table
+   * RET:
+   *   2 @return
+   */
+  struct ledger_table* t = (struct ledger_table*)lua_touserdata(L, 1);
+  /* get a full user data for the table pointer */
+  void ** ptr = (void**)lua_newuserdata(L, sizeof(void*));
+  if (ptr == NULL){
+    luaL_error(L, "unable to allocate space for `ledger.table`"
+      " indirect pointer");
+    return 0;
+  }
+  (*ptr) = t;
+  /* apply the userdata registry item `ledger.table` to this userdata */
+  luaL_setmetatable(L, ledger_llbase_table_meta);
+  return 1;
+}
+
+int ledger_llbase_posttablemarkP1(struct lua_State *L){
+  /* ARG:
+   *   1 *tablemark
+   * RET:
+   *   2 @return
+   */
+  struct ledger_table_mark* num =
+    (struct ledger_table_mark*)lua_touserdata(L, 1);
+  /* get a full user data for the table mark pointer */
+  void ** ptr = (void**)lua_newuserdata(L, sizeof(void*));
+  if (ptr == NULL){
+    luaL_error(L, "unable to allocate space for `ledger.table.mark`"
+      " indirect pointer");
+    return 0;
+  }
+  (*ptr) = num;
+  /* apply the userdata registry item `ledger.table.mark` to this userdata */
+  luaL_setmetatable(L, ledger_llbase_tablemark_meta);
+  return 1;
+}
+
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -80,6 +140,7 @@ int ledger_llbase_poststring
       lua_error(L);
     } else /* leave return at top of stack */;
   } else {
+    ledger_util_free(str);
     luaL_error(L, err);
   }
   return 1;
@@ -105,6 +166,46 @@ int ledger_llbase_postbignum
   return 1;
 }
 
+int ledger_llbase_posttable
+  (struct lua_State *L, struct ledger_table* t, int ok, char const* err)
+{
+  /* enter protection */if (ok){
+    int success_line;
+    lua_pushcfunction(L, ledger_llbase_posttableP1);
+    lua_pushlightuserdata(L, t);
+    success_line = lua_pcall(L, 1, 1, 0);
+    if (success_line != LUA_OK){
+      ledger_table_free(t);
+      /* throw; */
+      lua_error(L);
+    } else /* leave return at top of stack */;
+  } else {
+    ledger_table_free(t);
+    luaL_error(L, err);
+  }
+  return 1;
+}
+
+int ledger_llbase_posttablemark
+  (struct lua_State *L, struct ledger_table_mark* t, int ok, char const* err)
+{
+  /* enter protection */if (ok){
+    int success_line;
+    lua_pushcfunction(L, ledger_llbase_posttablemarkP1);
+    lua_pushlightuserdata(L, t);
+    success_line = lua_pcall(L, 1, 1, 0);
+    if (success_line != LUA_OK){
+      ledger_table_mark_free(t);
+      /* throw; */
+      lua_error(L);
+    } else /* leave return at top of stack */;
+  } else {
+    ledger_table_mark_free(t);
+    luaL_error(L, err);
+  }
+  return 1;
+}
+
 void ledger_luaopen_base(struct lua_State *L){
   /* fetch the global `ledger` table */{
     int type = lua_getglobal (L, "ledger");
@@ -114,6 +215,7 @@ void ledger_luaopen_base(struct lua_State *L){
     }
   }
   ledger_luaopen_baseutil(L);
+  ledger_luaopen_baserefs(L);
   lua_pop(L,1);
   return;
 }
