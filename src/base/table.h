@@ -224,6 +224,15 @@ int ledger_table_fetch_id
 int ledger_table_put_id
   ( struct ledger_table_mark const* mark, int i, int value);
 
+/*
+ * Get the column type for the row referenced by a mark.
+ * - mark the mark to query
+ * - i column index
+ * @return a column type, or zero if unavailable
+ */
+int ledger_table_mark_get_type
+  (struct ledger_table_mark const* mark, int i);
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/
