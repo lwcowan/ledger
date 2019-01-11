@@ -1,6 +1,6 @@
 
 #include "llbaseutil.h"
-#include "llbaserefs.h"
+#include "llbasetable.h"
 #include "llbase.h"
 #include "../../deps/lua/src/lua.h"
 #include "../../deps/lua/src/lauxlib.h"
@@ -215,7 +215,7 @@ void ledger_luaopen_base(struct lua_State *L){
     }
   }
   ledger_luaopen_baseutil(L);
-  ledger_luaopen_baserefs(L);
+  ledger_luaopen_basetable(L);
   lua_pop(L,1);
   return;
 }

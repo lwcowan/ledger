@@ -1,10 +1,10 @@
 /*
- * file: act/llbaserefs.h
+ * file: act/llbasetable.h
  * brief: Lua extension for base library API
  * author: Cody Licorish (svgmovement@gmail.com)
  */
-#ifndef __Ledger_lua_LLBaseRefs_H__
-#define __Ledger_lua_LLBaseRefs_H__
+#ifndef __Ledger_lua_LLBaseTable_H__
+#define __Ledger_lua_LLBaseTable_H__
 
 
 #ifdef __cplusplus
@@ -18,13 +18,13 @@ extern "C" {
 struct lua_State;
 
 /*
- * Open the reference-counte portion of the base library.
+ * Open the table-handling portion of the base library.
  * @param l native lua state
  */
-void ledger_luaopen_baserefs(struct lua_State *l);
+void ledger_luaopen_basetable(struct lua_State *l);
 
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/
 
-#endif /*__Ledger_lua_LLBaseRefs_H__*/
+#endif /*__Ledger_lua_LLBaseTable_H__*/

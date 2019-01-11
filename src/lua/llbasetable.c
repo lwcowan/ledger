@@ -1,5 +1,5 @@
 
-#include "llbaserefs.h"
+#include "llbasetable.h"
 #include "llbase.h"
 #include "../../deps/lua/src/lua.h"
 #include "../../deps/lua/src/lauxlib.h"
@@ -643,7 +643,7 @@ int ledger_luaL_tablemark_put(struct lua_State *L){
 
 /* BEGIN implementation */
 
-void ledger_luaopen_baserefs(struct lua_State *L){
+void ledger_luaopen_basetable(struct lua_State *L){
   /* add table lib */{
     luaL_newlib(L, ledger_luaL_table_lib);
     /* add table mark lib */{
