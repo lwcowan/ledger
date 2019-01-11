@@ -6,6 +6,7 @@
 #include "../base/account.h"
 #include "../base/entry.h"
 #include "../base/journal.h"
+#include "../base/ledger.h"
 #include "../base/util.h"
 #include "../base/bignum.h"
 #include "../base/table.h"
@@ -16,6 +17,7 @@
 static char const* ledger_llbase_account_meta = "ledger.account";
 static char const* ledger_llbase_entry_meta = "ledger.entry";
 static char const* ledger_llbase_journal_meta = "ledger.journal";
+static char const* ledger_llbase_ledger_meta = "ledger.ledger";
 
 /*   BEGIN ledger/base/account { */
 
@@ -362,6 +364,139 @@ static const struct luaL_Reg ledger_luaL_journal_lib[] = {
 };
 
 /* } END   ledger/base/journal */
+
+/*   BEGIN ledger/base/ledger { */
+
+/*
+ * `ledger.ledger.create()`
+ * @return an ledger instance
+ */
+static int ledger_luaL_ledger_create(struct lua_State *L);
+
+/*
+ * `ledger.ledger.__gc(self~ledger.ledger)`
+ * - self the ledger to free
+ */
+static int ledger_luaL_ledger___gc(struct lua_State *L);
+
+/*
+ * `ledger.ledger.__eq(a~ledger.ledger, b~ledger.ledger)`
+ * - a first ledger
+ * - b second ledger
+ * @return true if equal, false otherwise
+ */
+static int ledger_luaL_ledger___eq(struct lua_State *L);
+
+/*
+ * `ledger.ledger.ptr(self~ledger.ledger)`
+ * - self the ledger to query
+ * @return the direct pointer to the ledger
+ */
+static int ledger_luaL_ledger_ptr(struct lua_State *L);
+
+/*
+ * `ledger.ledger.getdescription(self~ledger.ledger)`
+ * - self the ledger to query
+ * @return the ledger's description
+ */
+static int ledger_luaL_ledger_getdescription(struct lua_State *L);
+
+/*
+ * `ledger.ledger.setdescription(self~ledger.ledger, d~string)`
+ * - self the ledger to modify
+ * - d new description
+ * @return a success flag
+ */
+static int ledger_luaL_ledger_setdescription(struct lua_State *L);
+
+/*
+ * `ledger.ledger.getname(self~ledger.ledger)`
+ * - self the ledger to query
+ * @return the ledger's name
+ */
+static int ledger_luaL_ledger_getname(struct lua_State *L);
+
+/*
+ * `ledger.ledger.setname(self~ledger.ledger, n~string)`
+ * - self the ledger to modify
+ * - n new name
+ * @return a success flag
+ */
+static int ledger_luaL_ledger_setname(struct lua_State *L);
+
+/*
+ * `ledger.ledger.getid(self~ledger.ledger)`
+ * - self the ledger to query
+ * @return the ledger's identifier
+ */
+static int ledger_luaL_ledger_getid(struct lua_State *L);
+
+/*
+ * `ledger.ledger.setid(self~ledger.ledger, v~number)`
+ * - self the ledger to modify
+ * - v new identifier
+ * @return a success flag
+ */
+static int ledger_luaL_ledger_setid(struct lua_State *L);
+
+/*
+ * `ledger.ledger.getsequence(self~ledger.ledger)`
+ * - self the ledger to query
+ * @return the ledger's sequence number
+ */
+static int ledger_luaL_ledger_getsequence(struct lua_State *L);
+
+/*
+ * `ledger.ledger.setsequence(self~ledger.ledger, v~number)`
+ * - self the ledger to modify
+ * - v new sequence number
+ * @return a success flag
+ */
+static int ledger_luaL_ledger_setsequence(struct lua_State *L);
+
+/*
+ * `ledger.ledger.getaccount(self~ledger.ledger, i~number)`
+ * - self the ledger to query
+ * - i account array index
+ * @return the ledger's i-th account
+ */
+static int ledger_luaL_ledger_getaccount(struct lua_State *L);
+
+/*
+ * `ledger.ledger.getaccountcount(self~ledger.ledger)`
+ * - self the ledger to query
+ * @return the number of entries in the ledger
+ */
+static int ledger_luaL_ledger_getaccountcount(struct lua_State *L);
+
+/*
+ * `ledger.ledger.setaccountcount(self~ledger.ledger, v~number)`
+ * - self the ledger to modify
+ * - v new account count
+ * @return a success flag
+ */
+static int ledger_luaL_ledger_setaccountcount(struct lua_State *L);
+
+static const struct luaL_Reg ledger_luaL_ledger_lib[] = {
+  {"create", ledger_luaL_ledger_create},
+  {"__gc", ledger_luaL_ledger___gc},
+  {"__eq", ledger_luaL_ledger___eq},
+  {"ptr", ledger_luaL_ledger_ptr},
+  {"getdescription", ledger_luaL_ledger_getdescription},
+  {"setdescription", ledger_luaL_ledger_setdescription},
+  {"getname", ledger_luaL_ledger_getname},
+  {"setname", ledger_luaL_ledger_setname},
+  {"getid", ledger_luaL_ledger_getid},
+  {"setid", ledger_luaL_ledger_setid},
+  {"getsequence", ledger_luaL_ledger_getsequence},
+  {"setsequence", ledger_luaL_ledger_setsequence},
+  {"getaccountcount", ledger_luaL_ledger_getaccountcount},
+  {"setaccountcount", ledger_luaL_ledger_setaccountcount},
+  {"getaccount", ledger_luaL_ledger_getaccount},
+  {NULL, NULL}
+};
+
+/* } END   ledger/base/ledger */
 
 
 /* BEGIN static implementation */
@@ -1046,6 +1181,265 @@ int ledger_luaL_journal_setentrycount(struct lua_State *L){
 
 /* } END   ledger/base/journal */
 
+/*   BEGIN ledger/base/ledger { */
+
+int ledger_luaL_ledger_create(struct lua_State *L){
+  /* ARG:
+   *   -
+   * RET:
+   *   1 @return~ledger.ledger
+   * THROW:
+   *   X
+   */
+  struct ledger_ledger* next_ledger;
+  int ok;
+  /* execute C API */{
+    next_ledger = ledger_ledger_new();
+    if (next_ledger != NULL){
+      ok = 1;
+    } else ok = 0;
+  }
+  ledger_llbase_postledger
+    (L, next_ledger, ok, "ledger.ledger.create: generic error");
+  return 1;
+}
+
+int ledger_luaL_ledger___gc(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   * RET:
+   *   X
+   */
+  struct ledger_ledger** a =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  ledger_ledger_free(*a);
+  *a = NULL;
+  return 0;
+}
+
+int ledger_luaL_ledger_cmp(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.ledger
+   *   2  right~ledger.ledger
+   * ...:
+   */
+  struct ledger_ledger** left =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  struct ledger_ledger** right =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 2, ledger_llbase_ledger_meta);
+  if (*left != NULL && *right != NULL){
+    return ledger_ledger_is_equal(*left, *right)?0:-1;
+  } else {
+    luaL_error(L, "ledger_luaL_ledger_cmp: inconsistency check #1 triggered");
+    return -2;
+  }
+}
+
+int ledger_luaL_ledger___eq(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.ledger
+   *   2  right~ledger.ledger
+   * RET:
+   *   3 @return~boolean
+   */
+  int result = ledger_luaL_ledger_cmp(L);
+  lua_pushboolean(L, result==0);
+  return 1;
+}
+
+int ledger_luaL_ledger_ptr(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   * RET:
+   *   2  @return~lightuserdata
+   */
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  lua_pushlightuserdata(L, (void*)*j);
+  return 1;
+}
+
+int ledger_luaL_ledger_getdescription(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   * RET:
+   *   2  @return~string
+   */
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  unsigned char const* d = ledger_ledger_get_description(*j);
+  lua_pushstring(L, (char const*)d);
+  return 1;
+}
+
+int ledger_luaL_ledger_setdescription(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   *   2  d~string
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  unsigned char const* d = (unsigned char const*)lua_tostring(L, 2);
+  result = ledger_ledger_set_description(*j, d);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_ledger_getname(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   * RET:
+   *   2  @return~string
+   */
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  unsigned char const* n = ledger_ledger_get_name(*j);
+  lua_pushstring(L, (char const*)n);
+  return 1;
+}
+
+int ledger_luaL_ledger_setname(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   *   2  n~string
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  unsigned char const* n = (unsigned char const*)lua_tostring(L, 2);
+  result = ledger_ledger_set_name(*j, n);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_ledger_getid(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   * RET:
+   *   2  @return~number
+   */
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  int v = ledger_ledger_get_id(*j);
+  lua_pushinteger(L, (lua_Integer)v);
+  return 1;
+}
+
+int ledger_luaL_ledger_setid(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   *   2  v~number
+   * RET:
+   *   3  @return~boolean
+   */
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  int const v = (int)lua_tointeger(L, 2);
+  ledger_ledger_set_id(*j, v);
+  lua_pushboolean(L, 1);
+  return 1;
+}
+
+int ledger_luaL_ledger_getsequence(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   * RET:
+   *   2  @return~number
+   */
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  int v = ledger_ledger_get_sequence(*j);
+  lua_pushinteger(L, (lua_Integer)v);
+  return 1;
+}
+
+int ledger_luaL_ledger_setsequence(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   *   2  v~number
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  int const v = (int)lua_tointeger(L, 2);
+  result = ledger_ledger_set_sequence(*j, v);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_ledger_getaccount(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   *   2  v~number
+   * RET:
+   *   3  @return~ledger.account
+   */
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  int const v = ((int)lua_tointeger(L, 2))-1;
+  struct ledger_account* e = ledger_ledger_get_account(*j, v);
+  if (ledger_account_acquire(e) != e){
+    luaL_error(L, "ledger.ledger.getaccount: Account unavailable");
+  } else {
+    ledger_llbase_postaccount
+      (L, e, 1, "ledger.ledger.getaccount: Account available");
+  }
+  return 1;
+}
+
+int ledger_luaL_ledger_getaccountcount(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   * RET:
+   *   2  @return~number
+   */
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  int v = ledger_ledger_get_account_count(*j);
+  lua_pushinteger(L, (lua_Integer)v);
+  return 1;
+}
+
+int ledger_luaL_ledger_setaccountcount(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.ledger
+   *   2  v~number
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  int const v = (int)lua_tointeger(L, 2);
+  result = ledger_ledger_set_account_count(*j, v);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+/* } END   ledger/base/ledger */
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -1086,6 +1480,18 @@ void ledger_luaopen_baserefs(struct lua_State *L){
       lua_setfield(L, LUA_REGISTRYINDEX, ledger_llbase_journal_meta);
     }
     lua_setfield(L, -2, "journal");
+  }
+  /* add ledger lib */{
+    luaL_newlib(L, ledger_luaL_ledger_lib);
+    lua_pushvalue(L, -1);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+    lua_pushstring(L, ledger_llbase_ledger_meta);
+    lua_setfield(L, -2, "__name");  /* metatable.__name = tname */
+    /* registry.name = metatable */{
+      lua_setfield(L, LUA_REGISTRYINDEX, ledger_llbase_ledger_meta);
+    }
+    lua_setfield(L, -2, "ledger");
   }
   return;
 }

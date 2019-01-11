@@ -17,6 +17,7 @@ struct ledger_table_mark;
 struct ledger_account;
 struct ledger_entry;
 struct ledger_journal;
+struct ledger_ledger;
 
 /*
  * Lua state
@@ -101,6 +102,17 @@ int ledger_llbase_postentry
  */
 int ledger_llbase_postjournal
   (struct lua_State *L, struct ledger_journal* j, int ok, char const* err);
+
+/*
+ * Post the given ledger to the top of the stack.
+ * - L lua state to modify
+ * - j ledger to post
+ * - ok if nonzero, the ledger is posted, else the error is raised
+ * - err error message if not `ok`
+ * @return one on success, zero otherwise
+ */
+int ledger_llbase_postledger
+  (struct lua_State *L, struct ledger_ledger* j, int ok, char const* err);
 
 /*
  * Open the base library.
