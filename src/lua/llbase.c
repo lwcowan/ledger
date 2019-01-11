@@ -10,6 +10,7 @@
 #include "../base/table.h"
 #include "../base/account.h"
 #include "../base/entry.h"
+#include "../base/journal.h"
 #include <limits.h>
 
 
@@ -55,11 +56,19 @@ static int ledger_llbase_postaccountP1(struct lua_State *L);
  */
 static int ledger_llbase_postentryP1(struct lua_State *L);
 
+/* [INTERNAL]
+ * Post the journal on the top of the stack.
+ * - L lua state to modify
+ * @return one
+ */
+static int ledger_llbase_postjournalP1(struct lua_State *L);
+
 static char const* ledger_llbase_bignum_meta = "ledger.bignum";
 static char const* ledger_llbase_table_meta = "ledger.table";
 static char const* ledger_llbase_tablemark_meta = "ledger.table.mark";
 static char const* ledger_llbase_account_meta = "ledger.account";
 static char const* ledger_llbase_entry_meta = "ledger.entry";
+static char const* ledger_llbase_journal_meta = "ledger.journal";
 
 /* } END   ledger/base/bignum */
 
@@ -177,6 +186,26 @@ int ledger_llbase_postentryP1(struct lua_State *L){
   (*ptr) = e;
   /* apply the userdata registry item `ledger.entry` to this userdata */
   luaL_setmetatable(L, ledger_llbase_entry_meta);
+  return 1;
+}
+
+int ledger_llbase_postjournalP1(struct lua_State *L){
+  /* ARG:
+   *   1 *journal
+   * RET:
+   *   2 @return
+   */
+  struct ledger_journal* a = (struct ledger_journal*)lua_touserdata(L, 1);
+  /* get a full user data for the journal pointer */
+  void ** ptr = (void**)lua_newuserdata(L, sizeof(void*));
+  if (ptr == NULL){
+    luaL_error(L, "unable to allocate space for `ledger.journal`"
+      " indirect pointer");
+    return 0;
+  }
+  (*ptr) = a;
+  /* apply the userdata registry item `ledger.journal` to this userdata */
+  luaL_setmetatable(L, ledger_llbase_journal_meta);
   return 1;
 }
 
@@ -299,6 +328,26 @@ int ledger_llbase_postentry
     } else /* leave return at top of stack */;
   } else {
     ledger_entry_free(e);
+    luaL_error(L, err);
+  }
+  return 1;
+}
+
+int ledger_llbase_postjournal
+  (struct lua_State *L, struct ledger_journal* a, int ok, char const* err)
+{
+  /* enter protection */if (ok){
+    int success_line;
+    lua_pushcfunction(L, ledger_llbase_postjournalP1);
+    lua_pushlightuserdata(L, a);
+    success_line = lua_pcall(L, 1, 1, 0);
+    if (success_line != LUA_OK){
+      ledger_journal_free(a);
+      /* throw; */
+      lua_error(L);
+    } else /* leave return at top of stack */;
+  } else {
+    ledger_journal_free(a);
     luaL_error(L, err);
   }
   return 1;

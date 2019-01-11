@@ -5,6 +5,7 @@
 #include "../../deps/lua/src/lauxlib.h"
 #include "../base/account.h"
 #include "../base/entry.h"
+#include "../base/journal.h"
 #include "../base/util.h"
 #include "../base/bignum.h"
 #include "../base/table.h"
@@ -14,6 +15,7 @@
 
 static char const* ledger_llbase_account_meta = "ledger.account";
 static char const* ledger_llbase_entry_meta = "ledger.entry";
+static char const* ledger_llbase_journal_meta = "ledger.journal";
 
 /*   BEGIN ledger/base/account { */
 
@@ -219,6 +221,147 @@ static const struct luaL_Reg ledger_luaL_entry_lib[] = {
 };
 
 /* } END   ledger/base/entry */
+
+/*   BEGIN ledger/base/journal { */
+
+/*
+ * `ledger.journal.create()`
+ * @return an journal instance
+ */
+static int ledger_luaL_journal_create(struct lua_State *L);
+
+/*
+ * `ledger.journal.__gc(self~ledger.journal)`
+ * - self the journal to free
+ */
+static int ledger_luaL_journal___gc(struct lua_State *L);
+
+/*
+ * `ledger.journal.__eq(a~ledger.journal, b~ledger.journal)`
+ * - a first journal
+ * - b second journal
+ * @return true if equal, false otherwise
+ */
+static int ledger_luaL_journal___eq(struct lua_State *L);
+
+/*
+ * `ledger.journal.ptr(self~ledger.journal)`
+ * - self the journal to query
+ * @return the direct pointer to the journal
+ */
+static int ledger_luaL_journal_ptr(struct lua_State *L);
+
+/*
+ * `ledger.journal.getdescription(self~ledger.journal)`
+ * - self the journal to query
+ * @return the journal's description
+ */
+static int ledger_luaL_journal_getdescription(struct lua_State *L);
+
+/*
+ * `ledger.journal.setdescription(self~ledger.journal, d~string)`
+ * - self the journal to modify
+ * - d new description
+ * @return a success flag
+ */
+static int ledger_luaL_journal_setdescription(struct lua_State *L);
+
+/*
+ * `ledger.journal.getname(self~ledger.journal)`
+ * - self the journal to query
+ * @return the journal's name
+ */
+static int ledger_luaL_journal_getname(struct lua_State *L);
+
+/*
+ * `ledger.journal.setname(self~ledger.journal, n~string)`
+ * - self the journal to modify
+ * - n new name
+ * @return a success flag
+ */
+static int ledger_luaL_journal_setname(struct lua_State *L);
+
+/*
+ * `ledger.journal.getid(self~ledger.journal)`
+ * - self the journal to query
+ * @return the journal's identifier
+ */
+static int ledger_luaL_journal_getid(struct lua_State *L);
+
+/*
+ * `ledger.journal.setid(self~ledger.journal, v~number)`
+ * - self the journal to modify
+ * - v new identifier
+ * @return a success flag
+ */
+static int ledger_luaL_journal_setid(struct lua_State *L);
+
+/*
+ * `ledger.journal.gettable(self~ledger.journal)`
+ * - self the journal to query
+ * @return the journal's table
+ */
+static int ledger_luaL_journal_gettable(struct lua_State *L);
+
+/*
+ * `ledger.journal.getsequence(self~ledger.journal)`
+ * - self the journal to query
+ * @return the journal's sequence number
+ */
+static int ledger_luaL_journal_getsequence(struct lua_State *L);
+
+/*
+ * `ledger.journal.setsequence(self~ledger.journal, v~number)`
+ * - self the journal to modify
+ * - v new sequence number
+ * @return a success flag
+ */
+static int ledger_luaL_journal_setsequence(struct lua_State *L);
+
+/*
+ * `ledger.journal.getentry(self~ledger.journal, i~number)`
+ * - self the journal to query
+ * - i entry array index
+ * @return the journal's i-th entry
+ */
+static int ledger_luaL_journal_getentry(struct lua_State *L);
+
+/*
+ * `ledger.journal.getentrycount(self~ledger.journal)`
+ * - self the journal to query
+ * @return the number of entries in the journal
+ */
+static int ledger_luaL_journal_getentrycount(struct lua_State *L);
+
+/*
+ * `ledger.journal.setentrycount(self~ledger.journal, v~number)`
+ * - self the journal to modify
+ * - v new entry count
+ * @return a success flag
+ */
+static int ledger_luaL_journal_setentrycount(struct lua_State *L);
+
+static const struct luaL_Reg ledger_luaL_journal_lib[] = {
+  {"create", ledger_luaL_journal_create},
+  {"__gc", ledger_luaL_journal___gc},
+  {"__eq", ledger_luaL_journal___eq},
+  {"ptr", ledger_luaL_journal_ptr},
+  {"getdescription", ledger_luaL_journal_getdescription},
+  {"setdescription", ledger_luaL_journal_setdescription},
+  {"getname", ledger_luaL_journal_getname},
+  {"setname", ledger_luaL_journal_setname},
+  {"getid", ledger_luaL_journal_getid},
+  {"setid", ledger_luaL_journal_setid},
+  {"gettable", ledger_luaL_journal_gettable},
+  {"getsequence", ledger_luaL_journal_getsequence},
+  {"setsequence", ledger_luaL_journal_setsequence},
+  {"getentrycount", ledger_luaL_journal_getentrycount},
+  {"setentrycount", ledger_luaL_journal_setentrycount},
+  {"getentry", ledger_luaL_journal_getentry},
+  {NULL, NULL}
+};
+
+/* } END   ledger/base/journal */
 
 
 /* BEGIN static implementation */
@@ -625,6 +768,284 @@ int ledger_luaL_entry_setid(struct lua_State *L){
 
 /* } END   ledger/base/entry */
 
+/*   BEGIN ledger/base/journal { */
+
+int ledger_luaL_journal_create(struct lua_State *L){
+  /* ARG:
+   *   -
+   * RET:
+   *   1 @return~ledger.journal
+   * THROW:
+   *   X
+   */
+  struct ledger_journal* next_journal;
+  int ok;
+  /* execute C API */{
+    next_journal = ledger_journal_new();
+    if (next_journal != NULL){
+      ok = 1;
+    } else ok = 0;
+  }
+  ledger_llbase_postjournal
+    (L, next_journal, ok, "ledger.journal.create: generic error");
+  return 1;
+}
+
+int ledger_luaL_journal___gc(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   * RET:
+   *   X
+   */
+  struct ledger_journal** a =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  ledger_journal_free(*a);
+  *a = NULL;
+  return 0;
+}
+
+int ledger_luaL_journal_cmp(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.journal
+   *   2  right~ledger.journal
+   * ...:
+   */
+  struct ledger_journal** left =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  struct ledger_journal** right =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 2, ledger_llbase_journal_meta);
+  if (*left != NULL && *right != NULL){
+    return ledger_journal_is_equal(*left, *right)?0:-1;
+  } else {
+    luaL_error(L, "ledger_luaL_journal_cmp: inconsistency check #1 triggered");
+    return -2;
+  }
+}
+
+int ledger_luaL_journal___eq(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.journal
+   *   2  right~ledger.journal
+   * RET:
+   *   3 @return~boolean
+   */
+  int result = ledger_luaL_journal_cmp(L);
+  lua_pushboolean(L, result==0);
+  return 1;
+}
+
+int ledger_luaL_journal_ptr(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   * RET:
+   *   2  @return~lightuserdata
+   */
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  lua_pushlightuserdata(L, (void*)*j);
+  return 1;
+}
+
+int ledger_luaL_journal_getdescription(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   * RET:
+   *   2  @return~string
+   */
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  unsigned char const* d = ledger_journal_get_description(*j);
+  lua_pushstring(L, (char const*)d);
+  return 1;
+}
+
+int ledger_luaL_journal_setdescription(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   *   2  d~string
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  unsigned char const* d = (unsigned char const*)lua_tostring(L, 2);
+  result = ledger_journal_set_description(*j, d);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_journal_getname(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   * RET:
+   *   2  @return~string
+   */
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  unsigned char const* n = ledger_journal_get_name(*j);
+  lua_pushstring(L, (char const*)n);
+  return 1;
+}
+
+int ledger_luaL_journal_setname(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   *   2  n~string
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  unsigned char const* n = (unsigned char const*)lua_tostring(L, 2);
+  result = ledger_journal_set_name(*j, n);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_journal_getid(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   * RET:
+   *   2  @return~number
+   */
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  int v = ledger_journal_get_id(*j);
+  lua_pushinteger(L, (lua_Integer)v);
+  return 1;
+}
+
+int ledger_luaL_journal_setid(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   *   2  v~number
+   * RET:
+   *   3  @return~boolean
+   */
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  int const v = (int)lua_tointeger(L, 2);
+  ledger_journal_set_id(*j, v);
+  lua_pushboolean(L, 1);
+  return 1;
+}
+
+int ledger_luaL_journal_gettable(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   * RET:
+   *   2  @return~ledger.table
+   */
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  struct ledger_table* t = ledger_journal_get_table(*j);
+  if (ledger_table_acquire(t) != t){
+    luaL_error(L, "ledger.journal.gettable: Table unavailable");
+  } else {
+    ledger_llbase_posttable
+      (L, t, 1, "ledger.journal.gettable: Table available");
+  }
+  return 1;
+}
+
+int ledger_luaL_journal_getsequence(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   * RET:
+   *   2  @return~number
+   */
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  int v = ledger_journal_get_sequence(*j);
+  lua_pushinteger(L, (lua_Integer)v);
+  return 1;
+}
+
+int ledger_luaL_journal_setsequence(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   *   2  v~number
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  int const v = (int)lua_tointeger(L, 2);
+  result = ledger_journal_set_sequence(*j, v);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_journal_getentry(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   *   2  v~number
+   * RET:
+   *   3  @return~ledger.entry
+   */
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  int const v = ((int)lua_tointeger(L, 2))-1;
+  struct ledger_entry* e = ledger_journal_get_entry(*j, v);
+  if (ledger_entry_acquire(e) != e){
+    luaL_error(L, "ledger.journal.getentry: Journal entry unavailable");
+  } else {
+    ledger_llbase_postentry
+      (L, e, 1, "ledger.journal.getentry: Journal entry available");
+  }
+  return 1;
+}
+
+int ledger_luaL_journal_getentrycount(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   * RET:
+   *   2  @return~number
+   */
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  int v = ledger_journal_get_entry_count(*j);
+  lua_pushinteger(L, (lua_Integer)v);
+  return 1;
+}
+
+int ledger_luaL_journal_setentrycount(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.journal
+   *   2  v~number
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  int const v = (int)lua_tointeger(L, 2);
+  result = ledger_journal_set_entry_count(*j, v);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+/* } END   ledger/base/journal */
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -653,6 +1074,18 @@ void ledger_luaopen_baserefs(struct lua_State *L){
       lua_setfield(L, LUA_REGISTRYINDEX, ledger_llbase_entry_meta);
     }
     lua_setfield(L, -2, "entry");
+  }
+  /* add journal lib */{
+    luaL_newlib(L, ledger_luaL_journal_lib);
+    lua_pushvalue(L, -1);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+    lua_pushstring(L, ledger_llbase_journal_meta);
+    lua_setfield(L, -2, "__name");  /* metatable.__name = tname */
+    /* registry.name = metatable */{
+      lua_setfield(L, LUA_REGISTRYINDEX, ledger_llbase_journal_meta);
+    }
+    lua_setfield(L, -2, "journal");
   }
   return;
 }
