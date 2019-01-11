@@ -14,6 +14,7 @@ extern "C" {
 struct ledger_bignum;
 struct ledger_table;
 struct ledger_table_mark;
+struct ledger_account;
 
 /*
  * Lua state
@@ -65,6 +66,17 @@ int ledger_llbase_posttable
 int ledger_llbase_posttablemark
   ( struct lua_State *L, struct ledger_table_mark* tm,
     int ok, char const* err);
+
+/*
+ * Post the given account to the top of the stack.
+ * - L lua state to modify
+ * - a account to post
+ * - ok if nonzero, the account is posted, else the error is raised
+ * - err error message if not `ok`
+ * @return one on success, zero otherwise
+ */
+int ledger_llbase_postaccount
+  (struct lua_State *L, struct ledger_account* a, int ok, char const* err);
 
 /*
  * Open the base library.

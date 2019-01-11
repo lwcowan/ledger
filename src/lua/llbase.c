@@ -1,12 +1,14 @@
 
 #include "llbaseutil.h"
 #include "llbasetable.h"
+#include "llbaserefs.h"
 #include "llbase.h"
 #include "../../deps/lua/src/lua.h"
 #include "../../deps/lua/src/lauxlib.h"
 #include "../base/util.h"
 #include "../base/bignum.h"
 #include "../base/table.h"
+#include "../base/account.h"
 #include <limits.h>
 
 
@@ -38,9 +40,17 @@ static int ledger_llbase_posttableP1(struct lua_State *L);
  */
 static int ledger_llbase_posttablemarkP1(struct lua_State *L);
 
+/* [INTERNAL]
+ * Post the account on the top of the stack.
+ * - L lua state to modify
+ * @return one
+ */
+static int ledger_llbase_postaccountP1(struct lua_State *L);
+
 static char const* ledger_llbase_bignum_meta = "ledger.bignum";
 static char const* ledger_llbase_table_meta = "ledger.table";
 static char const* ledger_llbase_tablemark_meta = "ledger.table.mark";
+static char const* ledger_llbase_account_meta = "ledger.account";
 
 /* } END   ledger/base/bignum */
 
@@ -121,6 +131,25 @@ int ledger_llbase_posttablemarkP1(struct lua_State *L){
   return 1;
 }
 
+int ledger_llbase_postaccountP1(struct lua_State *L){
+  /* ARG:
+   *   1 *account
+   * RET:
+   *   2 @return
+   */
+  struct ledger_account* a = (struct ledger_account*)lua_touserdata(L, 1);
+  /* get a full user data for the account pointer */
+  void ** ptr = (void**)lua_newuserdata(L, sizeof(void*));
+  if (ptr == NULL){
+    luaL_error(L, "unable to allocate space for `ledger.account`"
+      " indirect pointer");
+    return 0;
+  }
+  (*ptr) = a;
+  /* apply the userdata registry item `ledger.account` to this userdata */
+  luaL_setmetatable(L, ledger_llbase_account_meta);
+  return 1;
+}
 
 /* END   static implementation */
 
@@ -206,6 +235,26 @@ int ledger_llbase_posttablemark
   return 1;
 }
 
+int ledger_llbase_postaccount
+  (struct lua_State *L, struct ledger_account* a, int ok, char const* err)
+{
+  /* enter protection */if (ok){
+    int success_line;
+    lua_pushcfunction(L, ledger_llbase_postaccountP1);
+    lua_pushlightuserdata(L, a);
+    success_line = lua_pcall(L, 1, 1, 0);
+    if (success_line != LUA_OK){
+      ledger_account_free(a);
+      /* throw; */
+      lua_error(L);
+    } else /* leave return at top of stack */;
+  } else {
+    ledger_account_free(a);
+    luaL_error(L, err);
+  }
+  return 1;
+}
+
 void ledger_luaopen_base(struct lua_State *L){
   /* fetch the global `ledger` table */{
     int type = lua_getglobal (L, "ledger");
@@ -216,6 +265,7 @@ void ledger_luaopen_base(struct lua_State *L){
   }
   ledger_luaopen_baseutil(L);
   ledger_luaopen_basetable(L);
+  ledger_luaopen_baserefs(L);
   lua_pop(L,1);
   return;
 }

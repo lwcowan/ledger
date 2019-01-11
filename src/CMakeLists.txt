@@ -51,6 +51,7 @@ set(ledger_lua_SOURCES
   lua/llbase.h         lua/llbase.c
   lua/llbaseutil.h     lua/llbaseutil.c
   lua/llbasetable.h    lua/llbasetable.c
+  lua/llbaserefs.h     lua/llbaserefs.c
   )
 
 add_library(ledger_lua ${ledger_lua_SOURCES})
