@@ -1139,7 +1139,9 @@ int ledger_luaL_journal_getentry(struct lua_State *L){
         (L, 1, ledger_llbase_journal_meta);
   int const v = ((int)lua_tointeger(L, 2))-1;
   struct ledger_entry* e = ledger_journal_get_entry(*j, v);
-  if (ledger_entry_acquire(e) != e){
+  if (e == NULL){
+    lua_pushnil(L);
+  } else if (ledger_entry_acquire(e) != e){
     luaL_error(L, "ledger.journal.getentry: Journal entry unavailable");
   } else {
     ledger_llbase_postentry
@@ -1398,7 +1400,9 @@ int ledger_luaL_ledger_getaccount(struct lua_State *L){
         (L, 1, ledger_llbase_ledger_meta);
   int const v = ((int)lua_tointeger(L, 2))-1;
   struct ledger_account* e = ledger_ledger_get_account(*j, v);
-  if (ledger_account_acquire(e) != e){
+  if (e == NULL){
+    lua_pushnil(L);
+  } else if (ledger_account_acquire(e) != e){
     luaL_error(L, "ledger.ledger.getaccount: Account unavailable");
   } else {
     ledger_llbase_postaccount
