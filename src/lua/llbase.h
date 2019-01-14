@@ -18,6 +18,7 @@ struct ledger_account;
 struct ledger_entry;
 struct ledger_journal;
 struct ledger_ledger;
+struct ledger_book;
 
 /*
  * Lua state
@@ -113,6 +114,17 @@ int ledger_llbase_postjournal
  */
 int ledger_llbase_postledger
   (struct lua_State *L, struct ledger_ledger* j, int ok, char const* err);
+
+/*
+ * Post the given book to the top of the stack.
+ * - L lua state to modify
+ * - b book to post
+ * - ok if nonzero, the book is posted, else the error is raised
+ * - err error message if not `ok`
+ * @return one on success, zero otherwise
+ */
+int ledger_llbase_postbook
+  (struct lua_State *L, struct ledger_book* b, int ok, char const* err);
 
 /*
  * Open the base library.

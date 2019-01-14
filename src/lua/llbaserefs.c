@@ -7,6 +7,7 @@
 #include "../base/entry.h"
 #include "../base/journal.h"
 #include "../base/ledger.h"
+#include "../base/book.h"
 #include "../base/util.h"
 #include "../base/bignum.h"
 #include "../base/table.h"
@@ -18,6 +19,7 @@ static char const* ledger_llbase_account_meta = "ledger.account";
 static char const* ledger_llbase_entry_meta = "ledger.entry";
 static char const* ledger_llbase_journal_meta = "ledger.journal";
 static char const* ledger_llbase_ledger_meta = "ledger.ledger";
+static char const* ledger_llbase_book_meta = "ledger.book";
 
 /*   BEGIN ledger/base/account { */
 
@@ -498,6 +500,147 @@ static const struct luaL_Reg ledger_luaL_ledger_lib[] = {
 
 /* } END   ledger/base/ledger */
 
+/*   BEGIN ledger/base/book { */
+
+/*
+ * `ledger.book.create()`
+ * @return an book instance
+ */
+static int ledger_luaL_book_create(struct lua_State *L);
+
+/*
+ * `ledger.book.__gc(self~ledger.book)`
+ * - self the book to free
+ */
+static int ledger_luaL_book___gc(struct lua_State *L);
+
+/*
+ * `ledger.book.__eq(a~ledger.book, b~ledger.book)`
+ * - a first book
+ * - b second book
+ * @return true if equal, false otherwise
+ */
+static int ledger_luaL_book___eq(struct lua_State *L);
+
+/*
+ * `ledger.book.ptr(self~ledger.book)`
+ * - self the book to query
+ * @return the direct pointer to the book
+ */
+static int ledger_luaL_book_ptr(struct lua_State *L);
+
+/*
+ * `ledger.book.getdescription(self~ledger.book)`
+ * - self the book to query
+ * @return the book's description
+ */
+static int ledger_luaL_book_getdescription(struct lua_State *L);
+
+/*
+ * `ledger.book.setdescription(self~ledger.book, d~string)`
+ * - self the book to modify
+ * - d new description
+ * @return a success flag
+ */
+static int ledger_luaL_book_setdescription(struct lua_State *L);
+
+/*
+ * `ledger.book.getnotes(self~ledger.book)`
+ * - self the book to query
+ * @return the book's notes
+ */
+static int ledger_luaL_book_getnotes(struct lua_State *L);
+
+/*
+ * `ledger.book.setnotes(self~ledger.book, n~string)`
+ * - self the book to modify
+ * - n new notes
+ * @return a success flag
+ */
+static int ledger_luaL_book_setnotes(struct lua_State *L);
+
+/*
+ * `ledger.book.getsequence(self~ledger.book)`
+ * - self the book to query
+ * @return the book's sequence number
+ */
+static int ledger_luaL_book_getsequence(struct lua_State *L);
+
+/*
+ * `ledger.book.setsequence(self~ledger.book, v~number)`
+ * - self the book to modify
+ * - v new sequence number
+ * @return a success flag
+ */
+static int ledger_luaL_book_setsequence(struct lua_State *L);
+
+/*
+ * `ledger.book.getledger(self~ledger.book, i~number)`
+ * - self the book to query
+ * - i ledger array index
+ * @return the book's i-th ledger
+ */
+static int ledger_luaL_book_getledger(struct lua_State *L);
+
+/*
+ * `ledger.book.getledgercount(self~ledger.book)`
+ * - self the book to query
+ * @return the number of ledgers in the book
+ */
+static int ledger_luaL_book_getledgercount(struct lua_State *L);
+
+/*
+ * `ledger.book.setledgercount(self~ledger.book, v~number)`
+ * - self the book to modify
+ * - v new ledger count
+ * @return a success flag
+ */
+static int ledger_luaL_book_setledgercount(struct lua_State *L);
+
+/*
+ * `ledger.book.getjournal(self~ledger.book, i~number)`
+ * - self the book to query
+ * - i journal array index
+ * @return the book's i-th journal
+ */
+static int ledger_luaL_book_getjournal(struct lua_State *L);
+
+/*
+ * `ledger.book.getjournalcount(self~ledger.book)`
+ * - self the book to query
+ * @return the number of journals in the book
+ */
+static int ledger_luaL_book_getjournalcount(struct lua_State *L);
+
+/*
+ * `ledger.book.setjournalcount(self~ledger.book, v~number)`
+ * - self the book to modify
+ * - v new journal count
+ * @return a success flag
+ */
+static int ledger_luaL_book_setjournalcount(struct lua_State *L);
+
+static const struct luaL_Reg ledger_luaL_book_lib[] = {
+  {"create", ledger_luaL_book_create},
+  {"__gc", ledger_luaL_book___gc},
+  {"__eq", ledger_luaL_book___eq},
+  {"ptr", ledger_luaL_book_ptr},
+  {"getdescription", ledger_luaL_book_getdescription},
+  {"setdescription", ledger_luaL_book_setdescription},
+  {"getnotes", ledger_luaL_book_getnotes},
+  {"setnotes", ledger_luaL_book_setnotes},
+  {"getsequence", ledger_luaL_book_getsequence},
+  {"setsequence", ledger_luaL_book_setsequence},
+  {"getjournalcount", ledger_luaL_book_getjournalcount},
+  {"setjournalcount", ledger_luaL_book_setjournalcount},
+  {"getjournal", ledger_luaL_book_getjournal},
+  {"getledgercount", ledger_luaL_book_getledgercount},
+  {"setledgercount", ledger_luaL_book_setledgercount},
+  {"getledger", ledger_luaL_book_getledger},
+  {NULL, NULL}
+};
+
+/* } END   ledger/base/book */
 
 /* BEGIN static implementation */
 
@@ -1444,6 +1587,291 @@ int ledger_luaL_ledger_setaccountcount(struct lua_State *L){
 
 /* } END   ledger/base/ledger */
 
+/*   BEGIN ledger/base/book { */
+
+int ledger_luaL_book_create(struct lua_State *L){
+  /* ARG:
+   *   -
+   * RET:
+   *   1 @return~ledger.book
+   * THROW:
+   *   X
+   */
+  struct ledger_book* next_book;
+  int ok;
+  /* execute C API */{
+    next_book = ledger_book_new();
+    if (next_book != NULL){
+      ok = 1;
+    } else ok = 0;
+  }
+  ledger_llbase_postbook
+    (L, next_book, ok, "ledger.book.create: generic error");
+  return 1;
+}
+
+int ledger_luaL_book___gc(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   * RET:
+   *   X
+   */
+  struct ledger_book** a =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  ledger_book_free(*a);
+  *a = NULL;
+  return 0;
+}
+
+int ledger_luaL_book_cmp(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.book
+   *   2  right~ledger.book
+   * ...:
+   */
+  struct ledger_book** left =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  struct ledger_book** right =
+    (struct ledger_book**)luaL_checkudata
+        (L, 2, ledger_llbase_book_meta);
+  if (*left != NULL && *right != NULL){
+    return ledger_book_is_equal(*left, *right)?0:-1;
+  } else {
+    luaL_error(L, "ledger_luaL_book_cmp: inconsistency check #1 triggered");
+    return -2;
+  }
+}
+
+int ledger_luaL_book___eq(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.book
+   *   2  right~ledger.book
+   * RET:
+   *   3 @return~boolean
+   */
+  int result = ledger_luaL_book_cmp(L);
+  lua_pushboolean(L, result==0);
+  return 1;
+}
+
+int ledger_luaL_book_ptr(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   * RET:
+   *   2  @return~lightuserdata
+   */
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  lua_pushlightuserdata(L, (void*)*j);
+  return 1;
+}
+
+int ledger_luaL_book_getdescription(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   * RET:
+   *   2  @return~string
+   */
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  unsigned char const* d = ledger_book_get_description(*j);
+  lua_pushstring(L, (char const*)d);
+  return 1;
+}
+
+int ledger_luaL_book_setdescription(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   *   2  d~string
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  unsigned char const* d = (unsigned char const*)lua_tostring(L, 2);
+  result = ledger_book_set_description(*j, d);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_book_getnotes(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   * RET:
+   *   2  @return~string
+   */
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  unsigned char const* n = ledger_book_get_notes(*j);
+  lua_pushstring(L, (char const*)n);
+  return 1;
+}
+
+int ledger_luaL_book_setnotes(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   *   2  n~string
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  unsigned char const* n = (unsigned char const*)lua_tostring(L, 2);
+  result = ledger_book_set_notes(*j, n);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_book_getsequence(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   * RET:
+   *   2  @return~number
+   */
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  int v = ledger_book_get_sequence(*j);
+  lua_pushinteger(L, (lua_Integer)v);
+  return 1;
+}
+
+int ledger_luaL_book_setsequence(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   *   2  v~number
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  int const v = (int)lua_tointeger(L, 2);
+  result = ledger_book_set_sequence(*j, v);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_book_getledger(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   *   2  v~number
+   * RET:
+   *   3  @return~ledger.ledger
+   */
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  int const v = ((int)lua_tointeger(L, 2))-1;
+  struct ledger_ledger* e = ledger_book_get_ledger(*j, v);
+  if (e == NULL){
+    lua_pushnil(L);
+  } else if (ledger_ledger_acquire(e) != e){
+    luaL_error(L, "ledger.book.getledger: Journal ledger unavailable");
+  } else {
+    ledger_llbase_postledger
+      (L, e, 1, "ledger.book.getledger: Journal ledger available");
+  }
+  return 1;
+}
+
+int ledger_luaL_book_getledgercount(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   * RET:
+   *   2  @return~number
+   */
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  int v = ledger_book_get_ledger_count(*j);
+  lua_pushinteger(L, (lua_Integer)v);
+  return 1;
+}
+
+int ledger_luaL_book_setledgercount(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   *   2  v~number
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  int const v = (int)lua_tointeger(L, 2);
+  result = ledger_book_set_ledger_count(*j, v);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_book_getjournal(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   *   2  v~number
+   * RET:
+   *   3  @return~ledger.journal
+   */
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  int const v = ((int)lua_tointeger(L, 2))-1;
+  struct ledger_journal* e = ledger_book_get_journal(*j, v);
+  if (e == NULL){
+    lua_pushnil(L);
+  } else if (ledger_journal_acquire(e) != e){
+    luaL_error(L, "ledger.book.getjournal: Journal journal unavailable");
+  } else {
+    ledger_llbase_postjournal
+      (L, e, 1, "ledger.book.getjournal: Journal journal available");
+  }
+  return 1;
+}
+
+int ledger_luaL_book_getjournalcount(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   * RET:
+   *   2  @return~number
+   */
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  int v = ledger_book_get_journal_count(*j);
+  lua_pushinteger(L, (lua_Integer)v);
+  return 1;
+}
+
+int ledger_luaL_book_setjournalcount(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.book
+   *   2  v~number
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_book** j =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  int const v = (int)lua_tointeger(L, 2);
+  result = ledger_book_set_journal_count(*j, v);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+/* } END   ledger/base/book */
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -1496,6 +1924,18 @@ void ledger_luaopen_baserefs(struct lua_State *L){
       lua_setfield(L, LUA_REGISTRYINDEX, ledger_llbase_ledger_meta);
     }
     lua_setfield(L, -2, "ledger");
+  }
+  /* add book lib */{
+    luaL_newlib(L, ledger_luaL_book_lib);
+    lua_pushvalue(L, -1);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+    lua_pushstring(L, ledger_llbase_book_meta);
+    lua_setfield(L, -2, "__name");  /* metatable.__name = tname */
+    /* registry.name = metatable */{
+      lua_setfield(L, LUA_REGISTRYINDEX, ledger_llbase_book_meta);
+    }
+    lua_setfield(L, -2, "book");
   }
   return;
 }
