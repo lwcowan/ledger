@@ -307,30 +307,49 @@ int ledger_luaL_util_ustrlen(struct lua_State *L){
 }
 
 int ledger_luaL_util_ustrcmp(struct lua_State *L){
-  luaL_checktype(L, 1, LUA_TSTRING);
-  luaL_checktype(L, 2, LUA_TSTRING);
   /* execute */{
-    unsigned char const* str1 =
-      (unsigned char const*)lua_tostring(L, 1);
-    unsigned char const* str2 =
-      (unsigned char const*)lua_tostring(L, 2);
-    int cmp_value = ledger_util_ustrcmp(str1, str2);
+    unsigned char const* str1;
+    unsigned char const* str2;
+    int cmp_value;
+    if (lua_isnil(L, 1))
+      str1 = NULL;
+    else {
+      luaL_checktype(L, 1, LUA_TSTRING);
+      str1 = (unsigned char const*)lua_tostring(L, 1);
+    }
+    if (lua_isnil(L, 2))
+      str2 = NULL;
+    else {
+      luaL_checktype(L, 2, LUA_TSTRING);
+      str2 = (unsigned char const*)lua_tostring(L, 2);
+    }
+    cmp_value = ledger_util_ustrcmp(str1, str2);
     lua_pushinteger(L, (lua_Integer)cmp_value);
   }
   return 1;
 }
 
 int ledger_luaL_util_ustrncmp(struct lua_State *L){
-  luaL_checktype(L, 1, LUA_TSTRING);
-  luaL_checktype(L, 2, LUA_TSTRING);
-  luaL_checktype(L, 3, LUA_TNUMBER);
   /* execute */{
-    unsigned char const* str1 =
-      (unsigned char const*)lua_tostring(L, 1);
-    unsigned char const* str2 =
-      (unsigned char const*)lua_tostring(L, 2);
-    lua_Integer len = lua_tointeger(L, 3);
-    int cmp_value = ledger_util_ustrncmp(str1, str2, len);
+    unsigned char const* str1;
+    unsigned char const* str2;
+    lua_Integer len;
+    int cmp_value;
+    if (lua_isnil(L, 1))
+      str1 = NULL;
+    else {
+      luaL_checktype(L, 1, LUA_TSTRING);
+      str1 = (unsigned char const*)lua_tostring(L, 1);
+    }
+    if (lua_isnil(L, 2))
+      str2 = NULL;
+    else {
+      luaL_checktype(L, 2, LUA_TSTRING);
+      str2 = (unsigned char const*)lua_tostring(L, 2);
+    }
+    luaL_checktype(L, 3, LUA_TNUMBER);
+    len = lua_tointeger(L, 3);
+    cmp_value = ledger_util_ustrncmp(str1, str2, len);
     lua_pushinteger(L, (lua_Integer)cmp_value);
   }
   return 1;
