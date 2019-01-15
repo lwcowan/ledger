@@ -1,6 +1,7 @@
 
 #include "luaext.h"
 #include "llbase.h"
+#include "llio.h"
 #include "../base/util.h"
 #include "../../deps/lua/src/lua.h"
 #include "../../deps/lua/src/lualib.h"
@@ -283,6 +284,9 @@ int ledger_lua_loadledgerlib(lua_State *l){
   }
   /* load the base library */{
     ledger_luaopen_base(l);
+  }
+  /* load the input/output library */{
+    ledger_luaopen_io(l);
   }
   return 0;
 }
