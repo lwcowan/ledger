@@ -12,6 +12,7 @@
 #include "../base/entry.h"
 #include "../base/journal.h"
 #include "../base/ledger.h"
+#include "../base/book.h"
 #include <limits.h>
 
 
@@ -86,8 +87,6 @@ static char const* ledger_llbase_entry_meta = "ledger.entry";
 static char const* ledger_llbase_journal_meta = "ledger.journal";
 static char const* ledger_llbase_ledger_meta = "ledger.ledger";
 static char const* ledger_llbase_book_meta = "ledger.book";
-
-/* } END   ledger/base/bignum */
 
 /* BEGIN static implementation */
 
