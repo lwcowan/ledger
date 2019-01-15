@@ -6,11 +6,15 @@
 #include "../base/util.h"
 #include "../base/bignum.h"
 #include "../base/sum.h"
+#include "../base/find.h"
 #include <limits.h>
 
 
 static char const* ledger_llbase_bignum_meta = "ledger.bignum";
 static char const* ledger_llbase_table_meta = "ledger.table";
+static char const* ledger_llbase_journal_meta = "ledger.journal";
+static char const* ledger_llbase_ledger_meta = "ledger.ledger";
+static char const* ledger_llbase_book_meta = "ledger.book";
 
 /*   BEGIN ledger/base/util { */
 
@@ -246,6 +250,51 @@ static const struct luaL_Reg ledger_luaL_sum_metalib[] = {
 };
 
 /* } END   ledger/base/sum */
+
+
+/*   BEGIN ledger/base/find { */
+
+/*
+ * `ledger.find.findledger(b, name)`
+ * - b book to read
+ * - name name of ledger if string, identifier of ledger if number
+ * @return the one-index of the ledger if found, nil otherwise
+ */
+static int ledger_luaL_find_findledger(struct lua_State *L);
+
+/*
+ * `ledger.find.findjournal(b, name)`
+ * - b book to read
+ * - name name of journal if string, identifier of journal if number
+ * @return the one-index of the journal if found, nil otherwise
+ */
+static int ledger_luaL_find_findjournal(struct lua_State *L);
+
+/*
+ * `ledger.find.findaccount(j, name)`
+ * - j ledger to read
+ * - name name of account if string, identifier of account if number
+ * @return the one-index of the account if found, nil otherwise
+ */
+static int ledger_luaL_find_findaccount(struct lua_State *L);
+
+/*
+ * `ledger.find.findentry(j, name)`
+ * - j journal to read
+ * - name name of entry if string, identifier of entry if number
+ * @return the one-index of the entry if found, nil otherwise
+ */
+static int ledger_luaL_find_findentry(struct lua_State *L);
+
+static const struct luaL_Reg ledger_luaL_find_lib[] = {
+  {"findledger", ledger_luaL_find_findledger},
+  {"findjournal", ledger_luaL_find_findjournal},
+  {"findaccount", ledger_luaL_find_findaccount},
+  {"findentry", ledger_luaL_find_findentry},
+  {NULL,NULL}
+};
+
+/* } END   ledger/base/find */
 
 /* BEGIN static implementation */
 
@@ -741,6 +790,110 @@ int ledger_luaL_sum_sumC1(struct lua_State *L, int arg){
 
 /* } END   ledger/base/sum */
 
+/*   BEGIN ledger/base/find { */
+
+int ledger_luaL_find_findledger(struct lua_State *L){
+  /* ARG:
+   *   1  b~ledger.book
+   *   2  v~number
+   * RET:
+   *   3  @return~number|~nil
+   */
+  int result;
+  struct ledger_book** b =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  if (lua_type(L, 2) == LUA_TNUMBER){
+    int const v = ((int)lua_tointeger(L, 2));
+    result = ledger_find_ledger_by_id(*b, v);
+  } else {
+    unsigned char const* v;
+    luaL_checktype(L, 2, LUA_TSTRING);
+    v = (unsigned char const*)lua_tostring(L,2);
+    result = ledger_find_ledger_by_name(*b, v);
+  }
+  if (result < 0) lua_pushnil(L);
+  else lua_pushinteger(L, (lua_Integer)(result+1));
+  return 1;
+}
+
+int ledger_luaL_find_findjournal(struct lua_State *L){
+  /* ARG:
+   *   1  b~ledger.book
+   *   2  v~number
+   * RET:
+   *   3  @return~number|~nil
+   */
+  int result;
+  struct ledger_book** b =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1, ledger_llbase_book_meta);
+  if (lua_type(L, 2) == LUA_TNUMBER){
+    int const v = ((int)lua_tointeger(L, 2));
+    result = ledger_find_journal_by_id(*b, v);
+  } else {
+    unsigned char const* v;
+    luaL_checktype(L, 2, LUA_TSTRING);
+    v = (unsigned char const*)lua_tostring(L,2);
+    result = ledger_find_journal_by_name(*b, v);
+  }
+  if (result < 0) lua_pushnil(L);
+  else lua_pushinteger(L, (lua_Integer)(result+1));
+  return 1;
+}
+
+int ledger_luaL_find_findaccount(struct lua_State *L){
+  /* ARG:
+   *   1  j~ledger.ledger
+   *   2  v~number
+   * RET:
+   *   3  @return~number|~nil
+   */
+  int result;
+  struct ledger_ledger** j =
+    (struct ledger_ledger**)luaL_checkudata
+        (L, 1, ledger_llbase_ledger_meta);
+  if (lua_type(L, 2) == LUA_TNUMBER){
+    int const v = ((int)lua_tointeger(L, 2));
+    result = ledger_find_account_by_id(*j, v);
+  } else {
+    unsigned char const* v;
+    luaL_checktype(L, 2, LUA_TSTRING);
+    v = (unsigned char const*)lua_tostring(L,2);
+    result = ledger_find_account_by_name(*j, v);
+  }
+  if (result < 0) lua_pushnil(L);
+  else lua_pushinteger(L, (lua_Integer)(result+1));
+  return 1;
+}
+
+int ledger_luaL_find_findentry(struct lua_State *L){
+  /* ARG:
+   *   1  j~ledger.journal
+   *   2  v~number
+   * RET:
+   *   3  @return~number|~nil
+   */
+  int result;
+  struct ledger_journal** j =
+    (struct ledger_journal**)luaL_checkudata
+        (L, 1, ledger_llbase_journal_meta);
+  if (lua_type(L, 2) == LUA_TNUMBER){
+    int const v = ((int)lua_tointeger(L, 2));
+    result = ledger_find_entry_by_id(*j, v);
+  } else {
+    unsigned char const* v;
+    luaL_checktype(L, 2, LUA_TSTRING);
+    v = (unsigned char const*)lua_tostring(L,2);
+    result = ledger_find_entry_by_name(*j, v);
+  }
+  if (result < 0) lua_pushnil(L);
+  else lua_pushinteger(L, (lua_Integer)(result+1));
+  return 1;
+}
+
+/* } END   ledger/base/find */
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -767,6 +920,10 @@ void ledger_luaopen_baseutil(struct lua_State *L){
     luaL_newlib(L, ledger_luaL_sum_metalib);
     lua_setmetatable(L, -2);
     lua_setfield(L, -2, "sum");
+  }
+  /* add find lib */{
+    luaL_newlib(L, ledger_luaL_find_lib);
+    lua_setfield(L, -2, "find");
   }
   return;
 }
