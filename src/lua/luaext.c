@@ -2,6 +2,7 @@
 #include "luaext.h"
 #include "llbase.h"
 #include "llio.h"
+#include "llact.h"
 #include "../base/util.h"
 #include "../../deps/lua/src/lua.h"
 #include "../../deps/lua/src/lualib.h"
@@ -287,6 +288,9 @@ int ledger_lua_loadledgerlib(lua_State *l){
   }
   /* load the input/output library */{
     ledger_luaopen_io(l);
+  }
+  /* load the action library */{
+    ledger_luaopen_act(l);
   }
   return 0;
 }
