@@ -6,6 +6,7 @@
 #include "../../deps/lua/src/lauxlib.h"
 #include "../act/path.h"
 #include "../act/select.h"
+#include "../act/transact.h"
 #include "../base/book.h"
 #include "../base/util.h"
 #include "../base/table.h"
@@ -17,6 +18,7 @@
 static char const* ledger_llact_path_meta = "ledger.path";
 static char const* ledger_llbase_book_meta = "ledger.book";
 static char const* ledger_llbase_table_meta = "ledger.table";
+static char const* ledger_llact_transaction_meta = "ledger.transaction";
 
 /*   BEGIN ledger/act/path { */
 
@@ -146,6 +148,121 @@ struct ledger_luaL_select_cmp ledger_luaL_select_cmps[] = {
 };
 
 /* } END   ledger/act/select */
+
+/*   BEGIN ledger/act/transaction { */
+
+/*
+ * `ledger.transaction.create()`
+ * @return the transaction object
+ */
+int ledger_luaL_transaction_create(struct lua_State* L);
+
+/*
+ * `ledger.transaction.__gc(t~ledger.transaction)`
+ * - t transaction to collect
+ */
+int ledger_luaL_transaction___gc(struct lua_State* L);
+
+/*
+ * `ledger.transaction.__eq(a~ledger.transaction, b~ledger.transaction)`
+ * - a first transaction
+ * - b second transaction
+ * @return whether the transactions are equivalent
+ */
+int ledger_luaL_transaction___eq(struct lua_State* L);
+
+/*
+ * `ledger.transaction.ptr(t~ledger.transaction)`
+ * - t transaction to process
+ * @return the C pointer for the transaction
+ */
+int ledger_luaL_transaction_ptr(struct lua_State* L);
+
+/*
+ * `ledger.transaction.getdescription(t~ledger.transaction)`
+ * - t transaction to query
+ * @return its description
+ */
+int ledger_luaL_transaction_getdescription(struct lua_State* L);
+
+/*
+ * `ledger.transaction.setdescription(t~ledger.transaction, s~string)`
+ * - t transaction to configure
+ * - s new description
+ * @return one on success, zero otherwise
+ */
+int ledger_luaL_transaction_setdescription(struct lua_State* L);
+
+/*
+ * `ledger.transaction.getname(t~ledger.transaction)`
+ * - t transaction to query
+ * @return the name for the resulting entry
+ */
+int ledger_luaL_transaction_getname(struct lua_State* L);
+
+/*
+ * `ledger.transaction.setname(t~ledger.transaction, s~string)`
+ * - t transaction to configure
+ * - s new name for the resulting entry
+ * @return one on success, zero otherwise
+ */
+int ledger_luaL_transaction_setname(struct lua_State* L);
+
+/*
+ * `ledger.transaction.getdate(t~ledger.transaction)`
+ * - t the transaction to query
+ * @return the date currently set on the transaction
+ */
+int ledger_luaL_transaction_getdate(struct lua_State* L);
+
+/*
+ * `ledger.transaction.setdate(t~ledger.transaction, d~string)`
+ * - t transaction to configure
+ * - d date to set on the new entry
+ * @return one on success, zero otherwise
+ */
+int ledger_luaL_transaction_setdate(struct lua_State* L);
+
+/*
+ * `ledger.transaction.getjournal(t~ledger.transaction)`
+ * - t transaction to query
+ * @return the array index of the journal into which to write
+ */
+int ledger_luaL_transaction_getjournal(struct lua_State* L);
+
+/*
+ * `ledger.transaction.setjournal(t~ledger.transaction, j~number)`
+ * - t transaction to configure
+ * - j array index of journal into which to write
+ * @return one on success, zero otherwise
+ */
+int ledger_luaL_transaction_setjournal(struct lua_State* L);
+
+/*
+ * `ledger.transaction.gettable(t~ledger.transaction)`
+ * - t transaction to configure
+ * @return a reference to the transaction line table
+ */
+int ledger_luaL_transaction_gettable(struct lua_State* L);
+
+static const struct luaL_Reg ledger_luaL_transaction_lib[] = {
+  {"create", ledger_luaL_transaction_create},
+  {"__gc", ledger_luaL_transaction___gc},
+  {"__eq", ledger_luaL_transaction___eq},
+  {"ptr", ledger_luaL_transaction_ptr},
+  {"getdescription", ledger_luaL_transaction_getdescription},
+  {"setdescription", ledger_luaL_transaction_setdescription},
+  {"getname", ledger_luaL_transaction_getname},
+  {"setname", ledger_luaL_transaction_setname},
+  {"getdate", ledger_luaL_transaction_getdate},
+  {"setdate", ledger_luaL_transaction_setdate},
+  {"getjournal", ledger_luaL_transaction_getjournal},
+  {"setjournal", ledger_luaL_transaction_setjournal},
+  {"gettable", ledger_luaL_transaction_gettable},
+  {NULL,NULL}
+};
+
+/* } END   ledger/act/transaction */
 
 /* BEGIN static implementation */
 
@@ -579,6 +696,234 @@ int ledger_luaL_select_bycond(struct lua_State *L){
 
 /* } END   ledger/act/select */
 
+
+/*   BEGIN ledger/act/transaction { */
+
+int ledger_luaL_transaction_create(struct lua_State *L){
+  /* ARG:
+   *   -
+   * RET:
+   *   1 @return~ledger.transaction
+   * THROW:
+   *   X
+   */
+  struct ledger_transaction* next_transaction;
+  int ok;
+  /* execute C API */{
+    next_transaction = ledger_transaction_new();
+    if (next_transaction != NULL){
+      ok = 1;
+    } else ok = 0;
+  }
+  ledger_llact_posttransaction
+    (L, next_transaction, ok, "ledger.transaction.create: generic error");
+  return 1;
+}
+
+int ledger_luaL_transaction___gc(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   * RET:
+   *   X
+   */
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  ledger_transaction_free(*a);
+  *a = NULL;
+  return 0;
+}
+
+int ledger_luaL_transaction_cmp(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.transaction
+   *   2  right~ledger.transaction
+   * ...:
+   */
+  struct ledger_transaction** left =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  struct ledger_transaction** right =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 2, ledger_llact_transaction_meta);
+  if (*left != NULL && *right != NULL){
+    return ledger_transaction_is_equal(*left, *right)?0:-1;
+  } else {
+    luaL_error(L,
+      "ledger_luaL_transaction_cmp: inconsistency check #1 triggered");
+    return -2;
+  }
+}
+
+int ledger_luaL_transaction___eq(struct lua_State *L){
+  /* ARG:
+   *   1  left~ledger.transaction
+   *   2  right~ledger.transaction
+   * RET:
+   *   3 @return~boolean
+   */
+  int result = ledger_luaL_transaction_cmp(L);
+  lua_pushboolean(L, result==0);
+  return 1;
+}
+
+int ledger_luaL_transaction_ptr(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   * RET:
+   *   2  @return~lightuserdata
+   */
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  lua_pushlightuserdata(L, (void*)*a);
+  return 1;
+}
+
+int ledger_luaL_transaction_getdescription(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   * RET:
+   *   2  @return~string
+   */
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  unsigned char const* d = ledger_transaction_get_description(*a);
+  lua_pushstring(L, (char const*)d);
+  return 1;
+}
+
+int ledger_luaL_transaction_setdescription(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   *   2  d~string
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  unsigned char const* d = (unsigned char const*)lua_tostring(L, 2);
+  result = ledger_transaction_set_description(*a, d);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_transaction_getname(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   * RET:
+   *   2  @return~string
+   */
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  unsigned char const* n = ledger_transaction_get_name(*a);
+  lua_pushstring(L, (char const*)n);
+  return 1;
+}
+
+int ledger_luaL_transaction_setname(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   *   2  n~string
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  unsigned char const* n = (unsigned char const*)lua_tostring(L, 2);
+  result = ledger_transaction_set_name(*a, n);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_transaction_getdate(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   * RET:
+   *   2  @return~string
+   */
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  unsigned char const* n = ledger_transaction_get_date(*a);
+  lua_pushstring(L, (char const*)n);
+  return 1;
+}
+
+int ledger_luaL_transaction_setdate(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   *   2  n~string
+   * RET:
+   *   3  @return~boolean
+   */
+  int result;
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  unsigned char const* n = (unsigned char const*)lua_tostring(L, 2);
+  result = ledger_transaction_set_date(*a, n);
+  lua_pushboolean(L, result);
+  return 1;
+}
+
+int ledger_luaL_transaction_getjournal(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   * RET:
+   *   2  @return~number
+   */
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  int v = ledger_transaction_get_journal(*a);
+  lua_pushinteger(L, (lua_Integer)v);
+  return 1;
+}
+
+int ledger_luaL_transaction_setjournal(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   *   2  v~number
+   * RET:
+   *   3  @return~boolean
+   */
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  int const v = (int)lua_tointeger(L, 2);
+  ledger_transaction_set_journal(*a, v);
+  lua_pushboolean(L, 1);
+  return 1;
+}
+
+int ledger_luaL_transaction_gettable(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   * RET:
+   *   2  @return~ledger.table
+   */
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  struct ledger_table* t = ledger_transaction_get_table(*a);
+  if (ledger_table_acquire(t) != t){
+    luaL_error(L, "ledger.transaction.gettable: Table unavailable");
+  } else {
+    ledger_llbase_posttable
+      (L, t, 1, "ledger.transaction.gettable: Table available");
+  }
+  return 1;
+}
+
+/* } END   ledger/act/transaction */
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -599,6 +944,18 @@ void ledger_luaopen_actutil(struct lua_State *L){
   /* add select lib */{
     luaL_newlib(L, ledger_luaL_select_lib);
     lua_setfield(L, -2, "select");
+  }
+  /* add transaction lib */{
+    luaL_newlib(L, ledger_luaL_transaction_lib);
+    lua_pushvalue(L, -1);
+    lua_pushvalue(L, -1);
+    lua_setfield(L, -2, "__index");  /* metatable.__index = metatable */
+    lua_pushstring(L, ledger_llact_transaction_meta);
+    lua_setfield(L, -2, "__name");  /* metatable.__name = tname */
+    /* registry.name = metatable */{
+      lua_setfield(L, LUA_REGISTRYINDEX, ledger_llact_transaction_meta);
+    }
+    lua_setfield(L, -2, "transaction");
   }
   return;
 }

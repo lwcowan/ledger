@@ -5,6 +5,7 @@
 #include "../../deps/lua/src/lua.h"
 #include "../../deps/lua/src/lauxlib.h"
 #include "../act/path.h"
+#include "../act/transact.h"
 #include "../base/book.h"
 #include <limits.h>
 #include <string.h>
@@ -24,8 +25,16 @@ static int ledger_llact_postpathP1(struct lua_State *L);
  */
 static int ledger_llact_getpathP1(struct lua_State *L);
 
+/* [INTERNAL]
+ * Post the transaction on the top of the stack.
+ * - L lua state to modify
+ * @return one
+ */
+static int ledger_llact_posttransactionP1(struct lua_State *L);
+
 static char const* ledger_llact_path_meta = "ledger.path";
 static char const* ledger_llbase_book_meta = "ledger.book";
+static char const* ledger_llact_transaction_meta = "ledger.transaction";
 
 /* BEGIN static implementation */
 
@@ -131,6 +140,28 @@ int ledger_llact_getpathP1(struct lua_State *L){
   return 0;
 }
 
+
+int ledger_llact_posttransactionP1(struct lua_State *L){
+  /* ARG:
+   *   1 *transaction
+   * RET:
+   *   2 @return
+   */
+  struct ledger_transaction* a =
+      (struct ledger_transaction*)lua_touserdata(L, 1);
+  /* get a full user data for the transaction pointer */
+  void ** ptr = (void**)lua_newuserdata(L, sizeof(void*));
+  if (ptr == NULL){
+    luaL_error(L, "unable to allocate space for `ledger.transaction`"
+      " indirect pointer");
+    return 0;
+  }
+  (*ptr) = a;
+  /* apply the userdata registry item `ledger.transaction` to this userdata */
+  luaL_setmetatable(L, ledger_llact_transaction_meta);
+  return 1;
+}
+
 /* END static implementation */
 
 /* BEGIN implementation */
@@ -208,6 +239,27 @@ int ledger_llact_getpath
     memcpy(path, &tmp_path, sizeof(*path));
     return 1;
   }
+}
+
+int ledger_llact_posttransaction
+  ( struct lua_State *L, struct ledger_transaction* a,
+    int ok, char const* err)
+{
+  /* enter protection */if (ok){
+    int success_line;
+    lua_pushcfunction(L, ledger_llact_posttransactionP1);
+    lua_pushlightuserdata(L, a);
+    success_line = lua_pcall(L, 1, 1, 0);
+    if (success_line != LUA_OK){
+      ledger_transaction_free(a);
+      /* throw; */
+      lua_error(L);
+    } else /* leave return at top of stack */;
+  } else {
+    ledger_transaction_free(a);
+    luaL_error(L, err);
+  }
+  return 1;
 }
 
 void ledger_luaopen_act(struct lua_State *L){

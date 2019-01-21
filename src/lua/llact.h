@@ -13,6 +13,7 @@ extern "C" {
 #endif /*__cplusplus*/
 
 struct ledger_book;
+struct ledger_transaction;
 
 /*
  * Lua state
@@ -45,6 +46,18 @@ int ledger_llact_postpath
 int ledger_llact_getpath
   ( struct lua_State *L, struct ledger_act_path *path,
     struct ledger_book** book, int throwing, char const* err);
+
+/*
+ * Post the given transaction to the top of the stack.
+ * - L lua state to modify
+ * - a transaction to post
+ * - ok if nonzero, the transaction is posted, else the error is raised
+ * - err error message if not `ok`
+ * @return one on success, zero otherwise
+ */
+int ledger_llact_posttransaction
+  ( struct lua_State *L, struct ledger_transaction* a,
+    int ok, char const* err);
 
 /*
  * Open the action library.
