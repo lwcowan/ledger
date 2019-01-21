@@ -44,7 +44,12 @@ int main(int argc, char **argv){
       result = ledger_lua_exec_file
         ( lua, (unsigned char const*)argv[fname_point], argv[fname_point]);
       if (!result){
-        fputs("ledger_lua: script chunk rejected\n",stderr);
+        unsigned char const* errmsg = ledger_lua_get_last_error(lua);
+        if (errmsg != NULL){
+          fputs("ledger_lua: script chunk rejected: {\n",stderr);
+          fputs((char const*)errmsg,stderr);
+          fputs("\n}\n",stderr);
+        } else fputs("ledger_lua: script chunk rejected\n",stderr);
         result = 0;
         break;
       }
@@ -53,14 +58,24 @@ int main(int argc, char **argv){
       /* do interactive mode */
       char* next_line;
       int ok;
+      int want_continue = 0;
       result = 1;
-      while ((next_line = linenoise("ledger_lua> ")) != NULL){
+      while ((next_line = linenoise(
+          want_continue ? "        + > " : "ledger_lua> "
+        )) != NULL)
+      {
         linenoiseHistoryAdd(next_line);
         ok = ledger_lua_exec_str
-          (lua, (unsigned char const*)"*", (unsigned char const*)next_line);
+          ( lua, (unsigned char const*)"*", (unsigned char const*)next_line,
+            want_continue, &want_continue);
         linenoiseFree(next_line);
         if (!ok){
-          fputs("ledger_lua: script line rejected\n",stderr);
+          unsigned char const* errmsg = ledger_lua_get_last_error(lua);
+          if (errmsg != NULL){
+            fputs("ledger_lua: script line rejected: {\n",stderr);
+            fputs((char const*)errmsg,stderr);
+            fputs("\n}\n",stderr);
+          } else fputs("ledger_lua: script line rejected\n",stderr);
           result = 0;
         }
       }

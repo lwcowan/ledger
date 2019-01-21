@@ -39,10 +39,13 @@ void ledger_lua_close(struct ledger_lua* l);
  * - l the state to use
  * - name a name for the string
  * - s string to execute
+ * - want_continue if nonzero, this string continues the previous string
+ * - request_continue if not NULL, a request-more-text flag is written here
  * @return one on success, zero otherwise
  */
 int ledger_lua_exec_str(struct ledger_lua* l,
-    unsigned char const* name, unsigned char const* s);
+    unsigned char const* name, unsigned char const* s,
+    int want_continue, int *request_continue);
 
 /*
  * Add libraries to Lua for standalone processing.
@@ -78,6 +81,13 @@ int ledger_lua_set_arg
  * @return one on success
  */
 int luaopen_ledger(struct lua_State* l);
+
+/*
+ * Get the last error message for the package.
+ * - l Lua package
+ * @return the last error message, or NULL if no message is available
+ */
+unsigned char const* ledger_lua_get_last_error(struct ledger_lua const* l);
 
 #ifdef __cplusplus
 };

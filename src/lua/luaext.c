@@ -14,6 +14,9 @@
 struct ledger_lua {
   int lib_type;
   lua_State* base;
+  unsigned char* last_error;
+  unsigned char* last_text;
+  size_t last_text_length;
 };
 
 /*
@@ -36,6 +39,21 @@ struct ledger_lua_file_reader {
   unsigned char buf[256];
 };
 
+
+/*
+ * Add to the current text buffer.
+ * - l Lua package to update
+ * - ss new string chunk
+ * @return one on success, zero otherwise
+ */
+int ledger_lua_add_last_text
+  ( struct ledger_lua* l, unsigned char const* ss);
+
+/*
+ * Drop the current text buffer.
+ * - l Lua package to update
+ */
+void ledger_lua_clear_last_text( struct ledger_lua* l);
 
 /*
  * Close a Lua structure.
@@ -66,11 +84,14 @@ void* ledger_lua_alloc(void *ud, void *ptr, size_t osize, size_t nsize);
  * Load a text string of a certain length.
  * - l ledger-lua state
  * - ss NUL-terminated string to load
+ * - chunk_name name to place on the string
+ * - request_continue output field, set to one if more script lines
+ *     are needed
  * @return one on success, zero otherwise
  */
 static int ledger_lua_load_str
-  ( struct ledger_lua const* l, unsigned char const* ss,
-    unsigned char const* chunk_name);
+  ( struct ledger_lua* l, unsigned char const* ss,
+    unsigned char const* chunk_name, int *request_continue);
 
 /*
  * Load a text string of a certain length.
@@ -128,6 +149,15 @@ static int ledger_lua_set_arg_i(lua_State *L);
  */
 static int ledger_lua_loadledgerlib(lua_State *l);
 
+/*
+ * Set the last error message for the Lua package.
+ * - l the package to modify
+ * - le last error string
+ * @return one on success, zero otherwise
+ */
+static int ledger_lua_set_last_error
+  (struct ledger_lua* l, char const* le);
+
 
 /* BEGIN static implementation */
 
@@ -157,6 +187,15 @@ void ledger_lua_clear(struct ledger_lua* l){
     lua_close(l->base);
     l->base = NULL;
   }
+  if (l->last_error != NULL){
+    ledger_util_free(l->last_error);
+    l->last_error = NULL;
+  }
+  if (l->last_text != NULL){
+    ledger_util_free(l->last_text);
+    l->last_text = NULL;
+  }
+  l->last_text_length = 0;
   return;
 }
 
@@ -167,6 +206,9 @@ int ledger_lua_init(struct ledger_lua* l){
   }
   l->base = new_state;
   l->lib_type = 0;
+  l->last_error = NULL;
+  l->last_text = NULL;
+  l->last_text_length = 0;
   return 1;
 }
 
@@ -239,14 +281,72 @@ const char * ledger_lua_file_read(lua_State *l, void *data, size_t *size){
   }
 }
 
-int ledger_lua_load_str
-  ( struct ledger_lua const* l, unsigned char const* ss,
-    unsigned char const* chunk_name)
+int ledger_lua_add_last_text
+  ( struct ledger_lua* l, unsigned char const* ss)
 {
+  size_t add_len = strlen((char const*)ss);
+  if (add_len >= ((~0u)-l->last_text_length-1)){
+    return 0;
+  } else {
+    size_t next_offset = l->last_text_length;
+    unsigned char* new_text =
+      (unsigned char*)ledger_util_malloc(l->last_text_length+add_len+2);
+    if (new_text == NULL) return 0;
+    memcpy(new_text, l->last_text, l->last_text_length);
+    if (next_offset > 0){
+      new_text[next_offset] = '\n';
+      next_offset += 1;
+    }
+    memcpy(new_text+next_offset, ss, add_len);
+    new_text[next_offset+add_len] = 0;
+    ledger_util_free(l->last_text);
+    l->last_text = new_text;
+    l->last_text_length = next_offset+add_len;
+    return 1;
+  }
+}
+
+void ledger_lua_clear_last_text( struct ledger_lua* l){
+  ledger_util_free(l->last_text);
+  l->last_text_length = 0;
+  l->last_text = NULL;
+  return;
+}
+
+int ledger_lua_load_str
+  ( struct ledger_lua* l, unsigned char const* ss,
+    unsigned char const* chunk_name, int *request_continue)
+{
+  int continue_wanted = 0;
   int l_result;
-  struct ledger_lua_str_reader reader = { ss };
-  l_result = lua_load(l->base,
-      &ledger_lua_str_read, &reader, (char const*)chunk_name, "t");
+  struct ledger_lua_str_reader reader;
+  if (ledger_lua_add_last_text(l, ss) == 0){
+    lua_pushliteral(l->base, "ledger_lua: text too long");
+    l_result = LUA_ERRMEM;
+    continue_wanted = 0;
+  } else {
+    reader.p = l->last_text;
+    l_result = lua_load(l->base,
+        &ledger_lua_str_read, &reader, (char const*)chunk_name, "t");
+    if (l_result == LUA_ERRSYNTAX && *ss != 0){
+      size_t errlen;
+      char const* errmsg;
+      /* check <eof> token */{
+        errmsg = lua_tolstring(l->base, -1, &errlen);
+        if (errlen >= 5
+        &&  memcmp("<eof>", errmsg+errlen-5, 5) == 0)
+        {
+          lua_pop(l->base, 1);
+          l_result = LUA_OK;
+          continue_wanted = 1;
+        }
+      }
+    }
+  }
+  if (!continue_wanted)
+    ledger_lua_clear_last_text(l);
+  if (request_continue != NULL)
+    *request_continue = continue_wanted;
   return l_result==LUA_OK?1:0;
 }
 
@@ -275,16 +375,37 @@ int ledger_lua_exec_top(struct ledger_lua* l){
     return 0;
   else {
     l_result = lua_pcall(l->base, 0, 0, 0);
+    if (l_result != LUA_OK){
+      ledger_lua_set_last_error(l, lua_tostring(l->base, -1));
+      lua_pop(l->base, 1);
+    }
     return l_result==LUA_OK?1:0;
   }
 }
 
-int ledger_lua_loadledgerlib(lua_State *l){
-  luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
-  lua_pushcfunction(L, luaopen_ledger);
-  lua_setfield(L, -2, "ledger");
-  lua_pop(L, 1);
+unsigned char const* ledger_lua_get_last_error(struct ledger_lua const* l){
+  return l->last_error;
+}
+
+int ledger_lua_loadledgerlib(struct lua_State *l){
+  luaL_getsubtable(l, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
+  lua_pushcfunction(l, luaopen_ledger);
+  lua_setfield(l, -2, "ledger");
+  lua_pop(l, 1);
   return 0;
+}
+
+int ledger_lua_set_last_error
+  (struct ledger_lua* l, char const* le)
+{
+  int ok;
+  unsigned char* next_error =
+    ledger_util_ustrdup((unsigned char const*)le, &ok);
+  if (ok){
+    ledger_util_free(l->last_error);
+    l->last_error = next_error;
+  }
+  return ok;
 }
 
 /* END   static implementation */
@@ -311,12 +432,22 @@ void ledger_lua_close(struct ledger_lua* a){
 }
 
 int ledger_lua_exec_str
-  (struct ledger_lua* l, unsigned char const* name, unsigned char const* s)
+  ( struct ledger_lua* l, unsigned char const* name, unsigned char const* s,
+    int want_continue, int *request_continue)
 {
   int result;
-  result = ledger_lua_load_str(l,s, name);
-  if (result == 0) return 0;
-  else return ledger_lua_exec_top(l);
+  int subrequest;
+  if (!want_continue){
+    ledger_lua_clear_last_text(l);
+  }
+  result = ledger_lua_load_str(l,s, name, &subrequest);
+  if (request_continue != NULL) *request_continue = subrequest;
+  if (result == 0){
+    ledger_lua_set_last_error(l, lua_tostring(l->base, -1));
+    return 0;
+  } else if (!subrequest){
+    return ledger_lua_exec_top(l);
+  } else return 1;
 }
 
 int ledger_lua_openlibs(struct ledger_lua* l){
@@ -341,8 +472,11 @@ int ledger_lua_exec_file(struct ledger_lua* l,
 {
   int result;
   result = ledger_lua_load_file(l,f, name);
-  if (result == 0) return 0;
-  else return ledger_lua_exec_top(l);
+  if (result == 0){
+    ledger_lua_set_last_error(l, lua_tostring(l->base, -1));
+    lua_pop(l->base, 1);
+    return 0;
+  } else return ledger_lua_exec_top(l);
 }
 
 int ledger_lua_set_arg
