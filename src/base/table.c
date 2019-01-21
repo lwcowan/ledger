@@ -151,6 +151,12 @@ static int ledger_table_mark_init
 void ledger_table_mark_clear(struct ledger_table_mark* m);
 
 /*
+ * Clear a mark.
+ * - m the mark to clear
+ */
+void ledger_table_mark_free_cb(void* m);
+
+/*
  * Construct a row given a schema.
  * - schema array of data types
  * @return the row on success
@@ -421,9 +427,10 @@ struct ledger_table_mark* ledger_table_mark_new
 {
   struct ledger_table_mark* ptr;
   ptr = (struct ledger_table_mark*)
-    ledger_util_malloc(sizeof(struct ledger_table_mark));
+    ledger_util_ref_malloc(sizeof(struct ledger_table_mark),
+        ledger_table_mark_free_cb);
   if (!ledger_table_mark_init(t,r,mutable_flag,ptr)){
-    ledger_util_free(ptr);
+    ledger_util_ref_free(ptr);
     ptr = NULL;
   }
   return ptr;
@@ -436,6 +443,9 @@ int ledger_table_mark_init
   struct ledger_table_row* row =
     ledger_table_row_acquire((struct ledger_table_row*)r);
   if (row == NULL){
+    ptr->source = 0;
+    ptr->row = NULL;
+    ptr->mutable_flag = 0;
     return 0;
   }
   /* put mark contents */{
@@ -449,6 +459,10 @@ int ledger_table_mark_init
 void ledger_table_mark_clear(struct ledger_table_mark* m){
   ledger_table_row_free(m->row);
   return;
+}
+
+void ledger_table_mark_free_cb(void* m){
+  ledger_table_mark_clear((struct ledger_table_mark*)m);
 }
 
 int ledger_table_mark_add_one_checked(struct ledger_table_mark* m){
@@ -1323,8 +1337,8 @@ int ledger_table_mark_is_equal
 }
 
 void ledger_table_mark_free(struct ledger_table_mark* m){
-  ledger_table_mark_clear(m);
-  ledger_util_free(m);
+  /* NOTE ledger_table_mark_clear(m); called by ledger_util_ref_free */
+  ledger_util_ref_free(m);
 }
 
 int ledger_table_get_column_count(struct ledger_table const* t){
@@ -1520,6 +1534,16 @@ int ledger_table_mark_get_type
   ||  i >= schema->columns)
     return 0;
   else return schema->types[i];
+}
+
+int ledger_table_mark_is_valid(struct ledger_table_mark const* mark){
+  return ledger_table_schema_is_outdated(mark->row->schema);
+}
+
+struct ledger_table_mark* ledger_table_mark_acquire
+  (struct ledger_table_mark* mark)
+{
+  return (struct ledger_table_mark*)ledger_util_ref_acquire(mark);
 }
 
 /* END   implementation */

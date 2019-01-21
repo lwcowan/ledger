@@ -233,6 +233,21 @@ int ledger_table_put_id
 int ledger_table_mark_get_type
   (struct ledger_table_mark const* mark, int i);
 
+/*
+ * Check whether the mark is still valid.
+ * - mark the mark to query
+ * @return one if the mark is valid, zero otherwise
+ */
+int ledger_table_mark_is_valid(struct ledger_table_mark const* mark);
+
+/*
+ * Acquire a reference to a table mark.
+ * - mark the mark to acquire
+ * @return the mark on success, NULL otherwise
+ */
+struct ledger_table_mark* ledger_table_mark_acquire
+  (struct ledger_table_mark* mark);
+
 #ifdef __cplusplus
 };
 #endif /*__cplusplus*/
