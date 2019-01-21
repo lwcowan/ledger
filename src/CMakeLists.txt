@@ -45,6 +45,24 @@ set(ledger_act_SOURCES
 add_library(ledger_act ${ledger_act_SOURCES})
 target_link_libraries(ledger_act  ledger_base)
 
+#set lua library code
+set(ledger_lua_SOURCES
+  lua/luaext.h         lua/luaext.c
+  lua/llbase.h         lua/llbase.c
+  lua/llbaseutil.h     lua/llbaseutil.c
+  lua/llbasetable.h    lua/llbasetable.c
+  lua/llbaserefs.h     lua/llbaserefs.c
+  lua/llio.h           lua/llio.c
+  lua/llact.h          lua/llact.c
+  lua/llactutil.h      lua/llactutil.c
+  )
+
+add_library(ledger_lua ${ledger_lua_SOURCES})
+target_link_libraries(ledger_lua ledger_io ledger_act ledger_base lua)
+
+add_executable(ledger_lua_exec lua/lua.c)
+target_link_libraries(ledger_lua_exec ledger_lua linenoise)
+
 #set ledger-cli code
 set(ledger_cli_SOURCES
   cli/line.h           cli/line.c

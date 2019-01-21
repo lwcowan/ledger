@@ -3,6 +3,7 @@
 
 add_subdirectory(zip)
 add_subdirectory(cJSON)
+add_subdirectory(lua)
 add_subdirectory(refalloc)
 
 #minicsv library
