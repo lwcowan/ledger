@@ -7,6 +7,7 @@
 #include "../act/path.h"
 #include "../act/select.h"
 #include "../act/transact.h"
+#include "../act/commit.h"
 #include "../base/book.h"
 #include "../base/util.h"
 #include "../base/table.h"
@@ -263,6 +264,50 @@ static const struct luaL_Reg ledger_luaL_transaction_lib[] = {
 };
 
 /* } END   ledger/act/transaction */
+
+/*   BEGIN ledger/act/commit { */
+
+/* [INTERNAL]
+ * Perform a transaction commit.
+ * - L Lua state
+ * - arg argument offset
+ * @return one on success
+ */
+static int ledger_luaL_commit_commitC1(struct lua_State *L, int arg);
+
+/* [INTERNAL]
+ * `ledger.commit.commit(~ledger.book, ~ledger.transaction)`
+ * - L Lua state
+ * @return one on success
+ */
+static int ledger_luaL_commit_commit(struct lua_State *L);
+
+/* [INTERNAL]
+ * `ledger.commit.checkbalance(~ledger.transaction)`
+ * - L Lua state
+ * @return one on success
+ */
+static int ledger_luaL_commit_checkbalance(struct lua_State *L);
+
+/* [INTERNAL]
+ * `ledger.commit(~ledger.book, ~ledger.transaction)`
+ * - L Lua state
+ * @return one on success
+ */
+static int ledger_luaL_commit___call(struct lua_State *L);
+
+static const struct luaL_Reg ledger_luaL_commit_lib[] = {
+  {"commit", ledger_luaL_commit_commit},
+  {"checkbalance", ledger_luaL_commit_checkbalance},
+  {NULL,NULL}
+};
+
+static const struct luaL_Reg ledger_luaL_commit_metalib[] = {
+  {"__call", ledger_luaL_commit___call},
+  {NULL,NULL}
+};
+
+/* } END   ledger/act/commit */
 
 /* BEGIN static implementation */
 
@@ -924,6 +969,68 @@ int ledger_luaL_transaction_gettable(struct lua_State *L){
 
 /* } END   ledger/act/transaction */
 
+/*   BEGIN ledger/act/commit { */
+
+int ledger_luaL_commit_commit(struct lua_State *L){
+  /* ARG:
+   *   1 book~ledger.book
+   *   2 act~ledger.transaction
+   * RET:
+   *   3 @return~boolean
+   * THROW:
+   *   X
+   */
+  return ledger_luaL_commit_commitC1(L,0);
+}
+
+int ledger_luaL_commit___call(struct lua_State *L){
+  /* ARG:
+   *   1 ~table
+   *   2 book~ledger.book
+   *   3 act~ledger.transaction
+   * RET:
+   *   4 @return~boolean
+   * THROW:
+   *   X
+   */
+  return ledger_luaL_commit_commitC1(L,1);
+}
+
+int ledger_luaL_commit_commitC1(struct lua_State *L, int arg){
+  int result;
+  struct ledger_book** book =
+    (struct ledger_book**)luaL_checkudata
+        (L, 1+arg, ledger_llbase_book_meta);
+  struct ledger_transaction** act =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 2+arg, ledger_llact_transaction_meta);
+  result = ledger_commit_transaction(*book, *act);
+  lua_pushboolean(L, result!=0);
+  return 1;
+}
+
+int ledger_luaL_commit_checkbalance(struct lua_State *L){
+  /* ARG:
+   *   1  ~ledger.transaction
+   * RET:
+   *   2  @return~boolean
+   */
+  int result;
+  int is_balanced;
+  struct ledger_transaction** a =
+    (struct ledger_transaction**)luaL_checkudata
+        (L, 1, ledger_llact_transaction_meta);
+  result = ledger_commit_check_balance(*a, &is_balanced);
+  if (result){
+    lua_pushboolean(L, is_balanced!=0);
+  } else {
+    luaL_error(L, "ledger.commit.checkbalance: low memory encountered");
+  }
+  return 1;
+}
+
+/* } END   ledger/act/commit */
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -956,6 +1063,12 @@ void ledger_luaopen_actutil(struct lua_State *L){
       lua_setfield(L, LUA_REGISTRYINDEX, ledger_llact_transaction_meta);
     }
     lua_setfield(L, -2, "transaction");
+  }
+  /* add commit lib */{
+    luaL_newlib(L, ledger_luaL_commit_lib);
+    luaL_newlib(L, ledger_luaL_commit_metalib);
+    lua_setmetatable(L, -2);
+    lua_setfield(L, -2, "commit");
   }
   return;
 }
