@@ -8,6 +8,7 @@
 #include "../act/select.h"
 #include "../base/book.h"
 #include "../base/util.h"
+#include "../base/table.h"
 #include <limits.h>
 #include <string.h>
 #include <ctype.h>
@@ -15,6 +16,7 @@
 
 static char const* ledger_llact_path_meta = "ledger.path";
 static char const* ledger_llbase_book_meta = "ledger.book";
+static char const* ledger_llbase_table_meta = "ledger.table";
 
 /*   BEGIN ledger/act/path { */
 
@@ -53,13 +55,6 @@ static int ledger_luaL_path_tostring(struct lua_State *L);
  */
 static int ledger_luaL_path_create(struct lua_State *L);
 
-/* [INTERNAL]
- * Convert a comparison string to a comparator code.
- * - str the string to convert
- * @return a corresponding code, or -1 if the string is invalid
- */
-static int ledger_luaL_select_cond_atoi(char const* str);
-
 static const struct luaL_Reg ledger_luaL_path_lib[] = {
   {"__gc", ledger_luaL_path___gc},
   {"create", ledger_luaL_path_create},
@@ -83,9 +78,53 @@ static const struct luaL_Reg ledger_luaL_path_lib[] = {
  */
 static int ledger_luaL_select_cond(struct lua_State *L);
 
+/*
+ * `ledger.select.bycond(t~ledger.table, cb~function(~ledger.table.mark),
+ *     cond~table{~table}, dir~number)`
+ * - t table in which to search
+ * - cb coroutine to which to call back on each matching row
+ * - cond array of condition structures
+ * - dir search direction (negative -> from end; positive -> from start)
+ * @return negative one on error, or the first nonzero value from the
+ *   callback, zero otherwise
+ * @throw carried through from the callback
+ */
+static int ledger_luaL_select_bycond(struct lua_State *L);
+
+/* [INTERNAL]
+ * Fill a condition array from a table of Lua tables.
+ * - L Lua state to configure
+ */
+static int ledger_luaL_select_bycond_fill(struct lua_State *L);
+
+/* [INTERNAL]
+ * Convert a comparison string to a comparator code.
+ * - str the string to convert
+ * @return a corresponding code, or -1 if the string is invalid
+ */
+static int ledger_luaL_select_cond_atoi(char const* str);
+
+/* [INTERNAL]
+ * Marshal the Lua callback.
+ * - arg pointer to carry structure
+ * - m next mark
+ * @return zero to continue, nonzero when done
+ */
+static int ledger_luaL_select_cb
+  (void* arg, struct ledger_table_mark const* m);
+
 static const struct luaL_Reg ledger_luaL_select_lib[] = {
   {"cond", ledger_luaL_select_cond},
+  {"bycond", ledger_luaL_select_bycond},
   {NULL,NULL}
+};
+
+/* callback argument for ledger_select_by_cond */
+struct ledger_luaL_select_bycond_carry {
+  /* Lua state */
+  struct lua_State *L;
+  /* callback stack index */
+  int cb_index;
 };
 
 struct ledger_luaL_select_cmp {
@@ -102,7 +141,8 @@ struct ledger_luaL_select_cmp ledger_luaL_select_cmps[] = {
   { LEDGER_SELECT_NOTMORE, "<=" },
   { LEDGER_SELECT_ID, "id" },
   { LEDGER_SELECT_BIGNUM, "bignum" },
-  { LEDGER_SELECT_STRING, "string" }
+  { LEDGER_SELECT_STRING, "string" },
+  { LEDGER_SELECT_STRING, "ustr" } /* to match ledger.table API */
 };
 
 /* } END   ledger/act/select */
@@ -313,6 +353,56 @@ int ledger_luaL_select_cond(struct lua_State *L){
   return 1;
 }
 
+int ledger_luaL_select_cb
+  (void* arg, struct ledger_table_mark const* m)
+{
+  int zero_check = 0;
+  struct ledger_luaL_select_bycond_carry const* carry =
+    (struct ledger_luaL_select_bycond_carry const*)arg;
+  struct lua_State *const L = carry->L;
+  lua_pushvalue(L, carry->cb_index);
+  ledger_table_mark_acquire((struct ledger_table_mark*)m);
+  /* marshal the mark */{
+    if (!ledger_llbase_posttablemark
+      ( L, (struct ledger_table_mark*)m,
+        1, "ledger.select.bycond: success"))
+    {
+      return 1;
+    }
+  }
+  /* protectedly call the function */{
+    int success_line;
+    success_line = lua_pcall(L, 1, 1, 0);
+    if (success_line != LUA_OK){
+      /* leave the error on top of the Lua stack */
+      return 2;
+    } else /* inspect the return value */{
+      switch (lua_type(L, -1)){
+      case LUA_TNIL:
+      case LUA_TNONE:
+        zero_check = 1;
+        break;
+      case LUA_TBOOLEAN:
+        if (lua_toboolean(L, -1) == 0)
+          zero_check = 1;
+        break;
+      case LUA_TNUMBER:
+        if (lua_tonumber(L, -1) == 0.0)
+          zero_check = 1;
+        break;
+      }
+      /* move the new value into place */
+      lua_rotate(L, lua_absindex(L, -2), -1);
+      lua_pop(L, 1);
+    }
+  }
+  /* return a value for the ledger API */
+  if (zero_check)
+    return 0;
+  else
+    return 3;
+}
+
 int ledger_luaL_select_cond_atoi(char const* str){
   int code = 0;
   char const* p;
@@ -342,7 +432,7 @@ int ledger_luaL_select_cond_atoi(char const* str){
       }
       if (i < len){
         code |= ledger_luaL_select_cmps[i].code;
-        p = q;
+        p = q-1;
       } else break;
     }
   }
@@ -350,6 +440,141 @@ int ledger_luaL_select_cond_atoi(char const* str){
     return code;
   else
     return -1;
+}
+
+int ledger_luaL_select_bycond_fill(struct lua_State *L){
+  /* ARG:
+   *   1  *ledger_select_cond[len]
+   *   2  len
+   *   3  ~table
+   * RET:
+   *   X
+   * THROW:
+   *   X
+   */
+  int cond_len = lua_tointeger(L, 2);
+  struct ledger_select_cond *const cond_array =
+      (struct ledger_select_cond *)lua_touserdata(L, 1);
+  int i;
+  for (i = 0; i < cond_len; ++i){
+    lua_geti(L, 3, i+1);
+    if (!lua_isnil(L, -1)){
+      char const* value_text;
+      unsigned char* renew_text;
+      /* fill the condition structure */
+      struct ledger_select_cond *const next_cond = cond_array+i;
+      lua_getfield(L, -1, "cmp");
+      next_cond->cmp = (int)lua_tointeger(L, -1);
+      lua_pop(L, 1);
+      lua_getfield(L, -1, "column");
+      next_cond->column = (int)(lua_tointeger(L, -1)-1);
+      lua_pop(L, 1);
+      lua_getfield(L, -1, "value");
+      value_text = lua_tostring(L, -1);
+      if (value_text == NULL){
+        luaL_error(L, "ledger.select.bycond: missing value for comparison");
+      }
+      renew_text =
+        ledger_util_ustrdup((unsigned char const*)value_text, NULL);
+      if (renew_text == NULL){
+        luaL_error(L, "ledger.select.bycond: low memory encountered");
+      }
+      next_cond->value = renew_text;
+      lua_pop(L, 1);
+    }
+    lua_pop(L, 1);
+  }
+  return 0;
+}
+
+int ledger_luaL_select_bycond(struct lua_State *L){
+  /* ARG:
+   *   1  t~ledger.table
+   *   2  cb~function(~ledger.table.mark)
+   *   3  cond~table{~table}
+   *   4  dir~number
+   * RET:
+   *   5 @return~number
+   * THROW:
+   *   6 @throw from cb
+   */
+  struct ledger_luaL_select_bycond_carry carry;
+  struct ledger_table** t =
+    (struct ledger_table**)luaL_checkudata(L, 1, ledger_llbase_table_meta);
+  lua_Integer dir = lua_tointeger(L, 4);
+  struct ledger_select_cond *cond_array;
+  int cond_len;
+  int execution_result;
+  /* compose the condition array */{
+    lua_Integer intended_cond_len;
+    lua_len(L, 3);
+    intended_cond_len = lua_tointeger(L, -1);
+    if (intended_cond_len < 0) cond_len = 0;
+    else if (intended_cond_len >= INT_MAX/sizeof(*cond_array)){
+      luaL_error(L, "ledger.select.bycond: condition array to large");
+    } else cond_len = intended_cond_len;
+    cond_array = ledger_util_malloc(cond_len *sizeof(*cond_array));
+    if (cond_array == NULL){
+      luaL_error(L,
+        "ledger.select.bycond: condition array to large to allocate");
+    }
+    /* pre-fill the strings of the condition array */{
+      int i;
+      for (i = 0; i < cond_len; ++i){
+        cond_array[i].value = NULL;
+      }
+    }
+    /* fill the condition array */{
+      int success_line;
+      lua_pushcfunction(L, ledger_luaL_select_bycond_fill);
+      lua_pushlightuserdata(L, cond_array);
+      lua_pushinteger(L, cond_len);
+      lua_pushvalue(L, 3);
+      success_line = lua_pcall(L, 3, 0, 0);
+      if (success_line != LUA_OK){
+        int i;
+        for (i = 0; i < cond_len; ++i){
+          ledger_util_free(cond_array[i].value);
+        }
+        ledger_util_free(cond_array);
+        lua_error(L);
+      }
+    }
+  }
+  /* compose the callback structure */{
+    carry.L = L;
+    carry.cb_index = 2;
+  }
+  /* prepare return value space */
+  lua_pushinteger(L, 0);
+  /* execute C API */{
+    execution_result =
+      ledger_select_by_cond(*t, &carry, ledger_luaL_select_cb,
+          cond_len, cond_array, dir<0?-1:(dir>0?+1:0));
+  }
+  /* release the condition array */{
+    int i;
+    for (i = 0; i < cond_len; ++i){
+      ledger_util_free(cond_array[i].value);
+    }
+    ledger_util_free(cond_array);
+    cond_array = NULL;
+  }
+  if (execution_result < 0){
+    /* error in ledger API */
+    luaL_error(L,
+        "ledger.select.bycond: execution error");
+  } else if (execution_result == 1){
+    /* error in leger-lua callback */
+    luaL_error(L,
+        "ledger.select.bycond: transfer error");
+  } else if (execution_result == 2){
+    /* Lua's error */
+    lua_error(L);
+  } else {
+    /* done */
+  }
+  return 1;
 }
 
 /* } END   ledger/act/select */
