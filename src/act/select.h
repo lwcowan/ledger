@@ -50,7 +50,7 @@ struct ledger_select_cond {
   /* column index */
   int column;
   /* value to check */
-  unsigned char* value;
+  unsigned char const* value;
 };
 
 /*
