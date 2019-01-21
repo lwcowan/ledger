@@ -5,9 +5,12 @@
 #include "../../deps/lua/src/lua.h"
 #include "../../deps/lua/src/lauxlib.h"
 #include "../act/path.h"
+#include "../act/select.h"
 #include "../base/book.h"
 #include "../base/util.h"
 #include <limits.h>
+#include <string.h>
+#include <ctype.h>
 
 
 static char const* ledger_llact_path_meta = "ledger.path";
@@ -50,6 +53,13 @@ static int ledger_luaL_path_tostring(struct lua_State *L);
  */
 static int ledger_luaL_path_create(struct lua_State *L);
 
+/* [INTERNAL]
+ * Convert a comparison string to a comparator code.
+ * - str the string to convert
+ * @return a corresponding code, or -1 if the string is invalid
+ */
+static int ledger_luaL_select_cond_atoi(char const* str);
+
 static const struct luaL_Reg ledger_luaL_path_lib[] = {
   {"__gc", ledger_luaL_path___gc},
   {"create", ledger_luaL_path_create},
@@ -61,6 +71,41 @@ static const struct luaL_Reg ledger_luaL_path_lib[] = {
 };
 
 /* } END   ledger/act/path */
+
+/*   BEGIN ledger/act/select { */
+
+/*
+ * `ledger.select.cond(cmp~string|~number, column~number, value~string)`
+ * - cmp comparison operator
+ * - column column number
+ * - value string representation of value against which to compare
+ * @return the table on success
+ */
+static int ledger_luaL_select_cond(struct lua_State *L);
+
+static const struct luaL_Reg ledger_luaL_select_lib[] = {
+  {"cond", ledger_luaL_select_cond},
+  {NULL,NULL}
+};
+
+struct ledger_luaL_select_cmp {
+  int code;
+  char const* text;
+};
+
+struct ledger_luaL_select_cmp ledger_luaL_select_cmps[] = {
+  { LEDGER_SELECT_EQUAL, "==" },
+  { LEDGER_SELECT_LESS, "<" },
+  { LEDGER_SELECT_MORE, ">" },
+  { LEDGER_SELECT_NOTEQUAL, "~="},
+  { LEDGER_SELECT_NOTLESS, ">=" },
+  { LEDGER_SELECT_NOTMORE, "<=" },
+  { LEDGER_SELECT_ID, "id" },
+  { LEDGER_SELECT_BIGNUM, "bignum" },
+  { LEDGER_SELECT_STRING, "string" }
+};
+
+/* } END   ledger/act/select */
 
 /* BEGIN static implementation */
 
@@ -229,6 +274,86 @@ int ledger_luaL_path_create(struct lua_State *L){
 
 /* } END   ledger/act/path */
 
+/*   BEGIN ledger/act/select { */
+
+int ledger_luaL_select_cond(struct lua_State *L){
+  /* ARG:
+   *   1  cmp~number|~string
+   *   2  column~number
+   *   3  value~string
+   * RET:
+   *   4 @return~table
+   * THROW:
+   *   X
+   */
+  lua_Integer column_number;
+  lua_Integer comparator;
+  lua_createtable(L, 0, 3);
+  /* set the "value" field */{
+    (void)luaL_tolstring(L, 3, NULL);
+    lua_setfield(L, -2, "value");
+  }
+  /* set the "column" field */{
+    column_number = lua_tointeger(L, 2);
+    lua_pushinteger(L, column_number);
+    lua_setfield(L, -2, "column");
+  }
+  /* set the comparator field */{
+    if (lua_isnumber(L, 1)){
+      comparator = lua_tointeger(L, 1);
+    } else {
+      char const* comparison_text;
+      comparison_text = luaL_tolstring(L, 1, NULL);
+      comparator = ledger_luaL_select_cond_atoi(comparison_text);
+      lua_pop(L, 1);
+    }
+    lua_pushinteger(L, comparator);
+    lua_setfield(L, -2, "cmp");
+  }
+  return 1;
+}
+
+int ledger_luaL_select_cond_atoi(char const* str){
+  int code = 0;
+  char const* p;
+  for (p = str; *p != 0; ++p){
+    /* find first non-space */
+    if (isspace(*p)){
+      continue;
+    } else {
+      /* find next non-space */
+      char const* q;
+      ptrdiff_t token_len;
+      int i;
+      int const len =
+        sizeof(ledger_luaL_select_cmps)/sizeof(*ledger_luaL_select_cmps);
+      for (q = p+1; *q != 0; ++q){
+        if (isspace(*q)) break;
+      }
+      token_len = q-p;
+      /* iterate over comparison strings */
+      for (i = 0; i < len; ++i){
+        if (strncmp(p, ledger_luaL_select_cmps[i].text, token_len) != 0){
+          continue;
+        }
+        if (strlen(ledger_luaL_select_cmps[i].text) == token_len){
+          break;
+        }
+      }
+      if (i < len){
+        code |= ledger_luaL_select_cmps[i].code;
+        p = q;
+      } else break;
+    }
+  }
+  if (*p == 0)
+    return code;
+  else
+    return -1;
+}
+
+/* } END   ledger/act/select */
+
 /* END   static implementation */
 
 /* BEGIN implementation */
@@ -245,6 +370,10 @@ void ledger_luaopen_actutil(struct lua_State *L){
       lua_setfield(L, LUA_REGISTRYINDEX, ledger_llact_path_meta);
     }
     lua_setfield(L, -2, "path");
+  }
+  /* add select lib */{
+    luaL_newlib(L, ledger_luaL_select_lib);
+    lua_setfield(L, -2, "select");
   }
   return;
 }
