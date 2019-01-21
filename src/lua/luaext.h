@@ -15,6 +15,11 @@ extern "C" {
 /*
  * Lua state
  */
+struct lua_State;
+
+/*
+ * Lua state in ledger package
+ */
 struct ledger_lua;
 
 /*
@@ -67,6 +72,12 @@ int ledger_lua_exec_file(struct ledger_lua* l,
 int ledger_lua_set_arg
   (struct ledger_lua* l, char **argv, int argc, int script);
 
+/*
+ * Load just the `ledger` table.
+ * - l  the state to configure
+ * @return one on success
+ */
+int luaopen_ledger(struct lua_State* l);
 
 #ifdef __cplusplus
 };

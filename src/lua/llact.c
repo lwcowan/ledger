@@ -263,15 +263,7 @@ int ledger_llact_posttransaction
 }
 
 void ledger_luaopen_act(struct lua_State *L){
-  /* fetch the global `ledger` table */{
-    int type = lua_getglobal (L, "ledger");
-    if (type != LUA_TTABLE){
-      luaL_error(L, "ledger_luaopen_base: bad `ledger` global");
-      return;
-    }
-  }
   ledger_luaopen_actutil(L);
-  lua_pop(L,1);
   return;
 }
 

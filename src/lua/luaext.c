@@ -6,6 +6,7 @@
 #include "../base/util.h"
 #include "../../deps/lua/src/lua.h"
 #include "../../deps/lua/src/lualib.h"
+#include "../../deps/lua/src/lauxlib.h"
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
@@ -123,7 +124,7 @@ static int ledger_lua_set_arg_i(lua_State *L);
 /*
  * Load the ledger library.
  * @param l library to load
- * @return one on success, zero otherwise
+ * @return zero
  */
 static int ledger_lua_loadledgerlib(lua_State *l);
 
@@ -279,19 +280,10 @@ int ledger_lua_exec_top(struct ledger_lua* l){
 }
 
 int ledger_lua_loadledgerlib(lua_State *l){
-  /* create the `ledger` table */{
-    lua_newtable(l);
-    lua_setglobal(l, "ledger");
-  }
-  /* load the base library */{
-    ledger_luaopen_base(l);
-  }
-  /* load the input/output library */{
-    ledger_luaopen_io(l);
-  }
-  /* load the action library */{
-    ledger_luaopen_act(l);
-  }
+  luaL_getsubtable(L, LUA_REGISTRYINDEX, LUA_PRELOAD_TABLE);
+  lua_pushcfunction(L, luaopen_ledger);
+  lua_setfield(L, -2, "ledger");
+  lua_pop(L, 1);
   return 0;
 }
 
@@ -371,6 +363,22 @@ int ledger_lua_set_arg
   lua_pushinteger(ls, script);  /* 3rd argument */
   status = lua_pcall(ls, 3, 0, 0);  /* do the call */
   return status==LUA_OK?1:0;
+}
+
+int luaopen_ledger(struct lua_State* l){
+  /* create the `ledger` table */{
+    lua_newtable(l);
+  }
+  /* load the base library */{
+    ledger_luaopen_base(l);
+  }
+  /* load the input/output library */{
+    ledger_luaopen_io(l);
+  }
+  /* load the action library */{
+    ledger_luaopen_act(l);
+  }
+  return 1;
 }
 
 /* END   implementation */

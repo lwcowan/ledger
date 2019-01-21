@@ -88,18 +88,10 @@ int ledger_luaL_io_writebook(struct lua_State *L){
 /* BEGIN implementation */
 
 void ledger_luaopen_io(struct lua_State *L){
-  /* fetch the global `ledger` table */{
-    int type = lua_getglobal (L, "ledger");
-    if (type != LUA_TTABLE){
-      luaL_error(L, "ledger_luaopen_io: bad `ledger` global");
-      return;
-    }
-  }
   /* add io lib */{
     luaL_newlib(L, ledger_luaL_io_lib);
     lua_setfield(L, -2, "io");
   }
-  lua_pop(L,1);
   return;
 }
 

@@ -450,17 +450,9 @@ int ledger_llbase_postbook
 }
 
 void ledger_luaopen_base(struct lua_State *L){
-  /* fetch the global `ledger` table */{
-    int type = lua_getglobal (L, "ledger");
-    if (type != LUA_TTABLE){
-      luaL_error(L, "ledger_luaopen_base: bad `ledger` global");
-      return;
-    }
-  }
   ledger_luaopen_baseutil(L);
   ledger_luaopen_basetable(L);
   ledger_luaopen_baserefs(L);
-  lua_pop(L,1);
   return;
 }
 
