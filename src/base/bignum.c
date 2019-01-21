@@ -505,6 +505,7 @@ int ledger_bignum_set_text
     {
       /* no number here */
       str_extent = 0;
+      fraction_extent = 0;
     } else if (text[str_extent] == '.'){
       /* recognize decimal portion */
       str_extent += 1;
