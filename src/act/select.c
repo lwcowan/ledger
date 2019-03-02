@@ -65,6 +65,7 @@ int ledger_select_check_cond
   int yes;
   switch (cnd.cmp&(~15u)){
   case LEDGER_SELECT_ID:
+  case LEDGER_SELECT_INDEX:
     {
       int cnd_value = ledger_util_atoi(cnd.value);
       int id_stash;
