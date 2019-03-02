@@ -21,7 +21,9 @@ enum ledger_table_type {
   /* big number */
   LEDGER_TABLE_BIGNUM = 2,
   /* unsigned character string */
-  LEDGER_TABLE_USTR = 3
+  LEDGER_TABLE_USTR = 3,
+  /* array index */
+  LEDGER_TABLE_INDEX = 4
 };
 
 /*
