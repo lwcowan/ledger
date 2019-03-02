@@ -61,8 +61,8 @@ int allocate_table_test(void){
     /* check the table */{
       struct ledger_table const* table = ledger_transaction_get_table_c(ptr);
       if (ledger_table_get_column_count(table) != 5) break;
-      if (ledger_table_get_column_type(table,0) != 1) break;
-      if (ledger_table_get_column_type(table,1) != 1) break;
+      if (ledger_table_get_column_type(table,0) != 4) break;
+      if (ledger_table_get_column_type(table,1) != 4) break;
       if (ledger_table_get_column_type(table,2) != 3) break;
       if (ledger_table_get_column_type(table,3) != 2) break;
       if (ledger_table_get_column_type(table,4) != 3) break;
