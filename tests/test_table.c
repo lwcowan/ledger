@@ -11,13 +11,17 @@ static int acquire_ref_test(void);
 static int trivial_equal_test(void);
 static int trivial_mark_test(void);
 static int set_schema_test(void);
+static int set_schema_index_test(void);
 static int add_row_test(void);
 static int set_row_string_test(void);
+static int set_row_string_index_test(void);
 static int switch_schema_test(void);
 static int set_row_bignum_test(void);
+static int set_row_bignum_index_test(void);
 static int move_mark_test(void);
 static int nonzero_equal_test(void);
 static int set_row_id_test(void);
+static int set_row_id_index_test(void);
 static int suspend_row_test(void);
 static int suspend_lost_row_test(void);
 
@@ -32,11 +36,15 @@ struct test_struct test_array[] = {
   { trivial_equal_test, "trivial_equal" },
   { trivial_mark_test, "trivial_mark_test" },
   { set_schema_test, "set schema" },
+  { set_schema_index_test, "set schema with indices" },
   { add_row_test, "add row" },
   { switch_schema_test, "switch schema" },
   { set_row_string_test, "set row string" },
   { set_row_bignum_test, "set row bignum" },
   { set_row_id_test, "set row id" },
+  { set_row_string_index_test, "set row with index string" },
+  { set_row_bignum_index_test, "set row with index bignum" },
+  { set_row_id_index_test, "set row with index id" },
   { move_mark_test, "mark move" },
   { nonzero_equal_test, "nonzero equal" },
   { suspend_row_test, "add a suspended row" },
@@ -128,6 +136,29 @@ int set_schema_test(void){
     if (ledger_table_get_column_type(ptr,0) != 1) break;
     if (ledger_table_get_column_type(ptr,1) != 3) break;
     if (ledger_table_get_column_type(ptr,2) != 2) break;
+    result = 1;
+  } while (0);
+  ledger_table_free(ptr);
+  return result;
+}
+
+int set_schema_index_test(void){
+  int result = 0;
+  struct ledger_table* ptr;
+  ptr = ledger_table_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int ok;
+    int column_types[4] =
+      { LEDGER_TABLE_ID, LEDGER_TABLE_USTR, LEDGER_TABLE_BIGNUM,
+        LEDGER_TABLE_INDEX };
+    ok = ledger_table_set_column_types(ptr,4,column_types);
+    if (!ok) break;
+    if (ledger_table_get_column_count(ptr) != 4) break;
+    if (ledger_table_get_column_type(ptr,0) != 1) break;
+    if (ledger_table_get_column_type(ptr,1) != 3) break;
+    if (ledger_table_get_column_type(ptr,2) != 2) break;
+    if (ledger_table_get_column_type(ptr,3) != 4) break;
     result = 1;
   } while (0);
   ledger_table_free(ptr);
@@ -251,6 +282,68 @@ int set_row_string_test(void){
   return result;
 }
 
+int set_row_string_index_test(void){
+  int result = 0;
+  struct ledger_table* ptr;
+  struct ledger_table_mark* mark = NULL;
+  ptr = ledger_table_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int ok;
+    int column_types[4] =
+      { LEDGER_TABLE_BIGNUM, LEDGER_TABLE_USTR, LEDGER_TABLE_ID,
+        LEDGER_TABLE_INDEX
+      };
+    ok = ledger_table_set_column_types(ptr,4,column_types);
+    if (!ok) break;
+    /* iterate from the start */{
+      unsigned char const* numeric =
+        (unsigned char const*)"034.56";
+      mark = ledger_table_begin(ptr);
+      if (mark == NULL) break;
+      ok = ledger_table_add_row(mark);
+      if (!ok) break;
+      if (ledger_table_count_rows(ptr) != 1) break;
+      /* set the row */{
+        if (!ledger_table_put_string(mark, 0, numeric)) break;
+        if (!ledger_table_put_string(mark, 1, numeric)) break;
+        if (!ledger_table_put_string(mark, 2, numeric)) break;
+        if (!ledger_table_put_string(mark, 3, numeric)) break;
+      }
+      /* check the row */{
+        unsigned char buf[16];
+        if (ledger_table_fetch_string(mark, 0, buf, sizeof(buf)) != 5)
+          break;
+        if (ledger_util_ustrcmp(buf,
+            (unsigned char const*)"34.56") != 0)
+          break;
+        if (ledger_table_fetch_string(mark, 1, buf, sizeof(buf)) != 6)
+          break;
+        if (ledger_util_ustrcmp(buf,
+            (unsigned char const*)"034.56") != 0)
+          break;
+        if (ledger_table_fetch_string(mark, 2, buf, sizeof(buf)) != 2)
+          break;
+        if (ledger_util_ustrcmp(buf,
+            (unsigned char const*)"34") != 0)
+          break;
+        if (ledger_table_fetch_string(mark, 3, buf, sizeof(buf)) != 2)
+          break;
+        if (ledger_util_ustrcmp(buf,
+            (unsigned char const*)"34") != 0)
+          break;
+      }
+      ok = ledger_table_drop_row(mark);
+      if (!ok) break;
+      if (ledger_table_count_rows(ptr) != 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_table_mark_free(mark);
+  ledger_table_free(ptr);
+  return result;
+}
+
 int set_row_id_test(void){
   int result = 0;
   struct ledger_table* ptr;
@@ -286,6 +379,63 @@ int set_row_id_test(void){
         if (reverse_number != 3456)
           break;
         if (ledger_table_fetch_id(mark, 2, &reverse_number) == 0)
+          break;
+        if (reverse_number != 3456)
+          break;
+      }
+      ok = ledger_table_drop_row(mark);
+      if (!ok) break;
+      if (ledger_table_count_rows(ptr) != 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_table_mark_free(mark);
+  ledger_table_free(ptr);
+  return result;
+}
+
+int set_row_id_index_test(void){
+  int result = 0;
+  struct ledger_table* ptr;
+  struct ledger_table_mark* mark = NULL;
+  ptr = ledger_table_new();
+  if (ptr == NULL) return 0;
+  else do {
+    int ok;
+    int column_types[4] =
+      { LEDGER_TABLE_BIGNUM, LEDGER_TABLE_USTR, LEDGER_TABLE_ID,
+        LEDGER_TABLE_INDEX
+      };
+    ok = ledger_table_set_column_types(ptr,4,column_types);
+    if (!ok) break;
+    /* iterate from the start */{
+      int numeric = 3456;
+      mark = ledger_table_begin(ptr);
+      if (mark == NULL) break;
+      ok = ledger_table_add_row(mark);
+      if (!ok) break;
+      if (ledger_table_count_rows(ptr) != 1) break;
+      /* set the row */{
+        if (!ledger_table_put_id(mark, 0, numeric)) break;
+        if (!ledger_table_put_id(mark, 1, numeric)) break;
+        if (!ledger_table_put_id(mark, 2, numeric)) break;
+        if (!ledger_table_put_id(mark, 3, numeric)) break;
+      }
+      /* check the row */{
+        int reverse_number;
+        if (ledger_table_fetch_id(mark, 0, &reverse_number) == 0)
+          break;
+        if (reverse_number != 3456)
+          break;
+        if (ledger_table_fetch_id(mark, 1, &reverse_number) == 0)
+          break;
+        if (reverse_number != 3456)
+          break;
+        if (ledger_table_fetch_id(mark, 2, &reverse_number) == 0)
+          break;
+        if (reverse_number != 3456)
+          break;
+        if (ledger_table_fetch_id(mark, 3, &reverse_number) == 0)
           break;
         if (reverse_number != 3456)
           break;
@@ -354,6 +504,92 @@ int set_row_bignum_test(void){
         if (ledger_bignum_compare(storage, numeric) != 0)
           break;
         if (!ledger_table_fetch_bignum(mark, 2, storage))
+          break;
+        /* bignum in, integer out, so should not be equal */
+        if (ledger_bignum_compare(storage, numeric) >= 0)
+          break;
+        if (ledger_bignum_get_long(storage) != 45)
+          break;
+      }
+      ledger_table_mark_free(mark);
+      mark = ledger_table_begin(ptr);
+      if (mark == NULL) break;
+      ok = ledger_table_drop_row(mark);
+      if (!ok) break;
+      if (ledger_table_count_rows(ptr) != 0) break;
+    }
+    result = 1;
+  } while (0);
+  ledger_table_mark_free(mark);
+  ledger_table_free(ptr);
+  ledger_bignum_free(storage);
+  ledger_bignum_free(numeric);
+  return result;
+}
+
+int set_row_bignum_index_test(void){
+  int result = 0;
+  struct ledger_table* ptr;
+  struct ledger_table_mark* mark = NULL;
+  struct ledger_bignum* storage;
+  struct ledger_bignum* numeric;
+  storage = ledger_bignum_new();
+  if (storage == NULL) return 0;
+  numeric = ledger_bignum_new();
+  if (numeric == NULL){
+    ledger_bignum_free(storage);
+    return 0;
+  }
+  if (!ledger_bignum_set_text(numeric,(unsigned char const*)"45.61",NULL)){
+    ledger_bignum_free(storage);
+    ledger_bignum_free(numeric);
+    return 0;
+  }
+  ptr = ledger_table_new();
+  if (ptr == NULL){
+    ledger_bignum_free(storage);
+    ledger_bignum_free(numeric);
+    return 0;
+  } else do {
+    int ok;
+    int column_types[4] =
+      { LEDGER_TABLE_BIGNUM, LEDGER_TABLE_USTR, LEDGER_TABLE_ID,
+        LEDGER_TABLE_INDEX
+      };
+    ok = ledger_table_set_column_types(ptr,4,column_types);
+    if (!ok) break;
+    /* iterate from the start */{
+      mark = ledger_table_begin(ptr);
+      if (mark == NULL) break;
+      ok = ledger_table_add_row(mark);
+      if (!ok) break;
+      if (ledger_table_count_rows(ptr) != 1) break;
+      /* set the row */{
+        if (!ledger_table_put_bignum(mark, 0, numeric)) break;
+        if (!ledger_table_put_bignum(mark, 1, numeric)) break;
+        if (!ledger_table_put_bignum(mark, 2, numeric)) break;
+        if (!ledger_table_put_bignum(mark, 3, numeric)) break;
+      }
+      ledger_table_mark_free(mark);
+      mark = ledger_table_begin_c(ptr);
+      if (mark == NULL) break;
+      /* check the row */{
+        if (!ledger_table_fetch_bignum(mark, 0, storage))
+          break;
+        if (ledger_bignum_compare(storage, numeric) != 0)
+          break;
+        if (!ledger_table_fetch_bignum(mark, 1, storage))
+          break;
+        if (ledger_bignum_compare(storage, numeric) != 0)
+          break;
+        if (!ledger_table_fetch_bignum(mark, 2, storage))
+          break;
+        /* bignum in, integer out, so should not be equal */
+        if (ledger_bignum_compare(storage, numeric) >= 0)
+          break;
+        if (ledger_bignum_get_long(storage) != 45)
+          break;
+        if (!ledger_table_fetch_bignum(mark, 3, storage))
           break;
         /* bignum in, integer out, so should not be equal */
         if (ledger_bignum_compare(storage, numeric) >= 0)

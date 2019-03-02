@@ -101,7 +101,9 @@ int new_arg_resize_test(void){
       char const* l = ledger_arg_list_get(ptr,i);
       if (i == 1){
         if (l == NULL) break;
-        if (ledger_util_ustrcmp(l,(unsigned char const*)"one") != 0) break;
+        if (ledger_util_ustrcmp(
+          (unsigned char const*)l,
+          (unsigned char const*)"one") != 0) break;
       } else if (i < 4){
         if (l != NULL) break;
       } else {
@@ -134,10 +136,10 @@ int new_arg_equal_test(void){
     return 0;
   } else do {
     int ok;
-    unsigned char const* description =
-      (unsigned char const*)"some long string";
-    unsigned char const* name =
-      (unsigned char const*)"short";
+    char const* description =
+      "some long string";
+    char const* name =
+      "short";
     /* different argument counts */
     ok = ledger_arg_list_set_count(ptr,1);
     if (!ok) break;

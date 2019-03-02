@@ -114,7 +114,7 @@ int ledger_cli_list(struct ledger_cli_line *tracking, int argc, char **argv){
       } else {
         int const entry_count = ledger_journal_get_entry_count(journal);
         fprintf(stdout,"total entries: %i\n", entry_count);
-        /* list entrys */{
+        /* list entries */{
           int i;
           for (i = 0; i < entry_count; ++i){
             struct ledger_entry const* const entry =

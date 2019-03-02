@@ -696,7 +696,7 @@ int ledger_luaL_select_bycond(struct lua_State *L){
       if (success_line != LUA_OK){
         int i;
         for (i = 0; i < cond_len; ++i){
-          ledger_util_free(cond_array[i].value);
+          ledger_util_free((void*)cond_array[i].value);
         }
         ledger_util_free(cond_array);
         lua_error(L);
@@ -717,7 +717,7 @@ int ledger_luaL_select_bycond(struct lua_State *L){
   /* release the condition array */{
     int i;
     for (i = 0; i < cond_len; ++i){
-      ledger_util_free(cond_array[i].value);
+      ledger_util_free((void*)cond_array[i].value);
     }
     ledger_util_free(cond_array);
     cond_array = NULL;

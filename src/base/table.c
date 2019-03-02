@@ -520,6 +520,7 @@ struct ledger_table_row* ledger_table_row_new
       for (i = 0; i < n; ++i){
         switch (schema[i]){
         case LEDGER_TABLE_ID:
+        case LEDGER_TABLE_INDEX:
           new_row->data[i].item_id = 0;
           entry_ok = 1;
           break;
@@ -566,6 +567,7 @@ void ledger_table_row_clear
     for (i = 0; i < n; ++i){
       switch (schema[i]){
       case LEDGER_TABLE_ID:
+      case LEDGER_TABLE_INDEX:
         r->data[i].item_id = 0;
         break;
       case LEDGER_TABLE_BIGNUM:
@@ -815,6 +817,7 @@ int ledger_table_fetch_string_sub
     } else /* fetch the string */{
       switch (types[i]){
       case LEDGER_TABLE_ID:
+      case LEDGER_TABLE_INDEX:
         if (old_row->data[i].item_id < 0){
           result = 0;
           if (len > 0) buf[0] = 0;
@@ -866,6 +869,7 @@ int ledger_table_put_string_sub
     } else /* put the string */{
       switch (types[i]){
       case LEDGER_TABLE_ID:
+      case LEDGER_TABLE_INDEX:
         if (value == NULL || *value == 0){
           old_row->data[i].item_id = -1;
           result = 1;
@@ -927,6 +931,7 @@ int ledger_table_fetch_bignum_sub
     } else /* fetch the string */{
       switch (types[i]){
       case LEDGER_TABLE_ID:
+      case LEDGER_TABLE_INDEX:
         if (old_row->data[i].item_id < 0){
           result = ledger_bignum_set_long(n, -1);
         } else {
@@ -969,6 +974,7 @@ int ledger_table_put_bignum_sub
     } else /* put the string */{
       switch (types[i]){
       case LEDGER_TABLE_ID:
+      case LEDGER_TABLE_INDEX:
         if (value == NULL){
           old_row->data[i].item_id = 0;
           result = 1;
@@ -1042,6 +1048,7 @@ int ledger_table_fetch_id_sub
     } else /* fetch the string */{
       switch (types[i]){
       case LEDGER_TABLE_ID:
+      case LEDGER_TABLE_INDEX:
         if (old_row->data[i].item_id < 0){
           *n = -1;
           result = 1;
@@ -1089,6 +1096,7 @@ int ledger_table_put_id_sub
     } else /* put the string */{
       switch (types[i]){
       case LEDGER_TABLE_ID:
+      case LEDGER_TABLE_INDEX:
         if (value < 0){
           old_row->data[i].item_id = -1;
           result = 1;
@@ -1251,6 +1259,7 @@ int ledger_table_is_equal
       for (i = 0; i < columns; ++i){
         switch (types[i]){
         case LEDGER_TABLE_ID:
+        case LEDGER_TABLE_INDEX:
           {
             if (a_row->data[i].item_id != b_row->data[i].item_id)
               result = 0;
@@ -1372,7 +1381,7 @@ int ledger_table_set_column_types
     int i;
     if (n > LEDGER_TABLE_SCHEMA_MAX) return 0;
     for (i = 0; i < n; ++i){
-      if (types[i] >= 1 && types[i] <= 3)
+      if (types[i] >= 1 && types[i] <= 4)
         continue;
       else
         break;

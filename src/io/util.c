@@ -148,15 +148,13 @@ int ledger_io_util_construct_name
           int numeric_length;
           int apt_length;
           int n = va_arg(ap,int);
-          if (!ledger_bignum_set_long(tmp_num, n))
-            return -1;
-          numeric_length = ledger_bignum_get_text(tmp_num, NULL, 0, 0);
+          numeric_length = ledger_util_itoa(n, NULL, 0, 0);
           if (numeric_length >= len-write_point){
             apt_length = len-write_point;
           } else apt_length = numeric_length+1;
           if (apt_length > 0) {
-            ledger_bignum_get_text
-              (tmp_num, ((unsigned char*)buf)+write_point, apt_length, 0);
+            ledger_util_itoa
+              (n, ((unsigned char*)buf)+write_point, apt_length, 0);
           }
           write_point += numeric_length;
         }break;

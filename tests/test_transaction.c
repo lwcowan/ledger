@@ -61,8 +61,8 @@ int allocate_table_test(void){
     /* check the table */{
       struct ledger_table const* table = ledger_transaction_get_table_c(ptr);
       if (ledger_table_get_column_count(table) != 5) break;
-      if (ledger_table_get_column_type(table,0) != 1) break;
-      if (ledger_table_get_column_type(table,1) != 1) break;
+      if (ledger_table_get_column_type(table,0) != 4) break;
+      if (ledger_table_get_column_type(table,1) != 4) break;
       if (ledger_table_get_column_type(table,2) != 3) break;
       if (ledger_table_get_column_type(table,3) != 2) break;
       if (ledger_table_get_column_type(table,4) != 3) break;
@@ -318,8 +318,8 @@ int date_equal_test(void){
       (unsigned char const*)"new description";
     unsigned char const* description2 =
       (unsigned char const*)"other description";
-    unsigned char const* date = "2018-11-15T23:18:40Z";
-    unsigned char const* date2 = "2016-05-24T05:49:01Z";
+    unsigned char const* date = (unsigned char const*)"2018-11-15T23:18:40Z";
+    unsigned char const* date2 = (unsigned char const*)"2016-05-24T05:49:01Z";
     /* different descriptions */
     ok = ledger_transaction_set_description(ptr,description);
     if (!ok) break;

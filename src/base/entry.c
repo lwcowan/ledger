@@ -26,8 +26,8 @@ static int ledger_entry_init(struct ledger_entry* a);
 static void ledger_entry_clear(struct ledger_entry* a);
 
 /*
- * Callback for cleaning up a table.
- * - t pointer to a table
+ * Callback for cleaning up an entry.
+ * - t pointer to an entry
  */
 static void ledger_entry_free_cb(void* t);
 
