@@ -230,6 +230,7 @@ int ledger_bignum_gp_add
     ledger_bignum_init(&tmp);
     ok = ledger_bignum_alloc_unchecked(&tmp, digit_count+1, dst->point_place);
     if (ok){
+      tmp.negative = dst->negative;
       memcpy(tmp.digits, dst->digits, sizeof(unsigned char)*digit_count);
       tmp.digits[digit_count] = carry;
       ledger_bignum_swap(&tmp, dst);

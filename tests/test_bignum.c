@@ -31,6 +31,7 @@ static int subtract_inverted_test(void);
 static int subtract_implicit_test(void);
 static int set_dot_text_test(void);
 static int set_nan_text_test(void);
+static int ninety_nine_test(void);
 
 struct test_struct {
   int (*fn)(void);
@@ -62,7 +63,8 @@ struct test_struct test_array[] = {
   { subtract_inverted_test, "subtract inverted" },
   { subtract_implicit_test, "subtract implicit" },
   { set_dot_text_test, "set text starting with a dot" },
-  { set_nan_text_test, "set non-numeric text" }
+  { set_nan_text_test, "set non-numeric text" },
+  { ninety_nine_test, "ninety-nine" }
 };
 
 
@@ -946,6 +948,43 @@ int set_nan_text_test(void){
     result = 1;
   } while (0);
   ledger_bignum_free(ptr);
+  return result;
+}
+
+int ninety_nine_test(void){
+  int result = 0;
+  struct ledger_bignum* a, * b, * c;
+  a = ledger_bignum_new();
+  if (a == NULL) return 0;
+  b = ledger_bignum_new();
+  if (b == NULL){
+    ledger_bignum_free(a);
+    return 0;
+  }
+  c = ledger_bignum_new();
+  if (c == NULL){
+    ledger_bignum_free(a);
+    ledger_bignum_free(b);
+    return 0;
+  }
+  do {
+    unsigned char buf[16];
+    if (!ledger_bignum_set_text
+        (a,(unsigned char const*)"-99",NULL))
+      break;
+    if (!ledger_bignum_set_text
+        (b,(unsigned char const*)"1",NULL))
+      break;
+    if (!ledger_bignum_subtract(c,a,b)) break;
+    if (ledger_bignum_get_text(c,buf,sizeof(buf),0) != 4) break;
+    if (ledger_util_ustrcmp(buf,
+        (unsigned char const*)"-100") != 0)
+      break;
+    result = 1;
+  } while (0);
+  ledger_bignum_free(c);
+  ledger_bignum_free(b);
+  ledger_bignum_free(a);
   return result;
 }
 
