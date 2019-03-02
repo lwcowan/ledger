@@ -52,8 +52,19 @@ static int ledger_book_init(struct ledger_book* book);
  */
 static void ledger_book_clear(struct ledger_book* book);
 
+/*
+ * Callback for cleaning up a book.
+ * - b pointer to a book
+ */
+static void ledger_book_free_cb(void* b);
+
 
 /* BEGIN static implementation */
+
+void ledger_book_free_cb(void* b){
+  ledger_book_clear((struct ledger_book*) b);
+  return;
+}
 
 int ledger_book_init(struct ledger_book* book){
   book->description = NULL;
@@ -82,21 +93,25 @@ void ledger_book_clear(struct ledger_book* book){
 /* BEGIN implementation */
 
 struct ledger_book* ledger_book_new(void){
-  struct ledger_book* book = (struct ledger_book* )ledger_util_malloc
-    (sizeof(struct ledger_book));
+  struct ledger_book* book = (struct ledger_book* )ledger_util_ref_malloc
+    (sizeof(struct ledger_book), ledger_book_free_cb);
   if (book != NULL){
     if (!ledger_book_init(book)){
-      ledger_util_free(book);
+      ledger_util_ref_free(book);
       book = NULL;
     }
   }
   return book;
 }
 
+struct ledger_book* ledger_book_acquire(struct ledger_book* b){
+  return (struct ledger_book*)ledger_util_ref_acquire(b);
+}
+
 void ledger_book_free(struct ledger_book* book){
   if (book != NULL){
-    ledger_book_clear(book);
-    ledger_util_free(book);
+    /* NOTE ledger_book_clear(book); called indirectly */
+    ledger_util_ref_free(book);
   }
 }
 

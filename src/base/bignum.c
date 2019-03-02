@@ -230,6 +230,7 @@ int ledger_bignum_gp_add
     ledger_bignum_init(&tmp);
     ok = ledger_bignum_alloc_unchecked(&tmp, digit_count+1, dst->point_place);
     if (ok){
+      tmp.negative = dst->negative;
       memcpy(tmp.digits, dst->digits, sizeof(unsigned char)*digit_count);
       tmp.digits[digit_count] = carry;
       ledger_bignum_swap(&tmp, dst);
@@ -500,9 +501,12 @@ int ledger_bignum_set_text
     while (text[str_extent] >= '0' && text[str_extent] <= '9'){
       str_extent += 1;
     }
-    if (str_extent == complement_extent){
+    if (str_extent == complement_extent
+    &&  text[str_extent] != '.')
+    {
       /* no number here */
       str_extent = 0;
+      fraction_extent = 0;
     } else if (text[str_extent] == '.'){
       /* recognize decimal portion */
       str_extent += 1;

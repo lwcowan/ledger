@@ -1,6 +1,6 @@
 /*
  * file: io/journal.h
- * brief: I/O API for account journal
+ * brief: I/O API for transaction journal
  * author: Cody Licorish (svgmovement@gmail.com)
  */
 #ifndef __Ledger_IO_journal_H__

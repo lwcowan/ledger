@@ -22,6 +22,13 @@ struct ledger_ledger;
 struct ledger_ledger* ledger_ledger_new(void);
 
 /*
+ * Acquire a reference to a ledger.
+ * - a an old ledger
+ * @return the ledger on success, otherwise NULL
+ */
+struct ledger_ledger* ledger_ledger_acquire(struct ledger_ledger* a);
+
+/*
  * Destroy a ledger.
  * - l the ledger to destroy
  */

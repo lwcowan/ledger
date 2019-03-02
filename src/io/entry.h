@@ -1,6 +1,6 @@
 /*
- * file: io/table.h
- * brief: Table transport API
+ * file: io/entry.h
+ * brief: Journal entry transport API
  * author: Cody Licorish (svgmovement@gmail.com)
  */
 #ifndef __Ledger_IO_entry_H__

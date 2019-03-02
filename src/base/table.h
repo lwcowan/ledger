@@ -21,7 +21,9 @@ enum ledger_table_type {
   /* big number */
   LEDGER_TABLE_BIGNUM = 2,
   /* unsigned character string */
-  LEDGER_TABLE_USTR = 3
+  LEDGER_TABLE_USTR = 3,
+  /* array index */
+  LEDGER_TABLE_INDEX = 4
 };
 
 /*
@@ -39,6 +41,13 @@ struct ledger_table_mark;
  * @return the account on success, otherwise NULL
  */
 struct ledger_table* ledger_table_new(void);
+
+/*
+ * Acquire an old table.
+ * - t the table for which to acquire a reference
+ * @return the table on success, otherwise NULL
+ */
+struct ledger_table* ledger_table_acquire(struct ledger_table* );
 
 /*
  * Destroy a table.
@@ -216,6 +225,30 @@ int ledger_table_fetch_id
  */
 int ledger_table_put_id
   ( struct ledger_table_mark const* mark, int i, int value);
+
+/*
+ * Get the column type for the row referenced by a mark.
+ * - mark the mark to query
+ * - i column index
+ * @return a column type, or zero if unavailable
+ */
+int ledger_table_mark_get_type
+  (struct ledger_table_mark const* mark, int i);
+
+/*
+ * Check whether the mark is still valid.
+ * - mark the mark to query
+ * @return one if the mark is valid, zero otherwise
+ */
+int ledger_table_mark_is_valid(struct ledger_table_mark const* mark);
+
+/*
+ * Acquire a reference to a table mark.
+ * - mark the mark to acquire
+ * @return the mark on success, NULL otherwise
+ */
+struct ledger_table_mark* ledger_table_mark_acquire
+  (struct ledger_table_mark* mark);
 
 #ifdef __cplusplus
 };

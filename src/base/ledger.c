@@ -26,6 +26,12 @@ struct ledger_ledger {
 };
 
 /*
+ * Callback for cleaning up a ledger.
+ * - l pointer to a ledger
+ */
+static void ledger_ledger_free_cb(void* l);
+
+/*
  * Initialize a ledger.
  * - l ledger to initialize
  * @return one on success, zero on failure
@@ -41,7 +47,13 @@ static void ledger_ledger_clear(struct ledger_ledger* l);
 
 /* BEGIN static implementation */
 
+void ledger_ledger_free_cb(void* l){
+  ledger_ledger_clear((struct ledger_ledger*) l);
+  return;
+}
+
 int ledger_ledger_init(struct ledger_ledger* l){
+  /* NOTE pre-clear compatible */
   l->description = NULL;
   l->name = NULL;
   l->item_id = -1;
@@ -67,21 +79,25 @@ void ledger_ledger_clear(struct ledger_ledger* l){
 /* BEGIN implementation */
 
 struct ledger_ledger* ledger_ledger_new(void){
-  struct ledger_ledger* l = (struct ledger_ledger* )ledger_util_malloc
-    (sizeof(struct ledger_ledger));
+  struct ledger_ledger* l = (struct ledger_ledger* )ledger_util_ref_malloc
+    (sizeof(struct ledger_ledger), ledger_ledger_free_cb);
   if (l != NULL){
     if (!ledger_ledger_init(l)){
-      ledger_util_free(l);
+      ledger_util_ref_free(l);
       l = NULL;
     }
   }
   return l;
 }
 
+struct ledger_ledger* ledger_ledger_acquire(struct ledger_ledger* a){
+  return (struct ledger_ledger*)ledger_util_ref_acquire(a);
+}
+
 void ledger_ledger_free(struct ledger_ledger* l){
   if (l != NULL){
-    ledger_ledger_clear(l);
-    ledger_util_free(l);
+    /* NOTE ledger_ledger_clear(l); called indirectly */
+    ledger_util_ref_free(l);
   }
 }
 

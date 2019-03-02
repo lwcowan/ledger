@@ -22,6 +22,13 @@ struct ledger_entry;
 struct ledger_entry* ledger_entry_new(void);
 
 /*
+ * Acquire a reference to an entry.
+ * - a an old entry
+ * @return the entry on success, otherwise NULL
+ */
+struct ledger_entry* ledger_entry_acquire(struct ledger_entry* a);
+
+/*
  * Destroy an entry.
  * - a the entry to destroy
  */
@@ -94,10 +101,10 @@ int ledger_entry_get_id(struct ledger_entry const* a);
 void ledger_entry_set_id(struct ledger_entry* a, int item_id);
 
 /*
- * Compare two entrys for equality.
+ * Compare two entries for equality.
  * - a an entry
  * - b another entry
- * @return one if the entrys are equal, zero otherwise
+ * @return one if the entries are equal, zero otherwise
  */
 int ledger_entry_is_equal
   (struct ledger_entry const* a, struct ledger_entry const* b);
