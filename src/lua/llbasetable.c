@@ -109,6 +109,7 @@ static struct ledger_luaL_table_enum const ledger_luaL_table_types[] = {
   {LEDGER_TABLE_ID, "id"},
   {LEDGER_TABLE_BIGNUM, "bignum"},
   {LEDGER_TABLE_USTR, "ustr"},
+  {LEDGER_TABLE_INDEX, "index"},
   {0,NULL}
 };
 
@@ -577,6 +578,18 @@ int ledger_luaL_tablemark_fetch(struct lua_State *L){
         (L, buf, result>=0, "ledger_luaL_tablemark_fetch: "
           "String not available");
     }break;
+  case LEDGER_TABLE_INDEX:
+    {
+      int value;
+      result = ledger_table_fetch_id(*mark, i, &value);
+      if (!result){
+        luaL_error(L, "ledger_luaL_tablemark_fetch: "
+          "Identifier not available");
+        break;
+      }
+      /* ensure Lua one-index adjustment `+1` */
+      lua_pushinteger(L, ((lua_Integer)value)+1);
+    }break;
   default:
     lua_pushnil(L);
     break;
@@ -611,6 +624,14 @@ int ledger_luaL_tablemark_put(struct lua_State *L){
   case LEDGER_TABLE_ID:
     {
       int result;
+      /* check if the destination is an index */{
+        if (ledger_table_mark_get_type(*mark, i) == LEDGER_TABLE_INDEX){
+          /* ensure Lua one-index adjustment `-1` */
+          result = ledger_table_put_id(*mark, i, (int)(lua_tointeger(L, 3)-1));
+          lua_pushboolean(L, result);
+          break;
+        }
+      }
       result = ledger_table_put_id(*mark, i, (int)lua_tointeger(L, 3));
       lua_pushboolean(L, result);
     }break;
@@ -619,6 +640,15 @@ int ledger_luaL_tablemark_put(struct lua_State *L){
       int result;
       struct ledger_bignum** bnp =
           luaL_checkudata(L, 3, ledger_llbase_bignum_meta);
+      /* check if the destination is an index */{
+        if (ledger_table_mark_get_type(*mark, i) == LEDGER_TABLE_INDEX){
+          /* ensure Lua one-index adjustment `-1` */
+          result = ledger_table_put_id
+            (*mark, i, (int)(ledger_bignum_get_long(*bnp)-1));
+          lua_pushboolean(L, result);
+          break;
+        }
+      }
       result = ledger_table_put_bignum(*mark, i, *bnp);
       lua_pushboolean(L, result);
     }break;
@@ -626,6 +656,15 @@ int ledger_luaL_tablemark_put(struct lua_State *L){
     {
       int result;
       char const* string = lua_tostring(L, 3);
+      /* check if the destination is an index */{
+        if (ledger_table_mark_get_type(*mark, i) == LEDGER_TABLE_INDEX){
+          /* ensure Lua one-index adjustment `-1` */
+          result = ledger_table_put_id
+            (*mark, i, (ledger_util_atoi((unsigned char const*)string)-1));
+          lua_pushboolean(L, result);
+          break;
+        }
+      }
       result = ledger_table_put_string
           (*mark, i, (unsigned char const*)string);
       lua_pushboolean(L, result);

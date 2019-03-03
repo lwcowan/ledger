@@ -39,7 +39,9 @@ enum ledger_select_cmp_type {
   /* big number */
   LEDGER_SELECT_BIGNUM = 32,
   /* unsigned character string  */
-  LEDGER_SELECT_STRING = 48
+  LEDGER_SELECT_STRING = 48,
+  /* array index integer */
+  LEDGER_SELECT_INDEX = 64
 };
 
 
