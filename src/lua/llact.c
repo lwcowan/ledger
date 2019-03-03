@@ -63,7 +63,7 @@ int ledger_llact_postpathP1(struct lua_State *L){
   /* fill the table */{
     int i;
     for (i = 0; i < len; ++i){
-      lua_pushinteger(L, path.path[i]);
+      lua_pushinteger(L, ((lua_Integer)path.path[i])+1);
       lua_seti(L, -2, i+1);
     }
   }
@@ -107,7 +107,7 @@ int ledger_llact_getpathP1(struct lua_State *L){
     path->len = (int)len;
     for (i = 0; i < len; ++i){
       lua_geti(L, 1, i+1);
-      path->path[i] = (int)lua_tointeger(L, -1);
+      path->path[i] = (int)(lua_tointeger(L, -1)-1);
       lua_pop(L, 1);
     }
   }

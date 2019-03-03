@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 
 static char const* ledger_llact_path_meta = "ledger.path";
@@ -143,6 +144,7 @@ struct ledger_luaL_select_cmp ledger_luaL_select_cmps[] = {
   { LEDGER_SELECT_NOTLESS, ">=" },
   { LEDGER_SELECT_NOTMORE, "<=" },
   { LEDGER_SELECT_ID, "id" },
+  { LEDGER_SELECT_INDEX, "index" },
   { LEDGER_SELECT_BIGNUM, "bignum" },
   { LEDGER_SELECT_STRING, "string" },
   { LEDGER_SELECT_STRING, "ustr" } /* to match ledger.table API */
@@ -636,8 +638,34 @@ int ledger_luaL_select_bycond_fill(struct lua_State *L){
       if (value_text == NULL){
         luaL_error(L, "ledger.select.bycond: missing value for comparison");
       }
-      renew_text =
-        ledger_util_ustrdup((unsigned char const*)value_text, NULL);
+      if ((next_cond->cmp & ~15u) == LEDGER_SELECT_INDEX){
+        /* adjust for Lua one-indexing */
+        char *value_endptr;
+        long int const value_index = strtol(value_text, &value_endptr, 10);
+        if (value_endptr > value_text){
+          unsigned char remix_buffer[(sizeof(int)*CHAR_BIT+2)/3+1];
+          /* subtract from one-indexing */
+          int const renew_index = (int)(value_index-1);
+          /* convert to string */
+          size_t const remix_max = sizeof(remix_buffer);
+          size_t const remix_length = ledger_util_itoa
+            (renew_index, remix_buffer, remix_max, 0);
+          if (remix_length >= remix_max)
+            remix_buffer[remix_max-1] = 0;
+          else
+            remix_buffer[remix_length] = 0;
+          /* duplicate the string */
+          renew_text = ledger_util_ustrdup(remix_buffer, NULL);
+        } else {
+          /* no number to adjust here; pass as is */
+          renew_text =
+            ledger_util_ustrdup((unsigned char const*)value_text, NULL);
+        }
+      } else {
+        /* do not adjust for Lua one-indexing */
+        renew_text =
+          ledger_util_ustrdup((unsigned char const*)value_text, NULL);
+      }
       if (renew_text == NULL){
         luaL_error(L, "ledger.select.bycond: low memory encountered");
       }
@@ -928,7 +956,7 @@ int ledger_luaL_transaction_getjournal(struct lua_State *L){
     (struct ledger_transaction**)luaL_checkudata
         (L, 1, ledger_llact_transaction_meta);
   int v = ledger_transaction_get_journal(*a);
-  lua_pushinteger(L, (lua_Integer)v);
+  lua_pushinteger(L, ((lua_Integer)v)+1);
   return 1;
 }
 
@@ -942,7 +970,7 @@ int ledger_luaL_transaction_setjournal(struct lua_State *L){
   struct ledger_transaction** a =
     (struct ledger_transaction**)luaL_checkudata
         (L, 1, ledger_llact_transaction_meta);
-  int const v = (int)lua_tointeger(L, 2);
+  int const v = (int)(lua_tointeger(L, 2)-1);
   ledger_transaction_set_journal(*a, v);
   lua_pushboolean(L, 1);
   return 1;

@@ -773,7 +773,7 @@ int ledger_luaL_sum_sumC1(struct lua_State *L, int arg){
   struct ledger_table** t =
     (struct ledger_table**)luaL_checkudata
         (L, 1+arg, ledger_llbase_table_meta);
-  int const column = lua_tointeger(L, 2+arg);
+  int const column = (int)(lua_tointeger(L, 2+arg)-1);
   struct ledger_bignum* bn;
   bn = ledger_bignum_new();
   if (bn == NULL){
