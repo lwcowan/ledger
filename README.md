@@ -39,6 +39,15 @@ make
 
 The `ledger_cli` program should be built by default.
 
+### Notes
+
+Because of a change in submodules, users may need to synchronize and update the
+submodule configuration of any of their active clones of this repository.
+```bash
+git submodule sync
+git submodule update
+```
+
 ## License
 
 The source code is available under the MIT license.
