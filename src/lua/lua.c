@@ -68,7 +68,7 @@ int main(int argc, char **argv){
         ok = ledger_lua_exec_str
           ( lua, (unsigned char const*)"*", (unsigned char const*)next_line,
             want_continue, &want_continue);
-        linenoiseFree(next_line);
+        free(next_line);
         if (!ok){
           unsigned char const* errmsg = ledger_lua_get_last_error(lua);
           if (errmsg != NULL){

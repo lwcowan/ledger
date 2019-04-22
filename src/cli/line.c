@@ -128,6 +128,6 @@ int ledger_cli_do_line
 }
 
 void ledger_cli_free_line(struct ledger_cli_line *tracking, char* line){
-  linenoiseFree(line);
+  free(line);
   return;
 }
