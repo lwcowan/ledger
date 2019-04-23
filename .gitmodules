@@ -9,7 +9,7 @@
 	url = https://github.com/jedisct1/minicsv.git
 [submodule "deps/linenoise"]
 	path = deps/linenoise
-	url = https://github.com/antirez/linenoise.git
+	url = https://github.com/msteveb/linenoise.git
 [submodule "deps/refalloc"]
 	path = deps/refalloc
 	url = https://github.com/codylico/refalloc.git
