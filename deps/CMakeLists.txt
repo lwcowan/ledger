@@ -1,8 +1,8 @@
 
 #dependencies
 
-add_subdirectory(zip)
 add_subdirectory(cJSON)
+add_subdirectory(zip)
 add_subdirectory(lua)
 add_subdirectory(refalloc)
 
